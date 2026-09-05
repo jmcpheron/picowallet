@@ -1,0 +1,3 @@
+#!/bin/sh
+# Talk to the Pico over WiFi from the Mac. Usage: ./pico ls | ./pico exec 'print(1)' | ./pico cp firmware/main.py :main.py
+exec "$HOME/.local/bin/mpremote" connect "socket://${PICO_HOST:-picowallet.local}:2323" resume "$@"

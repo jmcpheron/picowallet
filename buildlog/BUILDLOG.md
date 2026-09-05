@@ -25,3 +25,19 @@ Pico 2 W plugged into the omen box (Arch laptop, `ssh austin@omen.local`). Blank
 - `firmware/main.py` blinks the onboard LED. First light.
 
 Workflow from the Mac: `scp` a file to omen, then `mpremote connect /dev/ttyACM0 cp file :file` and `mpremote reset`.
+
+## 2026-09-05 — WiFi console
+
+Going through omen's USB was a detour. The Pico 2 W has WiFi, so now it joins the house network on boot and listens for a console on TCP 2323. From the Mac:
+
+```
+./tools/pico ls
+./tools/pico exec 'print(1)'
+./tools/pico cp firmware/main.py :main.py
+```
+
+That is `mpremote connect socket://picowallet.local:2323 resume ...`. mDNS name `picowallet.local` works from the Mac. `firmware/secrets.py` (gitignored) holds the WiFi creds, template in `secrets.example.py`.
+
+No SSH: MicroPython has no SSH server. The console has no password either, anyone on the LAN can run code on it. Fine for dev, not for the shipped firmware. LED: fast blink while joining WiFi, solid with a short blink every 2 s once up.
+
+Gotcha: mpremote soft-resets the board before the first command, which reruns main.py and kills the socket. Always pass `resume` (the wrapper does).
