@@ -1,12 +1,10 @@
-# picowallet firmware. Step 0: WiFi console + heartbeat LED.
-import time
-from machine import Pin
-import net
-
-wlan = net.start()
-led = Pin("LED", Pin.OUT)
-while True:
-    if wlan.isconnected():
-        led.off(); time.sleep_ms(80); led.on(); time.sleep(2)
-    else:
-        led.toggle(); time.sleep(1)
+# picowallet firmware. boot.py already brought WiFi + console up.
+# Start the UI on a timer and return, so the REPL idles and the WiFi console works.
+import sys
+try:
+    import ui
+    ui.start()
+except Exception as e:
+    with open("error.log", "w") as f:
+        sys.print_exception(e, f)
+    sys.print_exception(e)
