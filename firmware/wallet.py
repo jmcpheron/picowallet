@@ -348,6 +348,11 @@ def approve(yes):
         _log("rejected " + req["id"])
         say("rejected", 3)
         state = "home"; dirty = True
+        draw()
+        try:
+            requests.post(APP + "/api/requests/%s/reject" % req["id"], json={"by": NAME}, timeout=8).close()
+        except Exception as e:
+            _log("reject post failed: %r" % e)
         return
     state, msg, dirty = "working", "signing on " + sig.name, True
     draw()

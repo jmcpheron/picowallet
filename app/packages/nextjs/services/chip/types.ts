@@ -1,4 +1,4 @@
-export type RequestStatus = "pending" | "signed" | "relaying" | "confirmed" | "failed" | "expired";
+export type RequestStatus = "pending" | "signed" | "relaying" | "confirmed" | "failed" | "expired" | "rejected";
 
 export type TransferRequest = {
   id: string;

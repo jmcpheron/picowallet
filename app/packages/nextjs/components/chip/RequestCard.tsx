@@ -30,6 +30,7 @@ const BADGE: Record<TransferRequest["status"], string> = {
   confirmed: "badge-success",
   failed: "badge-error",
   expired: "badge-ghost",
+  rejected: "badge-error",
 };
 
 const LABEL: Record<TransferRequest["status"], string> = {
@@ -39,12 +40,13 @@ const LABEL: Record<TransferRequest["status"], string> = {
   confirmed: "confirmed",
   failed: "failed",
   expired: "expired",
+  rejected: "rejected on the wallet",
 };
 
 export const RequestCard = ({ r, now }: { r: TransferRequest; now: number }) => {
   const { targetNetwork } = useTargetNetwork();
   const idx = stepIndex(r);
-  const dead = r.status === "failed" || r.status === "expired";
+  const dead = r.status === "failed" || r.status === "expired" || r.status === "rejected";
   const txLink = r.txHash ? getBlockExplorerTxLink(targetNetwork.id, r.txHash) : undefined;
   const signMs = r.signedAt ? r.signedAt - r.createdAt : undefined;
   const totalMs = r.status === "confirmed" ? r.updatedAt - r.createdAt : undefined;
