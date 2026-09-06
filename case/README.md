@@ -89,3 +89,19 @@ Numbers we need from calipers, with the stack assembled:
 4. Centers (x, y in mm): joystick + 4 buttons, measured from the PCB corner at the USB end
    (or a straight-down photo with a ruler in it).
 5. The v0 case lid thickness at the button slot, once printed.
+
+## Measurements (2026-09-05, v0 case on the bench)
+
+From the v0 lid STL (the author's cutouts fit the board, photo in the build log), so these are
+positions we can trust. Case outer 57 x 31 x 26 mm, lid plate 2.0 mm thick. Board center = case
+center. x runs along the long side, + toward the buttons, 0 at the board center; y across, 0 on
+the centerline.
+
+| feature | in the lid | relative to board center |
+|---|---|---|
+| screen window | 30 x 27 mm | center x +2.0 |
+| button slot | 4.5 x 21 mm | column at x +22.25, buttons at y ≈ -7.75, -2.6, +2.6, +7.75 (pitch ≈ 5.17) |
+| joystick hole | 10 x 10 mm diamond (7.1 mm square rotated 45°) | center x -19.5 |
+
+Calipers (Austin): 30.94 = case base width; 4.55 = tact switch body (4.5 mm square); 5.15 and
+4.18 and 2.04 = see BUTTONS.md, being confirmed.
