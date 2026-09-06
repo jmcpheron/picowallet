@@ -66,14 +66,28 @@ def cap(clear=CLEAR, plunger_below=PLUNGER_BELOW_LID_GUESS, switch_top_below=SWI
     return part.translate((0, 0, -low))
 
 
+def keycap(pocket_d=1.95, proud=1.5, plunger_below=0.25, skirt=0.6):
+    """For the v0 lid, where the plungers sit flush with the lid face and the switch bodies are
+    inside the slot: no room for a flange, so the cap press-fits onto the 2.04 mm plunger and the
+    slot walls guide it. A dot of glue if the fit is loose. Print pocket-side down."""
+    across = SLOT_W - 2 * CLEAR
+    h = proud + plunger_below + skirt
+    part = cq.Workplane("XY").box(across, CAP_ALONG, h, centered=(True, True, False))
+    part = part.edges(">Z").fillet(TOP_R)
+    part = part.cut(cq.Workplane("XY").circle(pocket_d / 2).extrude(plunger_below + skirt + 0.2 - 0.0).translate((0, 0, -0.01)))
+    return part
+
+
 def joystick_dome(stem_w=STEM_W_GUESS, stem_above=STEM_ABOVE_LID_GUESS, hole_d=9.0):
     """Dome that press-fits the stem. Flange under a round hole so it can tilt. Print in TPU or PLA."""
     dome_d = 9.5
     h = stem_above + 2.5
     dome = cq.Workplane("XY").circle(dome_d / 2).extrude(h).faces(">Z").edges().fillet(2.0)
-    flange = cq.Workplane("XY").circle(hole_d / 2 + 1.2).extrude(0.8).translate((0, 0, -0.8))
-    part = dome.union(flange)
-    socket = cq.Workplane("XY").rect(stem_w + 0.08, stem_w + 0.08).extrude(stem_above + 1.2).translate((0, 0, -0.8))
+    part = dome
+    if hole_d:
+        flange = cq.Workplane("XY").circle(hole_d / 2 + 1.2).extrude(0.8).translate((0, 0, -0.8))
+        part = dome.union(flange)
+    socket = cq.Workplane("XY").rect(stem_w + 0.08, stem_w + 0.08).extrude(stem_above + 1.2).translate((0, 0, -0.81))
     return part.cut(socket)
 
 
@@ -86,11 +100,19 @@ def export(shape, name):
 if __name__ == "__main__":
     # caps in two clearances, four of each on one plate, flange down (top face up: print it upside
     # down? no: flange is wider than the body, so print flange DOWN, top up; bridge-free)
+    # v0 lid: press-fit keycaps, two pocket sizes (PLA holes print small; try both)
+    for pocket in (1.95, 2.05):
+        parts = None
+        for i in range(4):
+            c = keycap(pocket_d=pocket).translate((i * 8.0, 0, 0))
+            parts = c if parts is None else parts.union(c)
+        export(parts, f"keycaps_x4_pocket{pocket:.2f}")
+    # v1 lid (raised): floating caps with a flange. Needs SWITCH_TOP_BELOW_LID measured on the v1 lid.
     cap(verbose=True)
     for clear in (0.15, 0.25):
         parts = None
         for i in range(4):
             c = cap(clear=clear).translate((i * 8.0, 0, 0))
             parts = c if parts is None else parts.union(c)
-        export(parts, f"caps_x4_clear{clear:.2f}")
-    export(joystick_dome(), "joystick_dome")
+        export(parts, f"v1_floating_caps_x4_clear{clear:.2f}")
+    export(joystick_dome(hole_d=0), "joystick_dome")
