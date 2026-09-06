@@ -82,3 +82,23 @@ A = sign B = reject", Austin pressed A, the ATECC608 signed in 150 ms, the app's
 Bug of the day: two soft Timers plus a blocking HTTP call fill the rp2 scheduler queue (8 deep) and
 the WiFi console's accept callback gets dropped, which shows up as "connection reset by peer" forever.
 One 50 ms timer now, and it stops itself during sign + relay.
+
+## 2026-09-05 — first mainnet transfer from the wallet
+
+5 USDS to atg.eth, signed on the ATECC608 wedged into the Pico, relayed by the app on port 3001.
+Tx [`0x0fbd390b…`](https://etherscan.io/tx/0x0fbd390b3e82bc4566f9ef9c66c178e58904debaf728ec9d941b4090610c6257),
+81,715 gas. Vault 124.56 → 119.56 USDS, nonce 6 → 7. Screen: green SIGN bar, press A, "SENT",
+then the home screen flashed "-$5.00".
+
+Bumps on the way, all fixed:
+- Two copies of the site were running (yesterday's on :3000, the fork on :3001). A Send on :3000
+  never reaches the wallet. Use :3001.
+- The app had no reject path, so a Y press left the request pending and reserved its amount; the
+  next proposal failed the balance check. Added `POST /api/requests/[id]/reject`.
+- Mainnet latency wedged the WiFi console (scheduler queue). Timer now pauses around HTTP, the
+  console drains accepts from the tick, the app caches chain reads for 5 s.
+- Two signed attempts failed on "insufficient funds" while the relay held 0.000008 ETH. It needs
+  about 0.000012 ETH per send at tonight's gas. Funded with 0.001 ETH.
+
+Home screen now: balance big, small QR of the vault, chain label, pairing dot, warning line.
+Confirm screen: green SIGN bar in line with A, red REJECT bar in line with Y, details on down.
