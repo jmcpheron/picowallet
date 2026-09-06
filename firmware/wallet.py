@@ -8,6 +8,7 @@
 import time, json, machine, network, gc
 import requests
 import lcd as L
+import net
 import eip712
 import signer as S
 import secrets
@@ -90,25 +91,46 @@ def draw_home():
     d.fill(L.BLACK)
     acct = info.get("account", {}).get("address", "")
     bal = info.get("account", {}).get("balanceFormatted")
+    chain = info.get("chain", {})
+    # top-left: which chain. Test money and real money must never look alike.
+    if chain:
+        d.text("mainnet" if chain.get("id") == 1 else (chain.get("name", "?").lower()[:8]), 4, 4, L.GREEN if chain.get("id") == 1 else L.YELLOW)
+    # top-right: pairing dot
+    d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
+    # balance, big
     if bal is None:
-        d.center_text("connecting...", 8, L.GREY, 2)
+        d.center_text("connecting...", 30, L.GREY, 2)
     else:
         whole, _, frac = bal.partition(".")
-        s = "$" + whole + "." + (frac + "00")[:2]
-        d.center_text(s, 4, L.WHITE, 3 if len(s) <= 9 else 2)
+        sbal = "$" + whole + "." + (frac + "00")[:2]
+        d.center_text(sbal, 24, L.WHITE, 4 if len(sbal) <= 7 else 3)
+        d.center_text(info.get("token", {}).get("symbol", ""), 62, L.GREY)
+    # QR of the vault, small
     if _qr and acct and _qr[0].lower() == acct.lower():
-        box = draw_qr(34, 6)   # 29 modules * 6 + 16 = 190 px
-        d.center_text(acct[:21], 34 + box + 4, L.GREY)
-        d.center_text(acct[21:], 34 + box + 14, L.GREY)
+        box = draw_qr(80, 4)   # 29 * 4 + 16 = 132 px
+        d.center_text(acct[:21], 80 + box + 4, L.GREY)
+        d.center_text(acct[21:], 80 + box + 14, L.GREY)
     else:
-        d.center_text(short(acct) if acct else "", 120, L.GREY)
-        d.center_text("run tools/qr", 140, L.RED)
+        d.center_text(short(acct) if acct else "", 130, L.GREY)
+        d.center_text("run tools/qr", 150, L.RED)
+    # status bar: a flash message beats a warning beats nothing
+    warn = None
+    try:
+        if float(info.get("relayer", {}).get("balanceFormatted", "1")) < 0.0005:
+            warn = "relay gas low"
+    except ValueError:
+        pass
+    age = time.ticks_diff(time.ticks_ms(), last_fetch) // 1000 if last_fetch else 0
+    if age > 45:
+        warn = "no app for %ds" % age
+    if not paired:
+        warn = "not paired" if qx else "no key"
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
         d.fill_rect(0, 224, 240, 16, L.DARK)
         d.center_text(msg[:30], 228, L.YELLOW)
-    elif not paired:
+    elif warn:
         d.fill_rect(0, 224, 240, 16, L.DARK)
-        d.center_text("not paired" if qx else "no key", 228, L.RED)
+        d.center_text(warn, 228, L.RED)
     d.show()
 
 
@@ -180,8 +202,13 @@ def tick(t):
     _busy = True
     try:
         _n += 1
+        net.poll_accept()
         if _n % 20 == 0:
-            net_work()
+            timer.deinit()      # no timer events pile up while HTTP blocks (mainnet: 0.5-3 s)
+            try:
+                net_work()
+            finally:
+                start_timer()
         for k in keys.pressed():
             if state == "confirm":
                 if k == "A":
@@ -194,7 +221,7 @@ def tick(t):
                     page = 0; dirty = True
             elif state in ("done", "error") and k == "A":
                 state = "home"; dirty = True
-        if state == "home" and time.ticks_diff(msg_until, time.ticks_ms()) > 0:
+        if state == "home" and (time.ticks_diff(msg_until, time.ticks_ms()) > 0 or _n % 100 == 0):
             dirty = True  # keep the status line fresh
         if dirty:
             draw()

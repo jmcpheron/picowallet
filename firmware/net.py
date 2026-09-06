@@ -30,10 +30,20 @@ def connect(timeout_s=20):
 
 
 def _accept(ls):
-    conn, addr = ls.accept()
+    try:
+        conn, addr = ls.accept()
+    except OSError:
+        return  # nothing pending (non-blocking listen socket)
     print("console from", addr)
     conn.setblocking(False)
     os.dupterm(conn, 0)
+
+
+def poll_accept():
+    """Call from a timer tick. The socket-accept callback needs a free scheduler slot, which a busy
+    timer can starve; polling here means a connection can never get stuck in the backlog."""
+    if _listen:
+        _accept(_listen)
 
 
 def console(port=PORT):
@@ -41,7 +51,8 @@ def console(port=PORT):
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(socket.getaddrinfo("0.0.0.0", port)[0][-1])
-    s.listen(1)
+    s.listen(2)
+    s.setblocking(False)
     s.setsockopt(socket.SOL_SOCKET, 20, _accept)  # 20 = register accept callback
     _listen = s
     print("console listening on", port)
