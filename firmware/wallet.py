@@ -1,11 +1,10 @@
 # picowallet: the loop. Talks to the app, shows what is being asked, signs only on a button press.
 #
-# Two timers, both scheduled (soft) callbacks so main.py can return to the REPL and the WiFi
-# console keeps working:
-#   ui tick   30 ms   keys + redraw
-#   net tick  1 s     announce / poll commands / poll requests / post signatures
-# While a request is on screen waiting for A or B, the net tick does nothing, so no button press
-# gets lost inside a blocking HTTP call.
+# One 50 ms Timer (a scheduled, soft callback) so main.py can return to the REPL and the WiFi
+# console keeps working. Every tick polls keys and redraws; every 20th tick talks to the app.
+# Why one timer: the rp2 scheduler queue holds 8 callbacks. A second fast timer fills it while an
+# HTTP call blocks, and then the console's socket-accept callback gets dropped for good.
+# Signing + relaying can take seconds, so approve() stops the timer and restarts it after.
 import time, json, machine, network, gc
 import requests
 import lcd as L
@@ -26,7 +25,7 @@ info = {}           # last /api/state
 msg = ""            # status line / result text
 msg_until = 0
 seen = set()        # request ids already handled
-last_announce = 0
+last_announce = 0        # 0 = never; the first tick announces right away
 paired = False
 qx = qy = ""
 dirty = True
@@ -133,12 +132,18 @@ def draw():
 
 
 # ----------------------------------------------------------------------------- ui tick
-def ui_tick(t):
-    global dirty, page, state, _busy
+_n = 0
+
+
+def tick(t):
+    global dirty, page, state, _busy, _n
     if _busy:
         return
     _busy = True
     try:
+        _n += 1
+        if _n % 20 == 0:
+            net_work()
         for k in keys.pressed():
             if state == "confirm":
                 if k == "A":
@@ -173,7 +178,7 @@ def announce():
         x, y = sig.pubkey()
         qx, qy = hex32(x), hex32(y)
     body = {"name": NAME, "backend": sig.name, "chip": sig.status(), "qx": qx, "qy": qy}
-    r = requests.post(APP + "/api/device", json=body, timeout=10)
+    r = requests.post(APP + "/api/device", json=body, timeout=5)
     try:
         paired = bool(r.json().get("paired"))
     finally:
@@ -183,7 +188,7 @@ def announce():
 
 def fetch_state():
     global info, dirty
-    r = requests.get(APP + "/api/state", timeout=10)
+    r = requests.get(APP + "/api/state", timeout=5)
     try:
         info = r.json()
     finally:
@@ -192,7 +197,7 @@ def fetch_state():
 
 
 def run_commands():
-    r = requests.get(APP + "/api/commands?status=pending", timeout=10)
+    r = requests.get(APP + "/api/commands?status=pending", timeout=5)
     try:
         cmds = r.json().get("commands", [])
     finally:
@@ -212,9 +217,9 @@ def run_commands():
                 raise Exception("lock-config is not done from the wallet")
             else:
                 raise Exception("unknown command " + ctype)
-            requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": True, "result": res}, timeout=10).close()
+            requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": True, "result": res}, timeout=5).close()
         except Exception as e:
-            requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": False, "error": str(e)}, timeout=10).close()
+            requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": False, "error": str(e)}, timeout=5).close()
         announce()
 
 
@@ -226,7 +231,7 @@ def check_digest(r):
 
 def poll_requests():
     global req, state, page, dirty
-    r = requests.get(APP + "/api/requests?status=pending", timeout=10)
+    r = requests.get(APP + "/api/requests?status=pending", timeout=5)
     try:
         pending = r.json().get("requests", [])
     finally:
@@ -253,6 +258,7 @@ def approve(yes):
         return
     state, msg, dirty = "working", "signing on " + sig.name, True
     draw()
+    timer.deinit()  # long blocking work ahead; keep the scheduler queue empty
     try:
         digest = bytes.fromhex(req["digest"][2:])
         t0 = time.ticks_ms()
@@ -275,44 +281,50 @@ def approve(yes):
         msg, state = "sign/post failed: %r" % e, "error"
     _log(msg)
     dirty = True
+    start_timer()
 
 
-def net_tick(t):
-    global state, _busy, dirty
-    if _busy or state in ("confirm", "working"):
+def net_work():
+    global state, dirty, last_announce
+    if state in ("confirm", "working"):
         return
-    _busy = True
     try:
         if not network.WLAN(network.STA_IF).isconnected():
             return
-        if time.ticks_diff(time.ticks_ms(), last_announce) > 30000:
+        every = 30000 if paired else 5000
+        if last_announce == 0 or time.ticks_diff(time.ticks_ms(), last_announce) > every:
             announce()
+            _log("announced, paired=%s" % paired)
             fetch_state()
+            _log("state fetched, bal=%s" % info.get("account", {}).get("balanceFormatted"))
             if state == "boot":
                 state = "home"; dirty = True
         run_commands()
         if paired:
             poll_requests()
-        elif time.ticks_diff(time.ticks_ms(), last_announce) > 5000:
-            announce()
     except Exception as e:
         _log("net: %r" % e)
         say("net: %r" % e, 5)
-    finally:
-        _busy = False
-        gc.collect()
+    gc.collect()
 
 
 # ----------------------------------------------------------------------------- entry
+timer = None
+
+
+def start_timer():
+    global timer
+    timer = machine.Timer(period=50, mode=machine.Timer.PERIODIC, callback=tick)
+
+
 def start():
-    global d, keys, sig, ui_timer, net_timer, dirty
+    global d, keys, sig, dirty
     d = L.LCD()
     keys = L.Keys()
     draw()
     sig = S.load()
     dirty = True
-    ui_timer = machine.Timer(period=30, mode=machine.Timer.PERIODIC, callback=ui_tick)
-    net_timer = machine.Timer(period=1000, mode=machine.Timer.PERIODIC, callback=net_tick)
+    start_timer()
 
 
 def decide(yes=True):
@@ -322,4 +334,4 @@ def decide(yes=True):
 
 
 def stop():
-    ui_timer.deinit(); net_timer.deinit()
+    timer.deinit()

@@ -53,3 +53,20 @@ Lesson, cost an hour: on the rp2 port the network console (`os.dupterm` on a soc
 `tools/push` copies all of `firmware/` and reboots via a one-shot Timer (so mpremote returns before the socket drops). macOS has no `timeout` command, that bit me too.
 
 USB rescue path: the Pico's USB goes to the omen laptop. Device path there is `/dev/serial/by-id/usb-MicroPython_Board_in_FS_mode_*-if00` (the ttyACM number changes on each reboot).
+
+## 2026-09-05 — the chip is on the wallet, no solder
+
+The Adafruit ATECC608 from the Pi (serial `01235e6763cc8d97ee`, the key that owns the mainnet vault)
+moved onto the Pico with zero solder: a STEMMA QT cable into the breakout, the four wires pushed into
+the LCD board's female header beside the Pico pins (GP4 SDA blue, GP5 SCL yellow, 3V3 red, GND black),
+breakout tucked in the gap. `i2c.scan()` finds `0x60`, the chip signs in 151 ms.
+
+Firmware now: `atecc.py` driver, `signer.py` (chip if present, else software key), `wallet.py` loop
+(announce, poll, show, sign on A), and the digest is rebuilt on the device from the displayed fields
+before anything is shown. The home screen shows the vault's dollar balance and pairing state.
+Local test stack: fork of the ATECC608-demo app on port 3001 against anvil.
+
+![home screen: $1000.00 USDS paired](images/2026-09-05-06-home-screen-1000-usds.jpg)
+![home screen, atecc608 in the corner](images/2026-09-05-07-home-screen-paired.jpg)
+![four wires wedged into the LCD header](images/2026-09-05-08-atecc-wedged-wires.jpg)
+![ATECC608 breakout in the gap](images/2026-09-05-09-atecc-in-the-gap.jpg)
