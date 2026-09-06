@@ -186,3 +186,9 @@ job). Case v0 by [Tomáš Plass](https://www.printables.com/model/1322102-wavesh
 CC BY-NC. Cap and joystick geometry learned from the
 [SeedSigner](https://github.com/SeedSigner/seedsigner) enclosures, MIT. App scaffold by
 [Scaffold-ETH 2](https://scaffoldeth.io).
+
+## License
+
+MIT for everything here except where noted: the v0 case STL is Tomáš Plass's, CC BY-NC 4.0;
+the SeedSigner parts in `reference/seedsigner/` are MIT with their own copyright; `app/` carries
+Scaffold-ETH 2's MIT license.
