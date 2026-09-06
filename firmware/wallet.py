@@ -26,6 +26,8 @@ msg = ""            # status line / result text
 msg_until = 0
 seen = set()        # request ids already handled
 last_announce = 0        # 0 = never; the first tick announces right away
+last_fetch = 0
+STATE_EVERY_MS = 12000   # about one block; the balance shows up fast after a deposit
 paired = False
 qx = qy = ""
 dirty = True
@@ -52,25 +54,61 @@ def short(a):
     return a[:6] + ".." + a[-4:] if len(a) > 14 else a
 
 
+_qr = None          # (address, n, rows) from qr.bin, built by tools/qr
+_last_bal = None
+
+
+def load_qr():
+    global _qr
+    try:
+        b = open("qr.bin", "rb").read()
+        addr, n = b[:42].decode(), b[42]
+        w = (n + 7) // 8
+        rows = [int.from_bytes(b[43 + i * w:43 + (i + 1) * w], "little") for i in range(n)]
+        _qr = (addr, n, rows)
+    except Exception as e:
+        _qr = None
+        _log("no qr.bin: %r" % e)
+
+
+def draw_qr(y0, size):
+    """QR of the vault address, centered, black on white. size = px per module."""
+    addr, n, rows = _qr
+    pad = 8
+    box = n * size + 2 * pad
+    x0 = (240 - box) // 2
+    d.fill_rect(x0, y0, box, box, L.WHITE)
+    for r in range(n):
+        bits = rows[r]
+        for c in range(n):
+            if bits >> c & 1:
+                d.fill_rect(x0 + pad + c * size, y0 + pad + r * size, size, size, L.BLACK)
+    return box
+
+
 def draw_home():
     d.fill(L.BLACK)
-    d.fill_rect(0, 0, 240, 26, L.DARK)
-    d.text(NAME, 6, 9, L.YELLOW)
-    d.text(sig.name if sig else "", 240 - 8 * len(sig.name if sig else "") - 6, 9, L.GREY)
+    acct = info.get("account", {}).get("address", "")
     bal = info.get("account", {}).get("balanceFormatted")
     if bal is None:
-        d.center_text("connecting...", 100, L.GREY)
+        d.center_text("connecting...", 8, L.GREY, 2)
     else:
         whole, _, frac = bal.partition(".")
         s = "$" + whole + "." + (frac + "00")[:2]
-        d.center_text(s, 84, L.WHITE, 4 if len(s) <= 7 else 3)
-        d.center_text(info.get("token", {}).get("symbol", ""), 128, L.GREY)
-        acct = info.get("account", {}).get("address", "")
-        d.center_text(short(acct), 150, L.GREY)
-    st = "paired" if paired else ("not paired" if qx else "no key")
-    d.center_text(st, 180, L.GREEN if paired else L.RED)
+        d.center_text(s, 4, L.WHITE, 3 if len(s) <= 9 else 2)
+    if _qr and acct and _qr[0].lower() == acct.lower():
+        box = draw_qr(34, 6)   # 29 modules * 6 + 16 = 190 px
+        d.center_text(acct[:21], 34 + box + 4, L.GREY)
+        d.center_text(acct[21:], 34 + box + 14, L.GREY)
+    else:
+        d.center_text(short(acct) if acct else "", 120, L.GREY)
+        d.center_text("run tools/qr", 140, L.RED)
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
-        d.center_text(msg[:30], 214, L.YELLOW)
+        d.fill_rect(0, 224, 240, 16, L.DARK)
+        d.center_text(msg[:30], 228, L.YELLOW)
+    elif not paired:
+        d.fill_rect(0, 224, 240, 16, L.DARK)
+        d.center_text("not paired" if qx else "no key", 228, L.RED)
     d.show()
 
 
@@ -187,12 +225,23 @@ def announce():
 
 
 def fetch_state():
-    global info, dirty
-    r = requests.get(APP + "/api/state", timeout=5)
+    global info, dirty, _last_bal
+    r = requests.get(APP + "/api/state", timeout=8)
     try:
         info = r.json()
     finally:
         r.close()
+    global last_fetch
+    last_fetch = time.ticks_ms()
+    bal = info.get("account", {}).get("balanceFormatted")
+    if bal is not None and _last_bal is not None and bal != _last_bal:
+        try:
+            delta = float(bal) - float(_last_bal)
+            say(("+$%.2f" if delta >= 0 else "-$%.2f") % abs(delta), 8)
+        except ValueError:
+            pass
+    if bal is not None:
+        _last_bal = bal
     dirty = True
 
 
@@ -285,18 +334,19 @@ def approve(yes):
 
 
 def net_work():
-    global state, dirty, last_announce
+    global state, dirty, last_announce, last_fetch
     if state in ("confirm", "working"):
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
             return
+        now = time.ticks_ms()
         every = 30000 if paired else 5000
-        if last_announce == 0 or time.ticks_diff(time.ticks_ms(), last_announce) > every:
+        if last_announce == 0 or time.ticks_diff(now, last_announce) > every:
             announce()
             _log("announced, paired=%s" % paired)
+        if last_fetch == 0 or time.ticks_diff(now, last_fetch) > STATE_EVERY_MS:
             fetch_state()
-            _log("state fetched, bal=%s" % info.get("account", {}).get("balanceFormatted"))
             if state == "boot":
                 state = "home"; dirty = True
         run_commands()
@@ -321,6 +371,7 @@ def start():
     global d, keys, sig, dirty
     d = L.LCD()
     keys = L.Keys()
+    load_qr()
     draw()
     sig = S.load()
     dirty = True

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Build a QR bitmap of the vault address the app is serving, and push it to the Pico.
+# Usage: ./tools/qr [app-url]   (default http://localhost:3001)
+cd "$(dirname "$0")/.." || exit 1
+APP=${1:-http://localhost:3001}
+ADDR=$(curl -s -m 60 "$APP/api/state" | python3 -c 'import sys,json; print(json.load(sys.stdin)["account"]["address"])') || exit 1
+"$HOME/.local/bin/uv" run --python 3.11 --with qrcode --with pycryptodome python - "$ADDR" <<'PY'
+import sys, qrcode
+from Crypto.Hash import keccak
+addr = sys.argv[1][2:].lower()
+h = keccak.new(digest_bits=256, data=addr.encode()).hexdigest()
+checksummed = "0x" + "".join(c.upper() if int(h[i], 16) >= 8 else c for i, c in enumerate(addr))
+q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=0)
+q.add_data(checksummed)
+q.make(fit=True)
+m = q.get_matrix()
+n = len(m)
+out = bytearray(checksummed.encode() + bytes([n]))
+for row in m:
+    bits = 0
+    for i, v in enumerate(row):
+        if v:
+            bits |= 1 << i
+    out += bits.to_bytes((n + 7) // 8, "little")
+open("firmware/qr.bin", "wb").write(out)
+print("qr for", checksummed, "modules", n, "bytes", len(out))
+PY
+./tools/pico cp firmware/qr.bin :qr.bin
