@@ -31,3 +31,5 @@ Board facts for that: Pico-LCD-1.3 is 52.0 x 26.5 mm, display 23.4 x 23.4 mm act
 wiki: https://www.waveshare.com/wiki/Pico-LCD-1.3. A CAD model of the board exists on GrabCAD:
 https://grabcad.com/library/waveshare-1-3-inch-lcd-for-pico-65k-240x240-1. Button and joystick
 centers still need measuring with calipers.
+
+Print inbox drop 2026-09-05: `20260905-193939-waveshare-13-pico-lcd-case-tomas-plass` (PLA, black, 0.20 mm).
