@@ -70,3 +70,15 @@ Local test stack: fork of the ATECC608-demo app on port 3001 against anvil.
 ![home screen, atecc608 in the corner](images/2026-09-05-07-home-screen-paired.jpg)
 ![four wires wedged into the LCD header](images/2026-09-05-08-atecc-wedged-wires.jpg)
 ![ATECC608 breakout in the gap](images/2026-09-05-09-atecc-in-the-gap.jpg)
+
+## 2026-09-05 — first signed transfer from the wallet
+
+Whole loop, end to end, on the local chain: `POST /api/requests` for 5 USDS to atg.eth, the wallet
+rebuilt the EIP-712 digest from the fields and it matched, showed "SIGN? $5 USDS to atg.eth,
+A = sign B = reject", Austin pressed A, the ATECC608 signed in 150 ms, the app's relay called
+`executeTransfer`, confirmed in tx `0xc7c6f72a…`. Vault 1000 → 995 USDS, nonce 0 → 1. Screen:
+"SENT $5 to atg.eth". Same chip, same key that owns the mainnet vault.
+
+Bug of the day: two soft Timers plus a blocking HTTP call fill the rp2 scheduler queue (8 deep) and
+the WiFi console's accept callback gets dropped, which shows up as "connection reset by peer" forever.
+One 50 ms timer now, and it stops itself during sign + relay.
