@@ -32,25 +32,38 @@ REST_GAP = 0.3         # flange top to lid underside at rest, = click travel bef
 TOP_R = 0.6            # edge round on the cap top
 
 
-def cap(clear=CLEAR, plunger_below=PLUNGER_BELOW_LID_GUESS, switch_top_below=SWITCH_TOP_BELOW_LID_GUESS):
+def cap(clear=CLEAR, plunger_below=PLUNGER_BELOW_LID_GUESS, switch_top_below=SWITCH_TOP_BELOW_LID_GUESS, verbose=False):
+    """Vertical frame: z = 0 at the lid OUTER face, up is +. Lid underside at -LID_T, plunger top at
+    -plunger_below, switch body top at -switch_top_below. Returned part is shifted so its lowest
+    point is z = 0 (print flange down)."""
     across = SLOT_W - 2 * clear
-    body_h = LID_T + CAP_PROUD                       # part that lives in the slot + stands proud
-    # space under the lid before the switch body: that is all the flange can have
-    flange_t = max(0.6, switch_top_below - LID_T - REST_GAP)
-    total_h = CAP_PROUD + plunger_below + 0.4        # 0.4 mm of pocket depth over the plunger top
-    body = cq.Workplane("XY").box(across, CAP_ALONG, body_h, centered=(True, True, False)).translate((0, 0, total_h - body_h))
+    top_z = CAP_PROUD
+    flange_top = -LID_T - REST_GAP
+    flange_bot = max(-switch_top_below + 0.1, flange_top - 1.0)     # never touch the switch body
+    flange_t = flange_top - flange_bot
+    assert flange_t >= 0.4, "no room for a flange under the lid: measure again or thin the lid"
+    body = cq.Workplane("XY").box(across, CAP_ALONG, top_z - flange_top, centered=(True, True, False)).translate((0, 0, flange_top))
     body = body.edges(">Z").fillet(TOP_R)
-    flange = cq.Workplane("XY").box(across + 2 * FLANGE_OUT, CAP_ALONG, flange_t, centered=(True, True, False)).translate((0, 0, total_h - body_h - flange_t))
+    flange = cq.Workplane("XY").box(across + 2 * FLANGE_OUT, CAP_ALONG, flange_t, centered=(True, True, False)).translate((0, 0, flange_bot))
     part = body.union(flange)
-    # fill down to z=0 under the flange so the pocket has walls, then cut the pocket
-    stub_h = total_h - body_h - flange_t
-    if stub_h > 0.05:
-        part = part.union(cq.Workplane("XY").box(across, CAP_ALONG, stub_h + 0.01, centered=(True, True, False)))
-    pocket_d = PLUNGER_D + 0.25
-    pocket_depth = plunger_below + 0.4 - (LID_T - REST_GAP) + 0.0  # reaches to just under the lid plate line
-    pocket_depth = max(0.5, min(pocket_depth, total_h - 1.0))
-    part = part.cut(cq.Workplane("XY").circle(pocket_d / 2).extrude(pocket_depth))
-    return part
+    plunger_top = -plunger_below
+    if plunger_top > flange_bot + 0.2:
+        # plunger reaches up into the cap: pocket from the bottom up to the plunger top
+        pocket_d = PLUNGER_D + 0.25
+        depth = plunger_top - flange_bot
+        part = part.cut(cq.Workplane("XY").circle(pocket_d / 2).extrude(depth + 0.01).translate((0, 0, flange_bot - 0.01)))
+        mode = "pocket %.2f deep" % depth
+        low = flange_bot
+    else:
+        # cap bottom is above the plunger: a post reaches down to it
+        post_h = flange_bot - plunger_top
+        part = part.union(cq.Workplane("XY").circle((PLUNGER_D + 0.6) / 2).extrude(post_h + 0.01).translate((0, 0, plunger_top)))
+        mode = "post %.2f long" % post_h
+        low = plunger_top
+    if verbose:
+        print("cap: across %.2f along %.2f, proud %.2f, flange %.2f thick at %.2f..%.2f below lid face, %s, total %.2f" % (
+            across, CAP_ALONG, CAP_PROUD, flange_t, -flange_top, -flange_bot, mode, top_z - low))
+    return part.translate((0, 0, -low))
 
 
 def joystick_dome(stem_w=STEM_W_GUESS, stem_above=STEM_ABOVE_LID_GUESS, hole_d=9.0):
@@ -73,8 +86,8 @@ def export(shape, name):
 if __name__ == "__main__":
     # caps in two clearances, four of each on one plate, flange down (top face up: print it upside
     # down? no: flange is wider than the body, so print flange DOWN, top up; bridge-free)
+    cap(verbose=True)
     for clear in (0.15, 0.25):
-        plate = cq.Workplane("XY")
         parts = None
         for i in range(4):
             c = cap(clear=clear).translate((i * 8.0, 0, 0))
