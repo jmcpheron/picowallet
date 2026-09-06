@@ -134,22 +134,40 @@ def draw_home():
     d.show()
 
 
+def tri_right(x, y, h, c):
+    """Solid triangle pointing right, tip at (x+h//2, y), height h."""
+    for i in range(h // 2):
+        d.vline(x + i, y - (h // 2 - i), h - 2 * i, c)
+
+
+def bar(y, h, label, color, scale):
+    """Full-width bar with a label and an arrow at the right edge pointing at the physical button."""
+    d.fill_rect(0, y, 240, h, color)
+    d.center_text(label, y + (h - 8 * scale) // 2, L.WHITE, scale)
+    tri_right(222, y + h // 2, 16, L.WHITE)
+
+
+# The A/B/X/Y column sits along the right edge of the screen: A near the top, Y at the bottom.
+# SIGN lives in a green bar in line with A, REJECT in a red bar in line with Y.
+SIGN_BAR = (0, 60)
+REJECT_BAR = (190, 50)
+
+
 def draw_confirm():
     d.fill(L.BLACK)
-    d.fill_rect(0, 0, 240, 26, L.RED)
-    d.center_text("SIGN?", 5, L.WHITE, 2)
     if page == 0:
+        bar(SIGN_BAR[0], SIGN_BAR[1], "SIGN", L.GREEN, 3)
         amt = "$" + req["amountFormatted"]
-        d.center_text(amt, 44, L.WHITE, 4 if len(amt) <= 7 else 3)
-        d.center_text(req["tokenSymbol"], 84, L.GREY)
-        d.center_text("to", 108, L.GREY)
+        d.center_text(amt, 68, L.WHITE, 4 if len(amt) <= 7 else 3)
+        d.center_text(req["tokenSymbol"], 104, L.GREY)
+        d.center_text("to", 122, L.GREY)
         name = req.get("toName") or short(req["to"])
-        d.center_text(name[:14], 128, L.YELLOW, 2)
-        d.center_text(short(req["to"]), 152, L.GREY)
-        d.center_text("A = sign   B = reject", 190, L.WHITE)
-        d.center_text("down: details", 210, L.GREY)
+        d.center_text(name[:14], 138, L.YELLOW, 2)
+        d.center_text(short(req["to"]), 162, L.GREY)
+        bar(REJECT_BAR[0], REJECT_BAR[1], "REJECT", L.RED, 3)
     else:
-        y = 34
+        bar(0, 22, "SIGN", L.GREEN, 1)
+        y = 28
         for line in (
             "to " + req["to"][:22], "   " + req["to"][22:],
             "amount " + req["amount"],
@@ -159,10 +177,9 @@ def draw_confirm():
             "digest (checked on device)",
             req["digest"][2:34], req["digest"][34:],
         ):
-            d.text(line[:30], 4, y, L.WHITE if not line.startswith("digest") else L.GREEN)
+            d.text(line[:30], 4, y, L.GREEN if line.startswith("digest") else L.WHITE)
             y += 14
-        d.center_text("A = sign   B = reject", 190, L.WHITE)
-        d.center_text("up: summary", 210, L.GREY)
+        bar(218, 22, "REJECT", L.RED, 1)
     d.show()
 
 
@@ -213,7 +230,7 @@ def tick(t):
             if state == "confirm":
                 if k == "A":
                     approve(True)
-                elif k == "B":
+                elif k == "Y":
                     approve(False)
                 elif k == "down":
                     page = 1; dirty = True
