@@ -18,7 +18,7 @@ PLUNGER_D = 2.04       # round plunger diameter (Austin's 2.04 reading, to confi
 
 # --- to confirm with the depth rod ------------------------------------------------------------
 PLUNGER_BELOW_LID_GUESS = 0.6   # lid outer face down to plunger top
-SWITCH_TOP_BELOW_LID_GUESS = 1.4  # lid outer face down to the switch body top (flange lives here)
+SWITCH_TOP_BELOW_LID_GUESS = 3.0  # lid outer face down to the switch body top (flange lives here). If this is under 2.7 there is no room for a flange and the caps become press-fit keycaps instead.
 STEM_W_GUESS = 2.0              # joystick stem across flats (square)
 STEM_ABOVE_LID_GUESS = 1.5      # stem top above the lid outer face
 
