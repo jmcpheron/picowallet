@@ -70,3 +70,17 @@ time.sleep_ms(2); print([hex(a) for a in i2c.scan()])'
 
 Expect `['0x60']`. Nothing means a wire is off or SDA/SCL are swapped. Swap-safe: swapping SDA/SCL
 does not hurt anything, just fix it.
+
+## Ways that avoid the Pico's solder blobs
+
+1. **No solder, tonight:** push a 30 AWG solid wire into the LCD board's female header socket beside
+   the Pico pin (GP4, GP5, 3V3, GND). The spring contact grips both. Bench-grade.
+2. **No solder:** micro test hook clips on the pin stubs in the gap between Pico and LCD board.
+3. **Easiest solder, nothing to unplug:** the female header's through-hole joints on the screen side
+   of the LCD board. GP4, GP5, 3V3, GND are unused by the LCD, so those joints are free. Unplug power,
+   keep the iron away from the screen flex cable.
+4. **No solder, needs a part:** Pimoroni Pico Omnibus or Decker. Pico in one slot, LCD board in
+   another via a male-to-male header strip, jumpers to the ATECC from a free slot.
+
+Find the right header joint with a multimeter on continuity from the Pico's labeled pin on its
+outer face. The four pins are within the first eight positions from the USB end.
