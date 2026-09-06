@@ -1,39 +1,136 @@
 # picowallet
 
-A cheap, off-the-shelf hardware wallet. Three Amazon parts, four soldered wires, a battery, a printed case. Started 2026-09-05.
+A hardware wallet for stablecoins that you can build from three Amazon parts in an evening, with no
+soldering. It shows your balance in dollars, and when a website asks it to send money it puts the
+amount and the recipient on its screen and waits for you to press the green button.
 
-The secure element (ATECC608) holds the key and signs. The Pico runs the screen and buttons. On chain, a smart account with a P-256 verifier accepts the ATECC's signatures.
+![picowallet in its first printed case](buildlog/images/2026-09-05-11-v0-case-assembled.jpg)
 
-## Parts
-| part | ASIN | ~price |
+On 2026-09-05 it sent 5 USDS to atg.eth on Ethereum mainnet, signed by the secure element inside it:
+[`0x0fbd390b…`](https://etherscan.io/tx/0x0fbd390b3e82bc4566f9ef9c66c178e58904debaf728ec9d941b4090610c6257).
+
+## How it works
+
+```
+website ──"send $5 to atg.eth"──▶ app (queue + relay)
+                                     │  poll
+                                     ▼
+                              picowallet (WiFi)
+                              rebuilds the EIP-712 digest from the fields it shows you
+                              screen: SIGN? $5 USDS to atg.eth      A = sign   Y = reject
+                              ATECC608 signs the digest (P-256), key never leaves the chip
+                                     │  (r, s)
+                                     ▼
+                         relay pays gas ──▶ ChipAccount.executeTransfer ──▶ USDS.transfer
+```
+
+- The private key lives in an **ATECC608** secure element. It never existed anywhere else.
+- On chain, a small vault contract (`ChipAccount`) holds the stablecoin and accepts P-256
+  signatures from that key. Verification uses the RIP-7212 precompile where the chain has it.
+- The device **rebuilds the digest itself** from the fields on screen. If the website's digest
+  does not match what is displayed, the device refuses. The screen cannot be lied to.
+- A relay account pays gas. It cannot spend anything; it can only refuse.
+
+## The three parts
+
+| part | what it does | ~price |
 |---|---|---|
-| Raspberry Pi Pico 2 W, pre-soldered header (Freenove) | B0DRJXPPWL | $12 |
-| Waveshare Pico-LCD-1.3 (240×240 ST7789, joystick, A/B/X/Y) | B092VVCBQP | $15 |
-| ATECC608 breakout (2-pack) | B0G58G6FFR | $8 for 2 |
-| LiPo 502030 (5×20×30 mm, ~250 mAh) or 401230 | TBD | $5 |
-| LiPo charger (see PLAN.md) | TBD | $5 |
+| Raspberry Pi Pico 2 W with pre-soldered header | runs the screen, buttons, WiFi | $12 |
+| Waveshare Pico-LCD-1.3 (240×240 IPS, joystick, A/B/X/Y) | the face of the wallet | $15 |
+| ATECC608 breakout with a STEMMA QT / Qwiic connector (Adafruit 4314 or similar) | holds the key, signs | $6 |
 
-## Layout
+Plus a STEMMA QT cable with bare or female Dupont ends, a micro-USB cable, and a printed case.
+
+## Put it together, no solder
+
+![the stack: Pico, ATECC in the gap, LCD board on top](buildlog/images/2026-09-05-06-atecc-stack-wired.jpg)
+
+1. Plug the Pico into the LCD board's female header, component side toward the LCD.
+2. Plug the STEMMA QT cable into the ATECC breakout.
+3. Push the cable's four wires into the LCD board's header socket **beside** the Pico pins. The
+   spring contact grips both. Counting from the USB end: red into 3V3 (pin 36), black into GND
+   (pin 38), blue into GP4 (pin 6), yellow into GP5 (pin 7). Tug lightly, then tape flat.
+4. Tuck the breakout into the gap between the boards.
+
+![ATECC608 breakout jammed in the gap](buildlog/images/2026-09-05-07-atecc-in-the-gap.jpg)
+
+`SOLDERING.md` has the pinout diagram and the soldered version if you want it permanent.
+
+## Firmware
+
+MicroPython on the Pico. Copy `firmware/secrets.example.py` to `firmware/secrets.py`, fill in WiFi
+and the app URL, then:
+
+```sh
+uv tool install mpremote                  # or pip install mpremote
+./tools/push                              # copies firmware/*.py and reboots the board
 ```
-[ Pico-LCD-1.3 : screen, joystick, A/B/X/Y ]   <- female header
-[ gap ~11 mm : ATECC608 breakout + LiPo    ]
-[ Pico 2 W, component side up, USB out end ]   <- male header
+
+The first flash needs USB: hold BOOTSEL, plug in, drag the MicroPython `.uf2` onto the `RP2350`
+drive, then push over USB once. After that the board is on WiFi and `./tools/pico` reaches it
+at `picowallet.local` for everything (`./tools/pico ls`, `./tools/pico exec 'print(1)'`).
+
+What is in `firmware/`:
+
+| file | what |
+|---|---|
+| `wallet.py` | the loop: announce to the app, poll, show, sign on A, reject on Y |
+| `atecc.py` | ATECC608 over I2C: wake, serial, public key, sign a 32-byte digest |
+| `signer.py` | uses the chip if it answers, else a software P-256 key (dev only) |
+| `eip712.py`, `keccak.py`, `p256.py` | pure Python; the device checks the digest and can verify signatures itself |
+| `lcd.py` | ST7789 driver, keys, joystick |
+| `net.py`, `boot.py` | WiFi and a TCP console on port 2323 so the board can be developed over the air |
+
+Two things learned the hard way, both in `buildlog/BUILDLOG.md`: main.py must return to the REPL
+(the console is only read when the board idles), and nothing in a timer callback may block for
+long (the scheduler queue is 8 deep). The wallet runs off one 50 ms timer and pauses it around
+network calls.
+
+## The app
+
+`app/` is a Scaffold-ETH 2 project, forked from
+[ATECC608-demo](https://github.com/clawdbotatg/ATECC608-demo): the `ChipAccount` vault contract,
+a Next.js site with the queue and the relay as route handlers, and a Setup page to pair a chip.
+
+```sh
+cd app && yarn install
+yarn chain        # anvil
+yarn deploy       # ChipAccount + MockUSDS, 1000 USDS in the vault
+yarn workspace @se-2/nextjs dev -p 3001
 ```
 
-## Wiring
-Pico pin | goes to
----|---
-3V3 (OUT) | ATECC VCC
-GND | ATECC GND
-GP4 (I2C0 SDA) | ATECC SDA
-GP5 (I2C0 SCL) | ATECC SCL
+Point the wallet's `APP_URL` at `http://<your-lan-ip>:3001`. It announces its key; press
+**Pair** on `/setup`; the screen shows the vault balance and a green dot. Type a recipient and an
+amount on the Send page, and the wallet turns green. For mainnet, `app/packages/nextjs/.env.example`
+lists the four variables (network, relay keystore, its password file, USDS address).
 
-Solder to the header solder blobs on the Pico's component side (they face the gap). Everything else on the Pico is taken by the LCD board.
+## The screens
 
-Pico-LCD-1.3 uses: DC GP8, CS GP9, SCK GP10, MOSI GP11, RST GP12, BL GP13, keys A GP15 / B GP17 / X GP19 / Y GP21, joystick up GP2 / down GP18 / left GP16 / right GP20 / press GP3. (Verify against waveshare.com/wiki/Pico-LCD-1.3.) Free: GP0/1, GP4/5, GP6/7, GP14, GP22, GP26–28.
+| home | sign |
+|---|---|
+| balance in dollars, a QR of the vault to deposit into, chain label top-left, pairing dot top-right, warnings along the bottom (relay gas low, unpaired, app unreachable). Refreshes every 12 s and flashes the delta when money moves. | green SIGN bar in line with the A button, red REJECT bar in line with Y, amount, recipient name and address between them. Joystick down shows nonce, deadline, chain, vault and the digest. |
 
-## Docs
-- `PLAN.md` — the build plan
-- `buildlog/BUILDLOG.md` — photos and what happened, dated
-- `case/` — STLs and the generator
-- `firmware/` — MicroPython for the Pico
+## Case
+
+`case/` has a printable v0 (Tomáš Plass's Waveshare Pico 1.3 LCD case, CC BY-NC) and
+`case/gen.py`, a CadQuery generator for press-fit keycaps and a joystick dome. The v1 case with
+floating caps and a battery pocket is designed there too; see `case/BUTTONS.md`.
+
+## What is where
+
+| path | what |
+|---|---|
+| `firmware/` | MicroPython for the Pico |
+| `app/` | contracts, site, relay |
+| `case/` | STLs and the generator |
+| `tools/` | `pico` (talk to the board), `push` (deploy firmware), `qr` (QR of the vault for the screen) |
+| `buildlog/` | dated notes and photos, what actually happened |
+| `reference/` | the Pi signer from the demo this grew out of, and SeedSigner cap parts (MIT) |
+| `PLAN.md`, `SOLDERING.md` | the plan, and the wiring guide |
+
+## Trust model, short
+
+The chip key is the only thing that can spend the vault. The relay only pays gas. The app has no
+auth: anyone who can reach it can queue a request, which is why the wallet shows every request
+and signs nothing without a button press. The contract's admin can re-pair a new key; for real
+money hand that to a multisig or burn it. Audit notes for the contract are in the demo's README.

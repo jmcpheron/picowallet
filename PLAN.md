@@ -1,5 +1,7 @@
 # Plan
 
+Status 2026-09-05: steps 1, 2, 3 done (mainnet transfer signed on the wallet). 5 in progress (v0 case printed, keycaps in the printer). 4 and 6 next.
+
 Goal: a working wallet you can hold, that signs a real transaction, built from Amazon parts by someone who can solder 8 joints.
 
 ## 1. Prove the ATECC on the Pico

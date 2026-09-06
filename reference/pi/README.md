@@ -13,7 +13,7 @@ If you are a person or a bot with a fresh chip in your hand, read **"You just go
 Everything in it was done for real on 2026-09-04 with an ATECC608A on a Pi (serial
 `01235e6763cc8d97ee`); the outputs shown are what the real run printed.
 
-![Adafruit ATECC608 breakout on a Raspberry Pi 3 B+](../docs/pi-atecc608.jpg)
+![Adafruit ATECC608 breakout on a Raspberry Pi 3 B+](pi-atecc608.jpg)
 
 **The hardware in the photo:** Raspberry Pi 3 Model B+ · Adafruit ATECC608 STEMMA QT breakout
 (the black board, green power LED on) · a 4-wire STEMMA QT / JST-SH cable to the Pi's header for
