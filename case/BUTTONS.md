@@ -24,3 +24,18 @@ Numbers to bring back from the calipers:
 - PCB top to screen glass top
 - centers of joystick and 4 buttons from the PCB corner at the USB end
 - v0 lid thickness at the button slot
+
+## Finding (2026-09-05, v0 case): no room for a flange
+
+The lid's 4.5 mm slot is the switch body width: the switch bodies sit inside the lid plate and
+the plungers end up flush with the lid face (they clear it by ~0.25 mm). So nothing can hang
+under this lid. Two paths:
+
+- **v0 case, now:** press-fit keycaps. 4.2 x 4.42 x 2.35 mm, a 1.95 or 2.05 mm pocket over the
+  2.04 mm plunger, slot walls guide them, glue dot if loose. Print inbox drop
+  `20260905-210730-v0_keycaps_test_plate` (8 caps, both pocket sizes, plus a joystick dome).
+- **v1 case:** raise the lid 2 to 3 mm above the switch bodies and use the floating flanged caps
+  (`v1_floating_caps_*` from gen.py). Same for the joystick: a flange under a round hole so it can
+  tilt. That is the case we design ourselves anyway (battery, ATECC pocket).
+
+Still wanted: joystick stem width and height above the lid face (was 4.18 the stem height?).
