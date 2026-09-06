@@ -4,7 +4,7 @@ A hardware wallet for stablecoins that you can build from three Amazon parts in 
 soldering. It shows your balance in dollars, and when a website asks it to send money it puts the
 amount and the recipient on its screen and waits for you to press the green button.
 
-![picowallet in its first printed case](buildlog/images/2026-09-05-11-v0-case-assembled.jpg)
+![picowallet](buildlog/images/2026-09-05-18-hero-case-on-black.jpg)
 
 On 2026-09-05 it sent 5 USDS to atg.eth on Ethereum mainnet, signed by the secure element inside it:
 [`0x0fbd390b…`](https://etherscan.io/tx/0x0fbd390b3e82bc4566f9ef9c66c178e58904debaf728ec9d941b4090610c6257).
@@ -43,7 +43,7 @@ Plus a STEMMA QT cable with bare or female Dupont ends, a micro-USB cable, and a
 
 ## Put it together, no solder
 
-![the stack: Pico, ATECC in the gap, LCD board on top](buildlog/images/2026-09-05-06-atecc-stack-wired.jpg)
+![the stack: Pico on the LCD board, ATECC breakout in the gap](buildlog/images/2026-09-05-22-stack-with-atecc.jpg)
 
 1. Plug the Pico into the LCD board's female header, component side toward the LCD.
 2. Plug the STEMMA QT cable into the ATECC breakout.
@@ -52,7 +52,7 @@ Plus a STEMMA QT cable with bare or female Dupont ends, a micro-USB cable, and a
    (pin 38), blue into GP4 (pin 6), yellow into GP5 (pin 7). Tug lightly, then tape flat.
 4. Tuck the breakout into the gap between the boards.
 
-![ATECC608 breakout jammed in the gap](buildlog/images/2026-09-05-07-atecc-in-the-gap.jpg)
+![ATECC608 breakout jammed in the gap](buildlog/images/2026-09-05-21-atecc-jammed-in-the-gap.jpg)
 
 `SOLDERING.md` has the pinout diagram and the soldered version if you want it permanent.
 
@@ -105,6 +105,8 @@ amount on the Send page, and the wallet turns green. For mainnet, `app/packages/
 lists the four variables (network, relay keystore, its password file, USDS address).
 
 ## The screens
+
+![SIGN? $69 USDS to atg.eth, green bar at A, red bar at Y](buildlog/images/2026-09-05-20-sign-screen-69-usds.jpg)
 
 | home | sign |
 |---|---|

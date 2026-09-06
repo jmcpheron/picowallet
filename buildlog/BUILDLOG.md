@@ -100,3 +100,7 @@ Bumps on the way, all fixed:
 
 Home screen now: balance big, small QR of the vault, chain label, pairing dot, warning line.
 Confirm screen: green SIGN bar in line with A, red REJECT bar in line with Y, details on down.
+
+![the wallet in its case](images/2026-09-05-18-hero-case-on-black.jpg)
+![case, portrait](images/2026-09-05-19-case-portrait.jpg)
+![SIGN? $69 to atg.eth in front of the site](images/2026-09-05-20-sign-screen-69-usds.jpg)
