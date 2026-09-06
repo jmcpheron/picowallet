@@ -5,7 +5,6 @@
 Three parts, all from Amazon. Pico plugs face-down into the LCD board's female header. The ATECC608 breakout fits in the ~11 mm gap between them.
 
 ![stack end-on, ATECC wedged inside](images/2026-09-05-01-stack-end-atecc-inside.jpg)
-![stack end-on 2](images/2026-09-05-02-stack-end-2.jpg)
 ![stack side](images/2026-09-05-03-stack-side.jpg)
 ![Pico-LCD-1.3 top: joystick, screen, A/B/X/Y](images/2026-09-05-04-pico-lcd-1.3-top.jpg)
 ![Pico 2 W](images/2026-09-05-05-pico-2-w.jpg)
@@ -66,10 +65,10 @@ Firmware now: `atecc.py` driver, `signer.py` (chip if present, else software key
 before anything is shown. The home screen shows the vault's dollar balance and pairing state.
 Local test stack: fork of the ATECC608-demo app on port 3001 against anvil.
 
-![home screen: $1000.00 USDS paired](images/2026-09-05-06-home-screen-1000-usds.jpg)
-![home screen, atecc608 in the corner](images/2026-09-05-07-home-screen-paired.jpg)
-![four wires wedged into the LCD header](images/2026-09-05-08-atecc-wedged-wires.jpg)
-![ATECC608 breakout in the gap](images/2026-09-05-09-atecc-in-the-gap.jpg)
+![the stack with the four wires and the ATECC breakout](images/2026-09-05-06-atecc-stack-wired.jpg)
+![ATECC608 breakout in the gap](images/2026-09-05-07-atecc-in-the-gap.jpg)
+![home screen: $1000.00 USDS paired](images/2026-09-05-08-home-screen-1000-usds.jpg)
+![home screen, atecc608 in the corner](images/2026-09-05-09-home-screen-paired.jpg)
 
 ## 2026-09-05 — first signed transfer from the wallet
 
