@@ -43,7 +43,7 @@ website ──"send $5 to atg.eth"──▶ app (queue + relay, runs on your lap
 | Raspberry Pi Pico 2 W, **pre-soldered header** | $12 | Amazon `B0DRJXPPWL` (Freenove) or any Pico 2 W with headers |
 | Waveshare Pico-LCD-1.3 (240×240 IPS, joystick, A/B/X/Y) | $15 | Amazon `B092VVCBQP` |
 | Adafruit ATECC608 breakout, STEMMA QT | $6 | Adafruit 4314 |
-| STEMMA QT / JST-SH 4-pin cable with bare wire ends | $1 | Adafruit 4209 (or cut any STEMMA QT cable in half) |
+| STEMMA QT / JST-SH 4-pin cable, any ends | $1 | Adafruit 4209 ($0.95, snip the pins off and strip) or 4210 cut in half. Amazon kits work too, you only need one cable |
 | micro-USB cable, data not charge-only | | |
 
 About $35. No soldering iron.
