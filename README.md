@@ -55,6 +55,8 @@ no supports. Snaps together, micro-USB slot on the end, screen window, the four 
 joystick poke through. Keycaps and a joystick dome are in `case/out/` (PLA, 0.12 mm layers).
 `case/gen.py` regenerates them if your parts differ.
 
+![both halves on the printer](buildlog/images/2026-09-05-24-case-on-the-printer.jpg)
+
 ## 3. Put it together
 
 ![the stack: Pico on the LCD board, ATECC breakout in the gap](buildlog/images/2026-09-05-22-stack-with-atecc.jpg)
@@ -147,6 +149,8 @@ gas low, unpaired, app unreachable). Refreshes every 12 s and flashes the delta 
 **Sign:** green SIGN bar in line with the A button, red REJECT bar in line with Y. Amount,
 recipient name and address between them. Joystick down shows nonce, deadline, chain, vault and the
 digest the device computed.
+
+![details page: full address, amount in base units, nonce, deadline, vault, digest](buildlog/images/2026-09-05-23-details-screen.jpg)
 
 ## Change it
 
