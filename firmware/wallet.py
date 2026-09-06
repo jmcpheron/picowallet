@@ -307,7 +307,7 @@ def run_commands():
                 global qx, qy
                 qx, qy = res["qx"], res["qy"]
             elif ctype == "lock-config":
-                raise Exception("lock-config is not done from the wallet")
+                res = sig.lock_config()
             else:
                 raise Exception("unknown command " + ctype)
             requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": True, "result": res}, timeout=5).close()

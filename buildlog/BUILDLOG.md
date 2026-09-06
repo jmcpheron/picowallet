@@ -104,3 +104,14 @@ Confirm screen: green SIGN bar in line with A, red REJECT bar in line with Y, de
 ![the wallet in its case](images/2026-09-05-18-hero-case-on-black.jpg)
 ![case, portrait](images/2026-09-05-19-case-portrait.jpg)
 ![SIGN? $69 to atg.eth in front of the site](images/2026-09-05-20-sign-screen-69-usds.jpg)
+
+## 2026-09-05 — provisioning from the wallet, and the repo goes public-ready
+
+`atecc.py` grew `write_config`, `lock_config` and `genkey_new`, so a fresh chip can be locked
+and given a key from the app's Setup page without a Pi. Both are gated by `ALLOW_LOCK` /
+`ALLOW_GENKEY` in `secrets.py` on the device, default off; with them off the wallet refuses the
+commands (checked on the real chip). The lock and new-key paths have NOT yet run on a fresh chip;
+the config bytes and command sequence are the ones the Pi signer used successfully on 2026-09-04.
+
+Photos: feet cropped or dropped, files renamed by content, five good shots added. README rewritten
+as the build guide: order, print, assemble, flash, set up the chip, run, change it.

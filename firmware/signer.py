@@ -31,6 +31,9 @@ class SoftSigner:
         self._pub = p256.pubkey(self.d)
         return self._pub
 
+    def lock_config(self):
+        return "software key: nothing to lock"
+
     def status(self):
         return {"configLocked": True, "dataLocked": False, "slot": 0, "hasKey": True, "note": "software key on the Pico (no chip yet)"}
 
@@ -55,7 +58,22 @@ class ChipSigner:
         return r, s
 
     def genkey(self):
-        raise Exception("refusing to replace the chip key from the app")
+        """Only when secrets.ALLOW_GENKEY is True: this REPLACES the chip's key. A vault paired to
+        the old key can never be spent again."""
+        import secrets
+        if not getattr(secrets, "ALLOW_GENKEY", False):
+            raise Exception("genkey refused: set ALLOW_GENKEY = True in secrets.py on the Pico first")
+        self._pub = self.chip.genkey_new()
+        return self._pub
+
+    def lock_config(self):
+        """Only when secrets.ALLOW_LOCK is True. Writes the reference config, then locks it. Permanent."""
+        import secrets
+        if not getattr(secrets, "ALLOW_LOCK", False):
+            raise Exception("lock refused: set ALLOW_LOCK = True in secrets.py on the Pico first")
+        self.chip.write_config()
+        self.chip.lock_config()
+        return "config zone locked"
 
     def status(self):
         return self.chip.status()

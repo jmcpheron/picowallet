@@ -90,15 +90,16 @@ The screen comes up, finds the chip on the bus, and shows "no key" until step 5.
 
 A fresh ATECC608 refuses to make a key until its config zone is locked, once, permanently. This
 is normal; every chip in use is locked. Locking puts no key in and does not stop you making new
-keys later.
+keys later. The wallet does it from the app's Setup page, but only after you opt in on the device,
+because both steps are irreversible:
 
-Today that step runs from the app's Setup page against a Raspberry Pi with the chip on I2C
-(`reference/pi/README.md` walks through it with real output). Doing it from the Pico itself is the
-next firmware task. After the lock, **Generate key** and **Pair key** on the same page, then the
-wallet shows a green dot.
+1. In `firmware/secrets.py` set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`, then `./tools/push`.
+2. Run the app (step 6), open `/setup`, press **Lock config zone**, then **Generate key**, then
+   **Pair key**. The wallet shows a green dot.
+3. Set both flags back to `False` and push again. Now nothing on the network can replace the key.
 
-If you got your chip from someone who already locked it (or you are moving a chip from the demo
-this grew out of), skip to Pair.
+Moving a chip that is already locked and paired (say, from the demo this grew out of)? Skip to
+Pair. `reference/pi/README.md` shows the same steps from a Raspberry Pi with real output.
 
 ## 6. Run the app
 
