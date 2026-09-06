@@ -10,8 +10,8 @@ It is deliberately narrow: one token (USDS), one vault contract, one key that li
 element and never leaves it. That is what makes it small enough to build, read, and change.
 Fork it, swap the token, redraw the screens, print a different case.
 
-On 2026-09-05 it sent 5 USDS to atg.eth on Ethereum mainnet:
-[`0x0fbd390b…`](https://etherscan.io/tx/0x0fbd390b3e82bc4566f9ef9c66c178e58904debaf728ec9d941b4090610c6257).
+On 2026-09-05 it sent 69 USDS to atg.eth on Ethereum mainnet:
+[`0x87638ae1…`](https://etherscan.io/tx/0x87638ae169eccb9f002d4eb6ce8b60e7d6603e4d3d4e562164ea10e9023f9313).
 
 ## How it works
 

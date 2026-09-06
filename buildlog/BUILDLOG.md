@@ -115,3 +115,5 @@ the config bytes and command sequence are the ones the Pi signer used successful
 
 Photos: feet cropped or dropped, files renamed by content, five good shots added. README rewritten
 as the build guide: order, print, assemble, flash, set up the chip, run, change it.
+
+Then 69 USDS to atg.eth, same way: [`0x87638ae1…`](https://etherscan.io/tx/0x87638ae169eccb9f002d4eb6ce8b60e7d6603e4d3d4e562164ea10e9023f9313). That is the one in the tweet.
