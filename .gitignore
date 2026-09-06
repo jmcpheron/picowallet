@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 firmware/secrets.py
 firmware/qr.bin
+photo-review.html
