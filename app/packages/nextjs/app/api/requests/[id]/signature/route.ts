@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isHex } from "viem";
-import { executeTransfer, isValidTransfer, normalizeLowS, onchainNonce } from "~~/services/chip/relay";
+import {
+  executeCall,
+  executeCancelRecovery,
+  executeSetName,
+  executeTransfer,
+  isValidCancelRecovery,
+  isValidExecute,
+  isValidSetName,
+  isValidTransfer,
+  normalizeLowS,
+  onchainNonce,
+} from "~~/services/chip/relay";
 import { findRequest, patchRequest, readStore, updateStore } from "~~/services/chip/store";
 import { getParsedError } from "~~/utils/scaffold-eth/getParsedError";
 
@@ -35,13 +46,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "deadline passed", status: "expired" }, { status: 410 });
   }
 
-  const amount = BigInt(request.amount);
   const deadline = BigInt(request.deadline);
 
   // Pre-check against the contract when this request is next in line (the view uses the live nonce).
   const liveNonce = await onchainNonce();
   if (liveNonce.toString() === request.nonce) {
-    const ok = await isValidTransfer(request.token, request.to, amount, deadline, r, s);
+    let ok: boolean;
+    if (request.kind === "setName") ok = await isValidSetName(request.name, deadline, r, s);
+    else if (request.kind === "cancelRecovery") ok = await isValidCancelRecovery(deadline, r, s);
+    else if (request.kind === "execute") {
+      ok = await isValidExecute(request.target, BigInt(request.value), request.data, deadline, r, s);
+    } else ok = await isValidTransfer(request.token, request.to, BigInt(request.amount), deadline, r, s);
     if (!ok) {
       patchRequest(id, {
         status: "failed",
@@ -56,7 +71,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     patchRequest(id, { status: "relaying" });
-    const { hash, receipt, relayer } = await executeTransfer(request.token, request.to, amount, deadline, r, s);
+    let result;
+    if (request.kind === "setName") result = await executeSetName(request.name, deadline, r, s);
+    else if (request.kind === "cancelRecovery") result = await executeCancelRecovery(deadline, r, s);
+    else if (request.kind === "execute") {
+      result = await executeCall(request.target, BigInt(request.value), request.data, deadline, r, s);
+    } else result = await executeTransfer(request.token, request.to, BigInt(request.amount), deadline, r, s);
+    const { hash, receipt, relayer } = result;
     const done = patchRequest(id, {
       status: receipt.status === "success" ? "confirmed" : "failed",
       txHash: hash as `0x${string}`,

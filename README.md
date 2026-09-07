@@ -6,12 +6,32 @@ amount and the recipient on its own screen and does nothing until you press the 
 
 ![picowallet](buildlog/images/2026-09-05-18-hero-case-on-black.jpg)
 
-It is deliberately narrow: one token (USDS), one vault contract, one key that lives in a secure
-element and never leaves it. That is what makes it small enough to build, read, and change.
-Fork it, swap the token, redraw the screens, print a different case.
+The main flow is deliberately narrow: one token (USDS), one vault contract, one key that lives in
+a secure element and never leaves it. An advanced hardware-signed call can recover other assets or
+interact with contracts. Fork it, swap the token, redraw the screens, print a different case.
 
 On 2026-09-05 it sent 69 USDS to atg.eth on Ethereum mainnet:
 [`0x87638ae1…`](https://etherscan.io/tx/0x87638ae169eccb9f002d4eb6ce8b60e7d6603e4d3d4e562164ea10e9023f9313).
+
+> **Security notice:** that historical deployment is legacy authorization v1 with a mutable signer.
+> Do not fund or copy it. Current source is authorization v5; read [`SECURITY.md`](SECURITY.md) before use.
+
+## Current contract
+
+Authorization v5 is deployed on Ethereum mainnet at
+[`0x4564fA634b073AcBcA814DCA5210835EC9376324`](https://etherscan.io/address/0x4564fA634b073AcBcA814DCA5210835EC9376324).
+
+- No admin, upgrade, or unsigned spending path.
+- Hardware-signed USDS transfers and arbitrary contract calls.
+- ETH and accidental-token recovery through signed calls.
+- Hardware-signed ENS reverse-name setup.
+- Fixed recovery wallet with a 14-day signer-change delay. Any valid current-chip action cancels it.
+
+**Audit:** [One Dollar Audit engagement 850](https://www.onedollaraudit.com/audit/850) reviewed this
+exact deployment on 2026-09-06. [Full report](https://bafkreiha7yyl727uubma4shj2f5z5mlnezuya7wqg7yzqkjaqr443k4eg4.ipfs.community.bgipfs.com/):
+3 high, 3 medium, 4 low, 3 informational. Its main warnings are known trade-offs: a compromised chip
+can keep cancelling recovery, approvals can outlive signer recovery, and the fixed recovery wallet
+is a single point of failure. This is a PoC, not an audit guarantee.
 
 ## How it works
 
@@ -30,11 +50,16 @@ website ──"send $5 to atg.eth"──▶ app (queue + relay, runs on your lap
 
 - The key is generated inside an **ATECC608** secure element and cannot be read out.
 - On chain, a small vault contract (`ChipAccount`) holds the stablecoin and moves it only with a
-  valid P-256 signature from that key, over a digest that includes recipient, amount, nonce,
-  deadline, chain and contract. Verification uses the RIP-7212 precompile where the chain has it.
-- The wallet **rebuilds the digest itself** from the fields on its screen. If the app's digest does
-  not match, it refuses. The screen cannot be lied to.
-- The relay just pays gas. It cannot spend anything.
+  valid P-256 signature from the current hardware key, over a digest that
+  includes recipient, amount, nonce, deadline, chain and contract. There is no admin or upgrade.
+  A fixed recovery wallet can rotate the signer only after an uninterrupted 14-day delay.
+- The wallet **rebuilds the digest itself** from the security-critical raw fields and refuses a
+  mismatch. Names, symbols, and formatted values are untrusted display hints; production forks must
+  pin the chain/vault/token and use authenticated transport as described in `SECURITY.md`.
+- The relay just pays gas. It has no contract privilege and cannot replace the signer.
+- Chip-signed general execution can recover accidental tokens/ETH and interact with contracts.
+  The signature covers the exact target, ETH value, calldata, nonce, deadline, chain, and wallet.
+  This is powerful: approve unknown calls only after decoding every field.
 
 ## 1. Order the parts
 
@@ -83,25 +108,24 @@ joystick poke through. Keycaps and a joystick dome are in `case/out/` (PLA, 0.12
    (step 6 gives you that, `http://<your-laptop-lan-ip>:3001`).
 5. First time, over USB: `mpremote cp firmware/*.py :` then `mpremote reset`.
 
-From then on the board is on WiFi and `./tools/push` deploys firmware over the air. `./tools/pico`
-is a console to it (`./tools/pico ls`, `./tools/pico exec 'print(1)'`).
+The passwordless WiFi console is disabled by default because it grants full control of the signer.
+For isolated development only, set `ENABLE_NETWORK_CONSOLE = True`; then `./tools/push` deploys
+firmware over the air and `./tools/pico` opens the console. Disable it before holding real value.
 
 The screen comes up, finds the chip on the bus, and shows "no key" until step 5.
 
 ## 5. Set up the chip (once)
 
 A fresh ATECC608 refuses to make a key until its config zone is locked, once, permanently. This
-is normal; every chip in use is locked. Locking puts no key in and does not stop you making new
-keys later. The wallet does it from the app's Setup page, but only after you opt in on the device,
-because both steps are irreversible:
+is normal; every chip in use is locked. Generate the final key before deploying the contract:
 
-1. In `firmware/secrets.py` set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`, then `./tools/push`.
-2. Run the app (step 6), open `/setup`, press **Lock config zone**, then **Generate key**, then
-   **Pair key**. The wallet shows a green dot.
-3. Set both flags back to `False` and push again. Now nothing on the network can replace the key.
+1. In `firmware/secrets.py` temporarily set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`.
+2. Over USB, lock the config zone and generate the key. Record the public `qx` and `qy` values.
+3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and flash again.
+4. Put `qx` and `qy` in `app/packages/foundry/.env`, set a fixed `RECOVERY_ADDRESS`, and deploy.
+   Losing the chip starts the documented 14-day recovery process.
 
-Moving a chip that is already locked and paired (say, from the demo this grew out of)? Skip to
-Pair. `reference/pi/README.md` shows the same steps from a Raspberry Pi with real output.
+`reference/pi/README.md` shows the equivalent provisioning flow from a Raspberry Pi with real output.
 
 ## 6. Run the app
 
@@ -111,18 +135,19 @@ route handlers. Locally, with play money:
 ```sh
 cd app && yarn install
 yarn chain                                  # anvil, a local chain
-yarn deploy                                 # ChipAccount + MockUSDS, 1000 USDS in the vault
+yarn deploy                                 # requires CHIP_PUBKEY_X/Y in packages/foundry/.env
 yarn workspace @se-2/nextjs dev -p 3001     # http://localhost:3001
 ```
 
-The wallet announces its key to the app. On `/setup` press **Pair**. The screen shows the
-vault balance and a QR of the vault address. Type a recipient and an amount on the Send page.
-The wallet turns green. Press A. Watch it settle.
+The wallet announces its key to the app. `/setup` verifies that it matches the current on-chain
+key. The screen shows the vault balance and a QR of the vault address. Type a recipient and an
+amount on the Send page. The wallet turns green. Press A. Watch it settle.
 
 Mainnet, with real money, in `app/packages/nextjs/.env.local`:
 
 ```
 NEXT_PUBLIC_TARGET_NETWORK=mainnet
+NEXT_PUBLIC_ALCHEMY_API_KEY=<a restricted project-specific key>
 RELAYER_KEYSTORE=<a foundry keystore name>          # an account with a little ETH for gas
 RELAYER_KEYSTORE_PASSWORD_FILE=/path/to/password.txt
 USDS_ADDRESS=0xdC035D45d973E3EC169d2276DDab16f1e407384F
@@ -131,12 +156,20 @@ USDS_ADDRESS=0xdC035D45d973E3EC169d2276DDab16f1e407384F
 Deploy your own vault with the chip's public key baked in (the Setup page shows it):
 
 ```sh
-# app/packages/foundry/.env: CHIP_PUBKEY_X=0x… CHIP_PUBKEY_Y=0x… USDS_ADDRESS=0x…
+# app/packages/foundry/.env: CHIP_PUBKEY_X/Y=0x… USDS_ADDRESS=0x… ENS_REVERSE_REGISTRAR=0x…
 cd app && yarn deploy --network mainnet --keystore <name>
 ```
 
 Send USDS to the vault address it prints. Scan the QR on the wallet to get that address into
 your phone wallet. Each transfer costs the relay about 82k gas.
+
+For ENS, first create a subname such as `hard.atg.eth` and make its ETH record point to the vault.
+Then use **Set the vault ENS name** in the app and approve the exact name on the device. This sets
+reverse/primary resolution only; it does not create the subname.
+
+Recovery uses the fixed `RECOVERY_ADDRESS` chosen at deployment. That wallet proposes a new P-256
+key, waits 14 days, then finalizes. Any successful current-chip action cancels the proposal; the app
+also has **Cancel on Pico**. Monitor `RecoveryStarted` events. See `SECURITY.md` before funding.
 
 ## The screens
 
@@ -154,14 +187,14 @@ digest the device computed.
 
 ## Change it
 
-- **Another token:** `USDS_ADDRESS` in the app env. The wallet reads the symbol and decimals from
-  the app. The contract is token-agnostic.
+- **Another token:** set `USDS_ADDRESS` before deploying. The token address is immutable, so changing
+  assets requires a new vault.
 - **Another chain:** `targetNetworks` in `app/packages/nextjs/scaffold.config.ts`. The wallet
   shows the chain id it is told and bakes it into the digest.
 - **The screens:** `firmware/wallet.py`, functions `draw_home` and `draw_confirm`. 240×240,
   framebuf, an 8×8 font scaled up. `./tools/push` and look.
 - **The case:** `case/gen.py`, CadQuery, every dimension is a named number at the top.
-- **The contract:** `app/packages/foundry/contracts/ChipAccount.sol`, 100 lines, 12 tests.
+- **The contract:** `app/packages/foundry/contracts/ChipAccount.sol`, with 34 tests.
 
 ## What is where
 
@@ -177,11 +210,12 @@ digest the device computed.
 
 ## Trust model, short
 
-The chip key is the only thing that can spend the vault. The relay only pays gas. The app has no
-auth, so anyone who can reach it on your network can queue a request; that is why the wallet shows
-every request and signs nothing without a button press. The contract's admin can re-pair a new
-key; for real money hand that to a multisig or burn it. An AI audit of the contract is summarized
-in the [demo it grew out of](https://github.com/clawdbotatg/ATECC608-demo).
+The current chip key is the only thing that can spend the vault. The delayed recovery wallet can
+replace that key but cannot spend directly. The relay only pays gas. The app
+has no auth, so anyone who can reach it can queue deceptive requests or cause denial of service;
+keep it on a trusted network for this PoC. The passwordless development console must stay disabled
+when holding value. Read [`SECURITY.md`](SECURITY.md) before funding a deployment or publishing the
+app to the internet.
 
 ## Credits
 

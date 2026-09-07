@@ -3,12 +3,12 @@
 import { ago, short, usd } from "./types";
 import { Address } from "@scaffold-ui/components";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
-import type { TransferRequest } from "~~/services/chip/types";
+import type { WalletRequest } from "~~/services/chip/types";
 import { getBlockExplorerTxLink } from "~~/utils/scaffold-eth";
 
 const STEPS = ["Requested", "Signed on chip", "Relayed", "Confirmed"] as const;
 
-function stepIndex(r: TransferRequest) {
+function stepIndex(r: WalletRequest) {
   switch (r.status) {
     case "pending":
       return 0;
@@ -23,7 +23,7 @@ function stepIndex(r: TransferRequest) {
   }
 }
 
-const BADGE: Record<TransferRequest["status"], string> = {
+const BADGE: Record<WalletRequest["status"], string> = {
   pending: "badge-warning",
   signed: "badge-info",
   relaying: "badge-info",
@@ -33,7 +33,7 @@ const BADGE: Record<TransferRequest["status"], string> = {
   rejected: "badge-error",
 };
 
-const LABEL: Record<TransferRequest["status"], string> = {
+const LABEL: Record<WalletRequest["status"], string> = {
   pending: "waiting for the chip",
   signed: "signed, relaying",
   relaying: "relaying…",
@@ -43,7 +43,7 @@ const LABEL: Record<TransferRequest["status"], string> = {
   rejected: "rejected on the wallet",
 };
 
-export const RequestCard = ({ r, now }: { r: TransferRequest; now: number }) => {
+export const RequestCard = ({ r, now }: { r: WalletRequest; now: number }) => {
   const { targetNetwork } = useTargetNetwork();
   const idx = stepIndex(r);
   const dead = r.status === "failed" || r.status === "expired" || r.status === "rejected";
@@ -55,11 +55,29 @@ export const RequestCard = ({ r, now }: { r: TransferRequest; now: number }) => 
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tabular-nums">{r.amountFormatted}</span>
-            <span className="font-semibold">{r.tokenSymbol}</span>
-            <span className="text-sm opacity-60">{usd(r.amountFormatted)}</span>
-          </div>
+          {r.kind === "setName" ? (
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm opacity-60">ENS name</span>
+              <span className="text-2xl font-bold">{r.name}</span>
+            </div>
+          ) : r.kind === "cancelRecovery" ? (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">Cancel recovery</span>
+              <span className="text-sm opacity-60">keep current hardware key</span>
+            </div>
+          ) : r.kind === "execute" ? (
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm opacity-60">Contract call</span>
+              <span className="text-xl font-bold font-mono">{r.selector}</span>
+              <span className="text-sm opacity-60">{r.valueFormatted} ETH</span>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold tabular-nums">{r.amountFormatted}</span>
+              <span className="font-semibold">{r.tokenSymbol}</span>
+              <span className="text-sm opacity-60">{usd(r.amountFormatted)}</span>
+            </div>
+          )}
           <span className={`badge ${BADGE[r.status]} gap-1`}>
             {(r.status === "pending" || r.status === "relaying" || r.status === "signed") && (
               <span className="loading loading-spinner loading-xs" />
@@ -68,11 +86,25 @@ export const RequestCard = ({ r, now }: { r: TransferRequest; now: number }) => 
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="opacity-60">to</span>
-          {r.toName && <span className="font-semibold">{r.toName}</span>}
-          <Address address={r.to} chain={targetNetwork} size="sm" />
-        </div>
+        {r.kind === "transfer" && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="opacity-60">to</span>
+            {r.toName && <span className="font-semibold">{r.toName}</span>}
+            <Address address={r.to} chain={targetNetwork} size="sm" />
+          </div>
+        )}
+        {r.kind === "execute" && (
+          <div className="grid gap-1 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="opacity-60">target</span>
+              <Address address={r.target} chain={targetNetwork} size="sm" />
+            </div>
+            <div className="font-mono text-xs break-all">
+              <span className="opacity-60">calldata </span>
+              {r.data}
+            </div>
+          </div>
+        )}
 
         <ul className="steps steps-horizontal text-xs w-full">
           {STEPS.map((label, i) => (

@@ -1,6 +1,5 @@
-# WiFi + network console for development.
-# After boot the Pico joins WiFi and listens on TCP port 2323. mpremote on the Mac
-# connects with `socket://picowallet.local:2323`. No password: LAN-only, dev-only.
+# WiFi plus an optional network console for isolated development.
+# The console is passwordless arbitrary code execution and must remain disabled when holding value.
 import network, socket, os, time
 from machine import Pin
 import secrets
@@ -60,6 +59,8 @@ def console(port=PORT):
 
 def start():
     wlan = connect()
-    if wlan.isconnected():
+    if wlan.isconnected() and getattr(secrets, "ENABLE_NETWORK_CONSOLE", False):
         console()
+    elif wlan.isconnected():
+        print("network console disabled")
     return wlan

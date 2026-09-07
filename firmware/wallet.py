@@ -55,6 +55,14 @@ def short(a):
     return a[:6] + ".." + a[-4:] if len(a) > 14 else a
 
 
+def eth_amount(wei):
+    n = int(wei)
+    whole, frac = n // 1000000000000000000, n % 1000000000000000000
+    if not frac:
+        return str(whole)
+    return "%d.%s" % (whole, ("%018d" % frac).rstrip("0")[:6])
+
+
 _qr = None          # (address, n, rows) from qr.bin, built by tools/qr
 _last_bal = None
 
@@ -89,8 +97,10 @@ def draw_qr(y0, size):
 
 def draw_home():
     d.fill(L.BLACK)
-    acct = info.get("account", {}).get("address", "")
-    bal = info.get("account", {}).get("balanceFormatted")
+    account = info.get("account", {})
+    acct = account.get("address", "")
+    ens_name = account.get("ensName")
+    bal = account.get("balanceFormatted")
     chain = info.get("chain", {})
     # top-left: which chain. Test money and real money must never look alike.
     if chain:
@@ -108,10 +118,13 @@ def draw_home():
     # QR of the vault, small
     if _qr and acct and _qr[0].lower() == acct.lower():
         box = draw_qr(80, 4)   # 29 * 4 + 16 = 132 px
-        d.center_text(acct[:21], 80 + box + 4, L.GREY)
-        d.center_text(acct[21:], 80 + box + 14, L.GREY)
+        if ens_name:
+            d.center_text(ens_name[:20], 80 + box + 4, L.YELLOW, 2 if len(ens_name) <= 18 else 1)
+        else:
+            d.center_text(acct[:21], 80 + box + 4, L.GREY)
+            d.center_text(acct[21:], 80 + box + 14, L.GREY)
     else:
-        d.center_text(short(acct) if acct else "", 130, L.GREY)
+        d.center_text(ens_name or (short(acct) if acct else ""), 130, L.YELLOW if ens_name else L.GREY)
         d.center_text("run tools/qr", 150, L.RED)
     # status bar: a flash message beats a warning beats nothing
     warn = None
@@ -157,26 +170,80 @@ def draw_confirm():
     d.fill(L.BLACK)
     if page == 0:
         bar(SIGN_BAR[0], SIGN_BAR[1], "SIGN", L.GREEN, 3)
-        amt = "$" + req["amountFormatted"]
-        d.center_text(amt, 68, L.WHITE, 4 if len(amt) <= 7 else 3)
-        d.center_text(req["tokenSymbol"], 104, L.GREY)
-        d.center_text("to", 122, L.GREY)
-        name = req.get("toName") or short(req["to"])
-        d.center_text(name[:14], 138, L.YELLOW, 2)
-        d.center_text(short(req["to"]), 162, L.GREY)
+        if req.get("kind") == "setName":
+            d.center_text("SET ENS NAME", 76, L.WHITE, 2)
+            d.center_text(req["name"][:18], 112, L.YELLOW, 2)
+            d.center_text("for " + short(req["account"]), 146, L.GREY)
+        elif req.get("kind") == "cancelRecovery":
+            d.center_text("CANCEL RECOVERY", 76, L.YELLOW, 2)
+            d.center_text("KEEP CURRENT KEY", 116, L.WHITE, 2)
+            d.center_text(short(req["account"]), 150, L.GREY)
+        elif req.get("kind") == "execute":
+            selector = req["data"][:10] if len(req["data"]) >= 10 else "0x00000000"
+            title = "TOKEN TRANSFER" if selector == "0xa9059cbb" else ("TOKEN APPROVAL" if selector == "0x095ea7b3" else "GENERAL CALL")
+            d.center_text(title, 72, L.YELLOW, 2)
+            d.center_text(short(req["target"]), 108, L.WHITE, 2)
+            d.center_text(eth_amount(req["value"]) + " ETH", 138, L.GREY, 2)
+            d.center_text(selector, 166, L.GREY)
+        else:
+            amt = "$" + req["amountFormatted"]
+            d.center_text(amt, 68, L.WHITE, 4 if len(amt) <= 7 else 3)
+            d.center_text(req["tokenSymbol"], 104, L.GREY)
+            d.center_text("to", 122, L.GREY)
+            name = req.get("toName") or short(req["to"])
+            d.center_text(name[:14], 138, L.YELLOW, 2)
+            d.center_text(short(req["to"]), 162, L.GREY)
         bar(REJECT_BAR[0], REJECT_BAR[1], "REJECT", L.RED, 3)
     else:
         bar(0, 22, "SIGN", L.GREEN, 1)
         y = 28
-        for line in (
-            "to " + req["to"][:22], "   " + req["to"][22:],
-            "amount " + req["amount"],
-            "nonce %s  chain %s" % (req["nonce"], req["chainId"]),
-            "deadline " + str(req["deadline"]),
-            "vault " + short(req["account"]),
-            "digest (checked on device)",
-            req["digest"][2:34], req["digest"][34:],
-        ):
+        if req.get("kind") == "setName":
+            lines = (
+                "name " + req["name"],
+                "nonce %s  chain %s" % (req["nonce"], req["chainId"]),
+                "deadline " + str(req["deadline"]),
+                "vault " + short(req["account"]),
+                "digest (checked on device)",
+                req["digest"][2:34], req["digest"][34:],
+            )
+        elif req.get("kind") == "cancelRecovery":
+            lines = (
+                "CANCEL RECOVERY",
+                "keep current hardware key",
+                "nonce %s  chain %s" % (req["nonce"], req["chainId"]),
+                "deadline " + str(req["deadline"]),
+                "vault " + short(req["account"]),
+                "digest (checked on device)",
+                req["digest"][2:34], req["digest"][34:],
+            )
+        elif req.get("kind") == "execute":
+            raw = bytes.fromhex(req["data"][2:])
+            data_hash = "".join("%02x" % b for b in eip712.data_hash(raw))
+            selector = req["data"][:10] if len(req["data"]) >= 10 else "0x00000000"
+            lines = (
+                "target " + req["target"][:20], "       " + req["target"][20:],
+                "value " + req["value"] + " wei",
+                "selector " + selector,
+                "calldata %d bytes" % len(raw),
+                "data hash (device)", data_hash[:32], data_hash[32:],
+                "nonce %s  chain %s" % (req["nonce"], req["chainId"]),
+                "deadline " + str(req["deadline"]),
+                "vault " + short(req["account"]),
+                "digest (checked on device)",
+                req["digest"][2:34], req["digest"][34:],
+            )
+        else:
+            lines = (
+                "to " + req["to"][:22], "   " + req["to"][22:],
+                "amount " + req["amount"],
+                "nonce %s  chain %s" % (req["nonce"], req["chainId"]),
+                "deadline " + str(req["deadline"]),
+                "vault " + short(req["account"]),
+                "token " + req["token"][:22], "      " + req["token"][22:],
+                "digest (checked on device)",
+                req["digest"][2:34], req["digest"][34:],
+            )
+        for line in lines:
             d.text(line[:30], 4, y, L.GREEN if line.startswith("digest") else L.WHITE)
             y += 14
         bar(218, 22, "REJECT", L.RED, 1)
@@ -318,7 +385,23 @@ def run_commands():
 
 def check_digest(r):
     """Rebuild the EIP-712 digest from the fields the screen shows. Refuse if it differs."""
-    mine = eip712.transfer_digest(int(r["chainId"]), r["account"], r["token"], r["to"], int(r["amount"]), int(r["nonce"]), int(r["deadline"]))
+    expected_chain = getattr(secrets, "EXPECTED_CHAIN_ID", None)
+    expected_vault = getattr(secrets, "EXPECTED_VAULT", None)
+    expected_token = getattr(secrets, "EXPECTED_TOKEN", None)
+    if expected_chain is not None and int(r["chainId"]) != int(expected_chain):
+        return False
+    if expected_vault and r["account"].lower() != expected_vault.lower():
+        return False
+    if r.get("kind") == "transfer" and expected_token and r["token"].lower() != expected_token.lower():
+        return False
+    if r.get("kind") == "setName":
+        mine = eip712.set_name_digest(int(r["chainId"]), r["account"], r["name"], int(r["nonce"]), int(r["deadline"]))
+    elif r.get("kind") == "cancelRecovery":
+        mine = eip712.cancel_recovery_digest(int(r["chainId"]), r["account"], int(r["nonce"]), int(r["deadline"]))
+    elif r.get("kind") == "execute":
+        mine = eip712.execute_digest(int(r["chainId"]), r["account"], r["target"], int(r["value"]), bytes.fromhex(r["data"][2:]), int(r["nonce"]), int(r["deadline"]))
+    else:
+        mine = eip712.transfer_digest(int(r["chainId"]), r["account"], r["token"], r["to"], int(r["amount"]), int(r["nonce"]), int(r["deadline"]))
     return "0x" + "".join("%02x" % b for b in mine) == r["digest"].lower()
 
 
@@ -338,7 +421,14 @@ def poll_requests():
             _log("REFUSED %s: app digest does not match the fields" % p["id"])
             return
         req, page, state, dirty = p, 0, "confirm", True
-        _log("request %s: %s %s to %s" % (p["id"], p["amountFormatted"], p["tokenSymbol"], p.get("toName") or p["to"]))
+        if p.get("kind") == "setName":
+            _log("request %s: set ENS name %s" % (p["id"], p["name"]))
+        elif p.get("kind") == "cancelRecovery":
+            _log("request %s: cancel recovery" % p["id"])
+        elif p.get("kind") == "execute":
+            _log("request %s: execute %s on %s" % (p["id"], p["data"][:10], p["target"]))
+        else:
+            _log("request %s: %s %s to %s" % (p["id"], p["amountFormatted"], p["tokenSymbol"], p.get("toName") or p["to"]))
         return
 
 
@@ -370,7 +460,14 @@ def approve(yes):
         finally:
             resp.close()
         if out.get("status") == "confirmed":
-            msg = "$%s to %s  tx %s" % (req["amountFormatted"], req.get("toName") or short(req["to"]), short(out.get("txHash", "")))
+            if req.get("kind") == "setName":
+                msg = "ENS %s  tx %s" % (req["name"], short(out.get("txHash", "")))
+            elif req.get("kind") == "cancelRecovery":
+                msg = "recovery cancelled  tx %s" % short(out.get("txHash", ""))
+            elif req.get("kind") == "execute":
+                msg = "executed %s  tx %s" % (req["data"][:10], short(out.get("txHash", "")))
+            else:
+                msg = "$%s to %s  tx %s" % (req["amountFormatted"], req.get("toName") or short(req["to"]), short(out.get("txHash", "")))
             state = "done"
         else:
             msg = "%s: %s" % (out.get("status"), out.get("error", ""))[:100]

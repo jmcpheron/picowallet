@@ -1,3 +1,3 @@
-# Runs before main.py. WiFi + console first so a broken main.py can still be fixed remotely.
+# Runs before main.py. The passwordless development console is disabled by default in secrets.py.
 import net
 wlan = net.start()

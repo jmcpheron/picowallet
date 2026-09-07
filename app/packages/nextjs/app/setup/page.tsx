@@ -169,8 +169,8 @@ const Setup: NextPage = () => {
       <Step n={1} title="Lock the chip's config zone" done={configLocked}>
         <p className="text-sm opacity-70 m-0">
           The ATECC608 refuses to make or use keys until its config zone is locked. One time, permanent, and normal:
-          every chip in use is config-locked. The <b>data</b> zone stays unlocked so you can generate new keys whenever
-          you want.
+          every chip in use is config-locked. Generate the final key before deploying the vault; the vault signer cannot
+          be changed afterward.
         </p>
         {isMock ? (
           <p className="text-sm opacity-60 m-0">Mock signer: nothing to lock.</p>
@@ -209,68 +209,58 @@ const Setup: NextPage = () => {
             <div title={device!.qy}>qy {short(device!.qy, 10)}</div>
           </div>
         )}
-        <button
-          className={`btn btn-sm w-fit ${hasKey ? "btn-ghost" : "btn-primary"}`}
-          disabled={!!busy || !online || !configLocked}
-          onClick={() => {
-            if (hasKey && !confirm("Replace the current key? The vault will need to be paired again.")) return;
-            act("genkey", async () => {
-              await runCommand("genkey");
-              return "new key generated";
-            });
-          }}
-        >
-          {busy === "genkey" ? (
-            <>
-              <span className="loading loading-spinner loading-xs" /> Generating…
-            </>
-          ) : hasKey ? (
-            "Generate a new key"
-          ) : (
-            "Generate key"
-          )}
-        </button>
+        {hasKey ? (
+          <p className="text-sm text-warning m-0">
+            Do not regenerate this key after funding a vault unless you complete the 14-day recovery flow first.
+          </p>
+        ) : (
+          <button
+            className="btn btn-sm btn-primary w-fit"
+            disabled={!!busy || !online || !configLocked}
+            onClick={() =>
+              act("genkey", async () => {
+                await runCommand("genkey");
+                return "new key generated";
+              })
+            }
+          >
+            {busy === "genkey" ? (
+              <>
+                <span className="loading loading-spinner loading-xs" /> Generating…
+              </>
+            ) : (
+              "Generate key"
+            )}
+          </button>
+        )}
       </Step>
 
-      <Step n={3} title="Pair the key with the vault contract" done={paired}>
+      <Step n={3} title="Deploy the vault with the initial key" done={paired}>
         <p className="text-sm opacity-70 m-0">
-          Calls <code className="text-xs">setSigner(qx, qy)</code> on ChipAccount so only this chip can spend from it.
+          The recovery wallet can replace the signer only after an uninterrupted 14-day delay. Any valid current-key
+          action cancels recovery.
         </p>
         {state && (
           <div className="flex items-center gap-2 text-sm opacity-70">
             Vault <Address address={state.account.address} chain={targetNetwork} size="xs" />
           </div>
         )}
-        {state && !state.chain.isLocal && device?.qx && (
+        {device?.qx && (
           <div className="text-xs font-mono bg-base-200 p-2 rounded">
             CHIP_PUBKEY_X={device.qx}
             <br />
             CHIP_PUBKEY_Y={device.qy}
             <br />
-            <span className="opacity-60"># or put these in packages/foundry/.env and yarn deploy</span>
+            <span className="opacity-60"># put these in packages/foundry/.env, then yarn deploy</span>
           </div>
         )}
-        <button
-          className={`btn btn-sm w-fit ${paired ? "btn-ghost" : "btn-primary"}`}
-          disabled={!!busy || !hasKey || paired}
-          onClick={() =>
-            act("pair", async () => {
-              const r = await post("/api/pair");
-              return `paired (tx ${short(r.txHash, 6)})`;
-            })
-          }
-        >
-          {busy === "pair" ? (
-            <>
-              <span className="loading loading-spinner loading-xs" /> Pairing…
-            </>
-          ) : paired ? (
-            "Paired"
-          ) : (
-            "Pair key"
-          )}
-        </button>
-        {device?.pairTxHash && <div className="text-xs font-mono opacity-60">tx {device.pairTxHash}</div>}
+        {paired ? (
+          <p className="text-sm text-success m-0">The device key matches the current on-chain signer.</p>
+        ) : (
+          <p className="text-sm text-error m-0">
+            Do not fund this vault. Deploy a new ChipAccount with the device key shown above.
+          </p>
+        )}
       </Step>
 
       <Step

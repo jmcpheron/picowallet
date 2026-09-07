@@ -1,5 +1,9 @@
 # HANDOFF — read this first if you are the next agent (or future me)
 
+> **Historical and insecure design reference.** This handoff describes the retired v1 demo with a
+> mutable admin-controlled signer. Do not copy its contract, pairing route, or deployment model.
+> The current repository uses delayed-recovery v5 authorization; see `SECURITY.md`.
+
 Last updated 2026-09-05 11:30, after the demo was retired. No secrets in this file. Secrets live only
 in gitignored files on Austin's Mac; their *locations* are listed below.
 

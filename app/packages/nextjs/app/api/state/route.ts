@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { expireStale } from "../requests/route";
-import { formatEther, formatUnits } from "viem";
-import { chipAccount, isLocal, targetChain, tokenBalance, tokenMeta } from "~~/services/chip/chain";
-import { onchainNonce, onchainSigner, relayerAddress, relayerBalance } from "~~/services/chip/relay";
+import { Address, formatEther, formatUnits } from "viem";
+import { chipAccount, isLocal, publicClient, targetChain, tokenBalance, tokenMeta } from "~~/services/chip/chain";
+import { onchainNonce, onchainSigner, recoveryState, relayerAddress, relayerBalance } from "~~/services/chip/relay";
 import { readStore } from "~~/services/chip/store";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +11,18 @@ export const dynamic = "force-dynamic";
 // Cache the chain reads briefly so a poll is fast (the Pico blocks on it) and Alchemy stays quiet.
 const CHAIN_CACHE_MS = 5000;
 let chainCache: { at: number; value: any } | undefined;
-async function chainReads(address: string) {
+async function chainReads(address: Address) {
   if (chainCache && Date.now() - chainCache.at < CHAIN_CACHE_MS) return chainCache.value;
-  const value = await Promise.all([onchainSigner(), onchainNonce(), tokenBalance(address), relayerBalance()]);
+  const value = await Promise.all([
+    onchainSigner(),
+    onchainNonce(),
+    tokenBalance(address),
+    relayerBalance(),
+    publicClient()
+      .getEnsName({ address })
+      .catch(() => null),
+    recoveryState(),
+  ]);
   chainCache = { at: Date.now(), value };
   return value;
 }
@@ -24,7 +33,7 @@ export async function GET() {
     expireStale();
     const { address } = chipAccount();
     const token = await tokenMeta();
-    const [signer, nonce, balance, relayBal] = await chainReads(address);
+    const [signer, nonce, balance, relayBal, ensName, recovery] = await chainReads(address);
     const { device, requests, commands } = readStore();
     const devicePaired =
       !!device?.qx &&
@@ -35,6 +44,8 @@ export async function GET() {
       chain: { id: targetChain.id, name: targetChain.name, isLocal },
       account: {
         address,
+        ensName,
+        authorizationVersion: recovery.version.toString(),
         nonce: nonce.toString(),
         signer,
         balance: balance.toString(),
@@ -42,6 +53,14 @@ export async function GET() {
       },
       token,
       relayer: { address: relayerAddress(), balanceFormatted: formatEther(relayBal) },
+      recovery: recovery.recoveryAddress
+        ? {
+            address: recovery.recoveryAddress,
+            pendingSignerX: recovery.pendingSignerX,
+            pendingSignerY: recovery.pendingSignerY,
+            executeAfter: recovery.executeAfter.toString(),
+          }
+        : undefined,
       device: device ? { ...device, paired: devicePaired } : undefined,
       requests,
       commands,

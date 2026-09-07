@@ -161,13 +161,14 @@ returns only the public half:
   qx 0xe894cec7682c9ded169f5e137befe9aab54f7e595700bae943088f8123192718
   qy 0x03e681f87a1044a882d57596580adc592fce6a9ef0182b1360c95fc7d312433f
   done
-[atecc608] announced to http://192.168.1.50:3000 -> not paired (Setup page -> Pair key)
+[atecc608] announced to http://192.168.1.50:3000 -> does not match vault signer
 ```
 
-Because the data zone is unlocked you can press this again any time and get a different key.
+Record these coordinates and deploy the vault with them. Do not generate another key after funding:
+the vault's recovery wallet can rotate the key only after an uninterrupted 14-day delay.
 
-**7. Pair.** Step 3, **Pair key**. The app's relay calls `setSigner(qx, qy)` on the vault contract.
-From now on only this chip can spend from it.
+**7. Deploy.** Put the coordinates in `CHIP_PUBKEY_X` and `CHIP_PUBKEY_Y`, then deploy a new
+`ChipAccount`. Only the current chip can spend; the recovery wallet can rotate the key after 14 days.
 
 **8. Fund.** Step 4, **Mint into vault** (localhost) or send real tokens to the vault address.
 
@@ -187,13 +188,13 @@ moved the tokens. Signing works with the data zone unlocked; you do not need to 
 
 ### Second chip, or starting over
 
-- **Another fresh chip:** repeat steps 3-7. Each chip gets its own key; pair whichever is plugged in.
-- **New key on the same chip:** Setup → Generate a new key → Pair. Old key stops working the
-  moment you pair the new one.
+- **Another fresh chip:** repeat steps 3-7 and deploy a separate vault for its key.
+- **New key on the same chip:** move all assets out first, generate the key, and deploy a new vault.
+  The old vault cannot be updated and becomes inaccessible once its old key is gone.
 - **Pre-locked part (TrustFLEX / Trust&Go, I2C 0x35):** skip step 5; it is already config- and
-  data-locked with a key in slot 0. Start at step 4 with `--i2c-addr 0x35`, then Pair.
-- **You locked config and regret it:** you can't undo it, but there's nothing to regret. Keys are
-  still regenerable. The only thing frozen is "slot 0 is a P-256 signing key".
+  data-locked with a key in slot 0. Start at step 4 with `--i2c-addr 0x35`, then deploy with its key.
+- **You locked config:** you cannot undo it. Whether keys remain regenerable depends on the data-zone
+  and slot configuration; never regenerate a key that still controls a funded vault.
 
 ### Errors you will actually see
 

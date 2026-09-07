@@ -10,7 +10,8 @@ by file and location only.
   The ATECC is the Adafruit STEMMA QT board from the ATECC608-demo Pi, serial
   `01235e6763cc8d97ee`. Its key owns the mainnet vault. Four STEMMA cable wires are wedged into
   the LCD board's header beside the Pico pins (3V3 pin 36, GND 38, GP4 SDA pin 6, GP5 SCL pin 7).
-- Mainnet vault `ChipAccount` at `0x0336aD6afc8bE414D6BD1f7A16caEb14BCCd16e9`, token USDS
+- Mainnet vault `ChipAccount` v5 at `0x4564fA634b073AcBcA814DCA5210835EC9376324` (legacy v1 at
+  `0x0336aD6afc8bE414D6BD1f7A16caEb14BCCd16e9`, do not fund), token USDS
   `0xdC035D45d973E3EC169d2276DDab16f1e407384F`. Relay/admin `0x7FE7f508A267BF45D2D161F244DbB12743e2cf49`,
   a foundry keystore named `atecc-relay` in `~/.foundry/keystores` with its password in a file
   beside it. Vault ~$41.66, nonce 10, relay ~0.001 ETH (about 80 sends) on 2026-09-06.
@@ -92,24 +93,37 @@ by file and location only.
    with git filter-repo before the first push. Check every photo (PIL contact sheet) before adding.
 10. The Waveshare wiki and Printables block plain fetches; use the browser tool.
 
-## Uncommitted work in the tree (2026-09-06)
+## Contract v5 (2026-09-06)
 
-Another session left a large uncommitted hardening pass: `SECURITY.md`, no public RPC fallback,
-`api/pair` deleted, `ChipAccount.sol` changed ("authorization version 2"), firmware and tools
-edits. That tree rejects the live vault ("signer is mutable"). It is neither committed nor
-reverted. To serve the live vault today, the app runs from a detached worktree of committed
-`main` under the session scratchpad. Ask Austin what to do with that change set before touching it.
+A second session hardened the contract and app: `ChipAccount` authorization v5, no admin, fixed
+recovery address with a 14-day delay, arbitrary signed calls, ENS reverse name. Deployed to
+mainnet at `0x4564fA634b073AcBcA814DCA5210835EC9376324` and audited (One Dollar Audit 850, see
+README). The old vault `0x0336aD6a…` is legacy v1 with a mutable signer: the app refuses to relay
+for it. Do not fund it. `api/pair` is gone; the chip key is fixed at deployment. `SECURITY.md`
+has the threat model. All of that is committed on `main` now.
+
+## Case: stopped (2026-09-06)
+
+Printed caps and a joystick hat three times; none fit. The button pitch used since 2026-09-05 was
+a guess (5.17), the real one is about 5.58, and the joystick's push-down stopped working during the
+tests. Austin stopped it: the wallet lives in the original white v0 case with bare buttons. The
+calipers and photo measurements are in `case/BUTTONS.md`. `gen.py v06` and `tools/lid` build the
+last, unprinted version. Do not restart this unless Austin asks.
+
+## Sensitive things to know
+
+- An Alchemy API key was in `.env.example` and `scaffold.config.ts` from the first push until this
+  commit. It is in the public git history. Rotate it in the Alchemy dashboard.
+- `firmware/secrets.py`, `app/packages/nextjs/.env.local`, `.chip/`, and the relay keystore are
+  gitignored. Keep it that way.
 
 ## Open threads, in order
 
-1. Test the wide-slot lid + straddle caps + dome print. If the lip hits the board, thin `LIP_T`.
-   Then merge `case-v05` and push.
-2. Joystick: measure stem width and housing height; a flanged dome needs a ~13 mm hole.
-3. v1 case in `gen.py`: taller lid for true floating caps, pocket for ATECC + 502030 LiPo +
-   charger, USB slot, lanyard hole.
-4. Run the fresh-chip provisioning path on a real blank ATECC608 and fix what breaks.
-5. Host the app somewhere with a persistent store so "go to a website" works off the LAN.
-6. Battery (PLAN.md step 4).
+1. Joystick push-down on the board no longer registers; check the switch and `lcd.py` Keys.
+2. Run the fresh-chip provisioning path on a real blank ATECC608 and fix what breaks.
+3. Host the app somewhere with a persistent store so "go to a website" works off the LAN.
+4. Battery (PLAN.md step 4).
+5. Case v1 (own design, battery pocket) only if Austin brings it up.
 
 ## Where the notes are
 

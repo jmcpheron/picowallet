@@ -7,13 +7,23 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   1: {
     ChipAccount: {
-      address: "0x0336ad6afc8be414d6bd1f7a16caeb14bccd16e9",
+      address: "0x4564fa634b073acbca814dca5210835ec9376324",
       abi: [
         {
           type: "constructor",
           inputs: [
             {
-              name: "_admin",
+              name: "_token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_reverseRegistrar",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_recoveryAddress",
               type: "address",
               internalType: "address",
             },
@@ -36,6 +46,71 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "AUTHORIZATION_VERSION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "CANCEL_RECOVERY_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "EXECUTE_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "RECOVERY_DELAY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "SET_NAME_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "TRANSFER_TYPEHASH",
           inputs: [],
           outputs: [
@@ -49,16 +124,26 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "admin",
-          inputs: [],
-          outputs: [
+          name: "cancelRecovery",
+          inputs: [
             {
-              name: "",
-              type: "address",
-              internalType: "address",
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -118,10 +203,82 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "execute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "result",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "executeSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "executeTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -156,10 +313,109 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "finalizeRecovery",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hashCancelRecovery",
+          inputs: [
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hashExecute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hashSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "hashTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -195,10 +451,117 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isValidCancelRecovery",
+          inputs: [
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isValidExecute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isValidSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isValidTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -242,7 +605,7 @@ const deployedContracts = {
           name: "nextTransferDigest",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -291,34 +654,68 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setAdmin",
-          inputs: [
+          name: "pendingSignerX",
+          inputs: [],
+          outputs: [
             {
-              name: "_admin",
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "pendingSignerY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "recoveryAddress",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
-          name: "setSigner",
-          inputs: [
+          name: "recoveryExecuteAfter",
+          inputs: [],
+          outputs: [
             {
-              name: "_qx",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "_qy",
-              type: "bytes32",
-              internalType: "bytes32",
+              name: "",
+              type: "uint64",
+              internalType: "uint64",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "reverseRegistrar",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -365,19 +762,74 @@ const deployedContracts = {
           stateMutability: "view",
         },
         {
-          type: "event",
-          name: "AdminChanged",
+          type: "function",
+          name: "startRecovery",
           inputs: [
             {
-              name: "previous",
+              name: "newSignerX",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "token",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "CallExecuted",
+          inputs: [
+            {
+              name: "target",
               type: "address",
               indexed: true,
               internalType: "address",
             },
             {
-              name: "current",
-              type: "address",
+              name: "value",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "selector",
+              type: "bytes4",
               indexed: true,
+              internalType: "bytes4",
+            },
+            {
+              name: "dataHash",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+            {
+              name: "nonce",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "relayer",
+              type: "address",
+              indexed: false,
               internalType: "address",
             },
           ],
@@ -391,7 +843,132 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "SignerSet",
+          name: "EtherReceived",
+          inputs: [
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "NameSet",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "node",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "nonce",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "relayer",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryCancelled",
+          inputs: [
+            {
+              name: "pendingSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "pendingSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryFinalized",
+          inputs: [
+            {
+              name: "oldSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "oldSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerX",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryStarted",
+          inputs: [
+            {
+              name: "newSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "executeAfter",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SignerConfigured",
           inputs: [
             {
               name: "qx",
@@ -404,12 +981,6 @@ const deployedContracts = {
               type: "bytes32",
               indexed: true,
               internalType: "bytes32",
-            },
-            {
-              name: "by",
-              type: "address",
-              indexed: false,
-              internalType: "address",
             },
           ],
           anonymous: false,
@@ -474,12 +1045,63 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "FailedCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidName",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidReverseRegistrar",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InvalidShortString",
           inputs: [],
         },
         {
           type: "error",
-          name: "NotAdmin",
+          name: "InvalidSigner",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidToken",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyRecoveryAddress",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RecoveryNotPending",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RecoveryNotReady",
+          inputs: [
+            {
+              name: "executeAfter",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "nowTs",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
         {
@@ -495,7 +1117,7 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "SignerNotSet",
+          name: "SameSigner",
           inputs: [],
         },
         {
@@ -506,6 +1128,17 @@ const deployedContracts = {
               name: "str",
               type: "string",
               internalType: "string",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "UnsupportedToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
             },
           ],
         },
@@ -516,7 +1149,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 25907390,
+      deployedOnBlock: 25920704,
     },
   },
   31337: {
@@ -527,7 +1160,17 @@ const deployedContracts = {
           type: "constructor",
           inputs: [
             {
-              name: "_admin",
+              name: "_token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_reverseRegistrar",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_recoveryAddress",
               type: "address",
               internalType: "address",
             },
@@ -550,6 +1193,71 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "AUTHORIZATION_VERSION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "CANCEL_RECOVERY_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "EXECUTE_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "RECOVERY_DELAY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "SET_NAME_TYPEHASH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "TRANSFER_TYPEHASH",
           inputs: [],
           outputs: [
@@ -563,16 +1271,26 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "admin",
-          inputs: [],
-          outputs: [
+          name: "cancelRecovery",
+          inputs: [
             {
-              name: "",
-              type: "address",
-              internalType: "address",
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -632,10 +1350,82 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "execute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "result",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "executeSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "executeTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -670,10 +1460,109 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "finalizeRecovery",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hashCancelRecovery",
+          inputs: [
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hashExecute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hashSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "_nonce",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "hashTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -709,10 +1598,117 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isValidCancelRecovery",
+          inputs: [
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isValidExecute",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isValidSetName",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "r",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "s",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isValidTransfer",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -756,7 +1752,7 @@ const deployedContracts = {
           name: "nextTransferDigest",
           inputs: [
             {
-              name: "token",
+              name: "_token",
               type: "address",
               internalType: "address",
             },
@@ -805,34 +1801,68 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setAdmin",
-          inputs: [
+          name: "pendingSignerX",
+          inputs: [],
+          outputs: [
             {
-              name: "_admin",
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "pendingSignerY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "recoveryAddress",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
-          name: "setSigner",
-          inputs: [
+          name: "recoveryExecuteAfter",
+          inputs: [],
+          outputs: [
             {
-              name: "_qx",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "_qy",
-              type: "bytes32",
-              internalType: "bytes32",
+              name: "",
+              type: "uint64",
+              internalType: "uint64",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "reverseRegistrar",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -879,19 +1909,74 @@ const deployedContracts = {
           stateMutability: "view",
         },
         {
-          type: "event",
-          name: "AdminChanged",
+          type: "function",
+          name: "startRecovery",
           inputs: [
             {
-              name: "previous",
+              name: "newSignerX",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "token",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "CallExecuted",
+          inputs: [
+            {
+              name: "target",
               type: "address",
               indexed: true,
               internalType: "address",
             },
             {
-              name: "current",
-              type: "address",
+              name: "value",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "selector",
+              type: "bytes4",
               indexed: true,
+              internalType: "bytes4",
+            },
+            {
+              name: "dataHash",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+            {
+              name: "nonce",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "relayer",
+              type: "address",
+              indexed: false,
               internalType: "address",
             },
           ],
@@ -905,7 +1990,132 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "SignerSet",
+          name: "EtherReceived",
+          inputs: [
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "NameSet",
+          inputs: [
+            {
+              name: "name",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "node",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "nonce",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "relayer",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryCancelled",
+          inputs: [
+            {
+              name: "pendingSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "pendingSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryFinalized",
+          inputs: [
+            {
+              name: "oldSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "oldSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerX",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RecoveryStarted",
+          inputs: [
+            {
+              name: "newSignerX",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newSignerY",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "executeAfter",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SignerConfigured",
           inputs: [
             {
               name: "qx",
@@ -918,12 +2128,6 @@ const deployedContracts = {
               type: "bytes32",
               indexed: true,
               internalType: "bytes32",
-            },
-            {
-              name: "by",
-              type: "address",
-              indexed: false,
-              internalType: "address",
             },
           ],
           anonymous: false,
@@ -988,12 +2192,63 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "FailedCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidName",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidReverseRegistrar",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InvalidShortString",
           inputs: [],
         },
         {
           type: "error",
-          name: "NotAdmin",
+          name: "InvalidSigner",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidToken",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyRecoveryAddress",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RecoveryNotPending",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RecoveryNotReady",
+          inputs: [
+            {
+              name: "executeAfter",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "nowTs",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
         {
@@ -1009,7 +2264,7 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "SignerNotSet",
+          name: "SameSigner",
           inputs: [],
         },
         {
@@ -1020,6 +2275,17 @@ const deployedContracts = {
               name: "str",
               type: "string",
               internalType: "string",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "UnsupportedToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
             },
           ],
         },

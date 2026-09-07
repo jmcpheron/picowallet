@@ -1,4 +1,5 @@
 import { chipAccount, isLocal, publicClient, relayClient, relayerAddress, targetChain } from "./chain";
+import { recoveryAbi } from "./recoveryAbi";
 import { type Address, type Hex } from "viem";
 
 /**
@@ -7,6 +8,63 @@ import { type Address, type Hex } from "viem";
  */
 
 export const P256_N = BigInt("0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
+const SUPPORTED_AUTHORIZATION_VERSIONS = new Set([3n, 4n, 5n]);
+const AUTHORIZATION_VERSION_ABI = [
+  {
+    type: "function",
+    name: "AUTHORIZATION_VERSION",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+let authorizationChecked = false;
+
+export async function authorizationVersion(): Promise<bigint> {
+  const { address } = chipAccount();
+  return publicClient().readContract({
+    address,
+    abi: AUTHORIZATION_VERSION_ABI,
+    functionName: "AUTHORIZATION_VERSION",
+  });
+}
+
+/** Refuse to operate a legacy deployment whose signer can be changed by an admin. */
+export async function assertImmutableAuthorization(): Promise<void> {
+  if (authorizationChecked) return;
+  let version: bigint;
+  try {
+    version = await authorizationVersion();
+  } catch {
+    throw new Error("Unsafe legacy ChipAccount deployment. Redeploy authorization version 3 or newer.");
+  }
+  if (!SUPPORTED_AUTHORIZATION_VERSIONS.has(version)) {
+    throw new Error(`Unsupported ChipAccount authorization version ${version}`);
+  }
+  authorizationChecked = true;
+}
+
+export async function recoveryState() {
+  const version = await authorizationVersion();
+  if (version < 5n)
+    return {
+      version,
+      recoveryAddress: undefined,
+      pendingSignerX: undefined,
+      pendingSignerY: undefined,
+      executeAfter: 0n,
+    };
+  const { address } = chipAccount();
+  const pc = publicClient();
+  const [recoveryAddress, pendingSignerX, pendingSignerY, executeAfter] = await Promise.all([
+    pc.readContract({ address, abi: recoveryAbi, functionName: "recoveryAddress" }),
+    pc.readContract({ address, abi: recoveryAbi, functionName: "pendingSignerX" }),
+    pc.readContract({ address, abi: recoveryAbi, functionName: "pendingSignerY" }),
+    pc.readContract({ address, abi: recoveryAbi, functionName: "recoveryExecuteAfter" }),
+  ]);
+  return { version, recoveryAddress, pendingSignerX, pendingSignerY, executeAfter };
+}
 
 /** OpenZeppelin's verifier rejects high-s. (r, N-s) is the same signature in canonical form. */
 export function normalizeLowS(s: Hex): Hex {
@@ -16,6 +74,7 @@ export function normalizeLowS(s: Hex): Hex {
 }
 
 export async function onchainSigner(): Promise<{ qx: Hex; qy: Hex; paired: boolean }> {
+  await assertImmutableAuthorization();
   const { address, abi } = chipAccount();
   const [qx, qy] = (await publicClient().readContract({ address, abi, functionName: "signer" })) as [Hex, Hex];
   const paired = BigInt(qx) !== 0n || BigInt(qy) !== 0n;
@@ -34,6 +93,7 @@ export async function contractDigest(
   nonce: bigint,
   deadline: bigint,
 ): Promise<Hex> {
+  await assertImmutableAuthorization();
   const { address, abi } = chipAccount();
   return (await publicClient().readContract({
     address,
@@ -44,6 +104,7 @@ export async function contractDigest(
 }
 
 export async function isValidTransfer(token: Address, to: Address, amount: bigint, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
   const { address, abi } = chipAccount();
   return (await publicClient().readContract({
     address,
@@ -53,28 +114,80 @@ export async function isValidTransfer(token: Address, to: Address, amount: bigin
   })) as boolean;
 }
 
-export async function admin(): Promise<Address> {
+export async function contractNameDigest(name: string, nonce: bigint, deadline: bigint): Promise<Hex> {
+  await assertImmutableAuthorization();
   const { address, abi } = chipAccount();
-  return (await publicClient().readContract({ address, abi, functionName: "admin" })) as Address;
-}
-
-/** Pair the chip key onchain. Only works when the relay is the ChipAccount admin (true on localhost). */
-export async function setSigner(qx: Hex, qy: Hex): Promise<Hex> {
-  const { address, abi } = chipAccount();
-  const wallet = relayClient();
-  const hash = await wallet.writeContract({
-    chain: targetChain,
-    account: wallet.account!,
+  return (await publicClient().readContract({
     address,
     abi,
-    functionName: "setSigner",
-    args: [qx, qy],
-  });
-  await publicClient().waitForTransactionReceipt({ hash });
-  return hash;
+    functionName: "hashSetName",
+    args: [name, nonce, deadline],
+  })) as Hex;
+}
+
+export async function isValidSetName(name: string, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  return (await publicClient().readContract({
+    address,
+    abi,
+    functionName: "isValidSetName",
+    args: [name, deadline, r, s],
+  })) as boolean;
+}
+
+export async function contractExecuteDigest(
+  target: Address,
+  value: bigint,
+  data: Hex,
+  nonce: bigint,
+  deadline: bigint,
+): Promise<Hex> {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  return (await publicClient().readContract({
+    address,
+    abi,
+    functionName: "hashExecute",
+    args: [target, value, data, nonce, deadline],
+  })) as Hex;
+}
+
+export async function isValidExecute(target: Address, value: bigint, data: Hex, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  return (await publicClient().readContract({
+    address,
+    abi,
+    functionName: "isValidExecute",
+    args: [target, value, data, deadline, r, s],
+  })) as boolean;
+}
+
+export async function contractCancelRecoveryDigest(nonce: bigint, deadline: bigint): Promise<Hex> {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  return (await publicClient().readContract({
+    address,
+    abi,
+    functionName: "hashCancelRecovery",
+    args: [nonce, deadline],
+  })) as Hex;
+}
+
+export async function isValidCancelRecovery(deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  return (await publicClient().readContract({
+    address,
+    abi,
+    functionName: "isValidCancelRecovery",
+    args: [deadline, r, s],
+  })) as boolean;
 }
 
 export async function executeTransfer(token: Address, to: Address, amount: bigint, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
   const { address, abi } = chipAccount();
   const wallet = relayClient();
   const pc = publicClient();
@@ -87,6 +200,63 @@ export async function executeTransfer(token: Address, to: Address, amount: bigin
     address,
     abi,
     functionName: "executeTransfer",
+    args,
+  });
+  const receipt = await pc.waitForTransactionReceipt({ hash });
+  return { hash, receipt, relayer: relayerAddress() };
+}
+
+export async function executeSetName(name: string, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  const wallet = relayClient();
+  const pc = publicClient();
+  const args = [name, deadline, r, s] as const;
+  await pc.simulateContract({ address, abi, functionName: "executeSetName", args, account: wallet.account! });
+  const hash = await wallet.writeContract({
+    chain: targetChain,
+    account: wallet.account!,
+    address,
+    abi,
+    functionName: "executeSetName",
+    args,
+  });
+  const receipt = await pc.waitForTransactionReceipt({ hash });
+  return { hash, receipt, relayer: relayerAddress() };
+}
+
+export async function executeCall(target: Address, value: bigint, data: Hex, deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  const wallet = relayClient();
+  const pc = publicClient();
+  const args = [target, value, data, deadline, r, s] as const;
+  await pc.simulateContract({ address, abi, functionName: "execute", args, account: wallet.account! });
+  const hash = await wallet.writeContract({
+    chain: targetChain,
+    account: wallet.account!,
+    address,
+    abi,
+    functionName: "execute",
+    args,
+  });
+  const receipt = await pc.waitForTransactionReceipt({ hash });
+  return { hash, receipt, relayer: relayerAddress() };
+}
+
+export async function executeCancelRecovery(deadline: bigint, r: Hex, s: Hex) {
+  await assertImmutableAuthorization();
+  const { address, abi } = chipAccount();
+  const wallet = relayClient();
+  const pc = publicClient();
+  const args = [deadline, r, s] as const;
+  await pc.simulateContract({ address, abi, functionName: "cancelRecovery", args, account: wallet.account! });
+  const hash = await wallet.writeContract({
+    chain: targetChain,
+    account: wallet.account!,
+    address,
+    abi,
+    functionName: "cancelRecovery",
     args,
   });
   const receipt = await pc.waitForTransactionReceipt({ hash });

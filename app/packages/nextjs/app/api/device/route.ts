@@ -30,7 +30,6 @@ export async function POST(req: NextRequest) {
   let device: DeviceInfo | undefined;
   updateStore(store => {
     const prev = store.device;
-    const same = sameKey(prev, body);
     device = {
       name,
       backend,
@@ -38,7 +37,6 @@ export async function POST(req: NextRequest) {
       qy: hasKey ? body.qy : undefined,
       firstSeen: prev?.firstSeen ?? now,
       lastSeen: now,
-      pairTxHash: same ? prev!.pairTxHash : undefined,
       chip: chip ?? prev?.chip,
     };
     store.device = device;

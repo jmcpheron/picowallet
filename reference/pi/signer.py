@@ -285,7 +285,11 @@ def cmd_run(args):
         resp = requests.post(f"{app}/api/device", json=body, timeout=30)
         resp.raise_for_status()
         info = resp.json()
-        what = "paired" if info.get("paired") else ("not paired (Setup page -> Pair key)" if state["qx"] else "no key (Setup page)")
+        what = (
+            "matches current vault signer"
+            if info.get("paired")
+            else ("does not match vault signer (deploy a new vault with this key)" if state["qx"] else "no key")
+        )
         print(f"[{signer.name}] announced to {app} -> {what}")
         if state["qx"]:
             print(f"  qx {state['qx']}\n  qy {state['qy']}")
@@ -336,10 +340,20 @@ def cmd_run(args):
             resp.raise_for_status()
             pending = [r for r in resp.json().get("requests", []) if r["id"] not in seen_failed]
             for req in pending:
-                print(
-                    f"\n[{signer.name}] request {req['id']}: send {req['amountFormatted']} {req['tokenSymbol']} "
-                    f"to {req.get('toName') or req['to']}\n  digest {req['digest']}"
-                )
+                if req.get("kind") == "setName":
+                    print(f"\n[{signer.name}] request {req['id']}: set ENS name {req['name']}\n  digest {req['digest']}")
+                elif req.get("kind") == "execute":
+                    print(
+                        f"\n[{signer.name}] request {req['id']}: execute {req['data'][:10]} on {req['target']} "
+                        f"with {req['value']} wei\n  calldata {req['data']}\n  digest {req['digest']}"
+                    )
+                elif req.get("kind") == "cancelRecovery":
+                    print(f"\n[{signer.name}] request {req['id']}: cancel account recovery\n  digest {req['digest']}")
+                else:
+                    print(
+                        f"\n[{signer.name}] request {req['id']}: send {req['amountFormatted']} {req['tokenSymbol']} "
+                        f"to {req.get('toName') or req['to']}\n  digest {req['digest']}"
+                    )
                 if not wait_for_approval(args, req):
                     print("  skipped")
                     seen_failed.add(req["id"])

@@ -1,19 +1,13 @@
 export type RequestStatus = "pending" | "signed" | "relaying" | "confirmed" | "failed" | "expired" | "rejected";
 
-export type TransferRequest = {
+type RequestBase = {
   id: string;
+  kind: "transfer" | "setName" | "execute" | "cancelRecovery";
   chainId: number;
   account: `0x${string}`; // the ChipAccount this request is for
   createdAt: number;
   updatedAt: number;
   status: RequestStatus;
-  token: `0x${string}`;
-  tokenSymbol: string;
-  tokenDecimals: number;
-  to: `0x${string}`;
-  toName?: string;
-  amount: string; // base units, as a decimal string
-  amountFormatted: string;
   nonce: string;
   deadline: number; // unix seconds
   digest: `0x${string}`;
@@ -25,6 +19,30 @@ export type TransferRequest = {
   relayer?: `0x${string}`;
   error?: string;
 };
+
+export type TransferRequest = RequestBase & {
+  kind: "transfer";
+  token: `0x${string}`;
+  tokenSymbol: string;
+  tokenDecimals: number;
+  to: `0x${string}`;
+  toName?: string;
+  amount: string; // base units, as a decimal string
+  amountFormatted: string;
+};
+
+export type SetNameRequest = RequestBase & { kind: "setName"; name: string };
+export type ExecuteRequest = RequestBase & {
+  kind: "execute";
+  target: `0x${string}`;
+  value: string; // wei
+  valueFormatted: string; // ETH
+  data: `0x${string}`;
+  selector: `0x${string}`;
+  dataHash: `0x${string}`;
+};
+export type CancelRecoveryRequest = RequestBase & { kind: "cancelRecovery" };
+export type WalletRequest = TransferRequest | SetNameRequest | ExecuteRequest | CancelRecoveryRequest;
 
 export type ChipStatus = {
   serial?: string;
@@ -43,7 +61,6 @@ export type DeviceInfo = {
   qy?: `0x${string}`;
   firstSeen: number;
   lastSeen: number;
-  pairTxHash?: `0x${string}`;
   chip?: ChipStatus;
 };
 
@@ -62,6 +79,6 @@ export type Command = {
 
 export type Store = {
   device?: DeviceInfo;
-  requests: TransferRequest[];
+  requests: WalletRequest[];
   commands: Command[];
 };

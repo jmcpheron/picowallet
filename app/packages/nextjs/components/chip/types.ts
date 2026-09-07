@@ -1,9 +1,11 @@
-import type { Command, DeviceInfo, TransferRequest } from "~~/services/chip/types";
+import type { Command, DeviceInfo, WalletRequest } from "~~/services/chip/types";
 
 export type AppState = {
   chain: { id: number; name: string; isLocal: boolean };
   account: {
     address: `0x${string}`;
+    ensName?: string | null;
+    authorizationVersion: string;
     nonce: string;
     signer: { qx: `0x${string}`; qy: `0x${string}`; paired: boolean };
     balance: string;
@@ -11,8 +13,14 @@ export type AppState = {
   };
   token: { address: `0x${string}`; symbol: string; decimals: number };
   relayer: { address: `0x${string}`; balanceFormatted: string };
+  recovery?: {
+    address: `0x${string}`;
+    pendingSignerX: `0x${string}`;
+    pendingSignerY: `0x${string}`;
+    executeAfter: string;
+  };
   device?: DeviceInfo & { paired: boolean };
-  requests: TransferRequest[];
+  requests: WalletRequest[];
   commands: Command[];
   now: number;
 };

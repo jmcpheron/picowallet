@@ -1,5 +1,6 @@
 #!/bin/sh
 # Push all firmware files to the Pico over WiFi and reboot it.
+# Requires ENABLE_NETWORK_CONSOLE=True and is unsafe while the wallet holds value.
 cd "$(dirname "$0")/.." || exit 1
 for f in firmware/*.py; do
   case "$f" in *secrets.example.py) continue;; esac

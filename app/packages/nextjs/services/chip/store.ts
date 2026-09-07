@@ -1,5 +1,5 @@
 import { targetChain } from "./chain";
-import { Command, Store, TransferRequest } from "./types";
+import { Command, Store, WalletRequest } from "./types";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import deployedContracts from "~~/contracts/deployedContracts";
@@ -39,9 +39,9 @@ export function readStore(): Store {
 
 export function writeStore(store: Store) {
   cache = store;
-  mkdirSync(dirname(FILE), { recursive: true });
+  mkdirSync(dirname(FILE), { recursive: true, mode: 0o700 });
   const tmp = FILE + ".tmp";
-  writeFileSync(tmp, JSON.stringify(store, null, 2));
+  writeFileSync(tmp, JSON.stringify(store, null, 2), { mode: 0o600 });
   renameSync(tmp, FILE);
 }
 
@@ -56,12 +56,12 @@ export function updateStore(fn: (store: Store) => void): Store {
   return store;
 }
 
-export function findRequest(id: string): TransferRequest | undefined {
+export function findRequest(id: string): WalletRequest | undefined {
   return readStore().requests.find(r => r.id === id);
 }
 
-export function patchRequest(id: string, patch: Partial<TransferRequest>): TransferRequest {
-  let out: TransferRequest | undefined;
+export function patchRequest(id: string, patch: Partial<WalletRequest>): WalletRequest {
+  let out: WalletRequest | undefined;
   updateStore(store => {
     const r = store.requests.find(x => x.id === id);
     if (!r) throw new Error(`request ${id} not found`);

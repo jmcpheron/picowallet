@@ -23,8 +23,7 @@ import { getAlchemyHttpUrl } from "~~/utils/scaffold-eth/networks";
  *   - live chains: RELAYER_KEYSTORE=<foundry keystore name> (+ password) in .env.local — preferred,
  *                  the key stays encrypted on disk. RELAYER_PRIVATE_KEY also works.
  *   - localhost:   no key at all. Anvil's dev accounts are unlocked, so we send eth_sendTransaction
- *                  from account #9 — the same account `yarn deploy` uses, so it is also the ChipAccount
- *                  admin and can pair the chip's key automatically.
+ *                  from account #9. The relay is never authorized to change the vault signer.
  */
 const LOCAL_CHAIN_ID = 31337;
 const ANVIL_DEPLOYER: Address = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"; // anvil account #9 (SE2 default deployer)
@@ -35,9 +34,11 @@ export const isLocal = targetChain.id === LOCAL_CHAIN_ID;
 function rpcUrl(): string {
   if (isLocal) return process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545";
   const override = (scaffoldConfig.rpcOverrides as Record<number, string> | undefined)?.[targetChain.id];
-  return (
-    process.env.RELAY_RPC_URL || override || getAlchemyHttpUrl(targetChain.id) || targetChain.rpcUrls.default.http[0]
-  );
+  const url = process.env.RELAY_RPC_URL || override || getAlchemyHttpUrl(targetChain.id);
+  if (!url || !url.startsWith("https://") || !new URL(url).hostname.endsWith(".g.alchemy.com")) {
+    throw new Error(`Set an Alchemy RPC for chain ${targetChain.id}; public RPC fallbacks are disabled`);
+  }
+  return url;
 }
 
 let _public: PublicClient | undefined;
