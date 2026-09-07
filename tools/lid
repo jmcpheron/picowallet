@@ -1,0 +1,56 @@
+#!/bin/sh
+# Cut the v0 lid (Tomáš Plass) for the v06 floating caps and joystick hat, then build one print
+# plate with the lid, 4 caps and the hat. Run case/gen.py v06 first.
+# Frame: the lid STL has its outer face at z=0 and the walls going +z (printed face down).
+# Lid face = PCB + 4.4, so mesh z = 4.4 - z_pcb. Underside at z=2.0; pockets go 1.0 deep.
+cd "$(dirname "$0")/.." || exit 1
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
+import trimesh, numpy as np
+m = trimesh.load("case/waveshare-13-pico-lcd-case-tomas-plass.stl")
+parts = m.split(only_watertight=False)
+lid = [p for p in parts if p.bounds[1][0] < 0][0]
+base = [p for p in parts if p.bounds[0][0] > 0][0]
+T = trimesh.transformations.translation_matrix
+
+def box(w, l, h, x, y, z):
+    b = trimesh.creation.box(extents=(w, l, h)); b.apply_translation((x, y, z)); return b
+def cyl(d, h, x, y, z):
+    c = trimesh.creation.cylinder(radius=d / 2, height=h, sections=128); c.apply_translation((x, y, z)); return c
+
+SLOT_X, ROW_Y = -16.25, 32.5                   # button column in the lid STL
+PITCH = 5.58                                   # measured 2026-09-06 (photos); 5.17 was a guess
+BTN_Y = ROW_Y - 0.3                            # the row sits 0.3 toward -y of the case centreline
+JOY_X = -58.0
+HOLE_ACROSS, HOLE_ALONG = 7.7, 4.8             # per cap (0.35 clearance along for the caps)
+POCKET_DEPTH = 1.0                             # into the underside (z 1.0..2.0)
+WALL_IN = -12.0                                # inner face of the case wall next to the buttons
+
+# 1. fill the old slot (4.5 x 21) and the diamond so the new holes are clean
+fill = [box(4.7, 21.6, 2.0, SLOT_X, ROW_Y, 1.0), cyl(12.5, 2.0, JOY_X, ROW_Y, 1.0)]
+lid2 = trimesh.boolean.union([lid] + fill, engine="manifold")
+# 2. cut: four cap holes, a 1.0 mm pocket under them (up to the wall), the round joystick hole,
+#    and a pocket under it clipped 0.2 short of the screen window edge (x = -53.5)
+cuts = [box(HOLE_ACROSS, HOLE_ALONG, 6, SLOT_X, BTN_Y + k * PITCH, 1.0) for k in (-1.5, -0.5, 0.5, 1.5)]
+pocket_x0, pocket_x1 = -21.0, WALL_IN + 0.2
+cuts.append(box(pocket_x1 - pocket_x0, 22.8, POCKET_DEPTH + 1.0, (pocket_x0 + pocket_x1) / 2, BTN_Y, 2.0 - POCKET_DEPTH + (POCKET_DEPTH + 1.0) / 2))
+cuts.append(cyl(8.6, 6, JOY_X, ROW_Y, 1.0))
+joy_pocket = cyl(11.0, POCKET_DEPTH + 1.0, JOY_X, ROW_Y, 2.0 - POCKET_DEPTH + (POCKET_DEPTH + 1.0) / 2)
+joy_pocket = trimesh.boolean.intersection([joy_pocket, box(20, 20, 10, -53.7 - 10, ROW_Y, 2.0)], engine="manifold")
+cuts.append(joy_pocket)
+# 4. snap clearance: the base's long tabs are 53.0 long and the lid opening is 53.0 (zero
+#    clearance in the original, fine when both halves print together). Open the cavity 0.2 per
+#    side in x and 0.1 in y from the underside to the rim; the catch groove at z=11.5 stays.
+cuts.append(box(53.0 + 0.4, 27.13 + 0.2, 12.0, -38.5, ROW_Y, 2.0 + 6.0 + 0.5))
+lid3 = trimesh.boolean.difference([lid2] + cuts, engine="manifold")
+assert lid3.is_watertight, "lid not watertight"
+lid3.export("case/out/v06_lid.stl"); base.export("case/out/v0_base.stl")
+print("lid: cavity opened 0.2/side x, 0.1/side y for the snap; 4 holes %.1f x %.1f at pitch %.2f, row centre y=%.1f, pocket %.1f wide x 22.8 x %.1f deep; joystick hole 8.6 round, pocket 11 dia clipped at the window; watertight" % (
+    HOLE_ACROSS, HOLE_ALONG, PITCH, BTN_Y, pocket_x1 - pocket_x0, POCKET_DEPTH))
+
+# 3. one plate: lid as is (face down at z=0), caps and hat beside it
+caps = trimesh.load("case/out/v06_caps_x4.stl")
+caps.apply_translation((-66 - caps.bounds[0][0], 52 - caps.bounds[0][1], -caps.bounds[0][2]))
+plate = trimesh.util.concatenate([lid3, caps])
+plate.export("case/out/v06d_lid_caps_plate.stl")
+print("plate: %.0f x %.0f x %.0f mm" % tuple(plate.extents))
+PY
