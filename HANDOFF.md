@@ -37,6 +37,10 @@ by file and location only.
 - USB rescue: plug the Pico's USB into the omen laptop (`ssh omen`), device
   `/dev/serial/by-id/usb-MicroPython_Board_in_FS_mode_*-if00`, mpremote there with `resume`. Use
   only if the WiFi console is dead. `/tmp/usb.py` on omen is a raw serial helper.
+  The Pico is not a USB drive: plugging it into any computer gives a serial port only
+  (`/dev/tty.usbmodem*` on the Mac), no drag and drop, no SSH. Every mpremote command in
+  `tools/pico` works the same over USB if you swap the `socket://` target for that port.
+  BOOTSEL-while-plugging gives the RPI-RP2 drive, which is only for flashing `.uf2` firmware.
 - Chip provisioning (lock config zone, generate key) is implemented in `atecc.py` and gated by
   ALLOW_LOCK / ALLOW_GENKEY. It has never run on a fresh chip. The config bytes are the ones the Pi
   signer used successfully. Do not enable those flags on the wallet holding the mainnet key.
