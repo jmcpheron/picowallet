@@ -105,3 +105,13 @@ the centerline.
 
 Calipers (Austin): 30.94 = case base width; 4.55 = tact switch body (4.5 mm square); 5.15 and
 4.18 and 2.04 = see BUTTONS.md, being confirmed.
+
+## Zez0000 case with caps (2026-09-08)
+
+`case/zez0000/`: [Raspberry Pi Pico 2 Case - Waveshare 1.3" LCD by Zez0000](https://makerworld.com/en/models/3230142-raspberry-pi-pico-2-case-waveshare-1-3-lcd),
+CC BY-NC, released 2026-08-28. A remix of the v0 case with 4 button caps and a joystick cap
+already modeled: same base, rounded corners, square lid holes. Found while looking for a case
+with the buttons and joystick covered. Parts: base 57x31x13, lid 57x31x15.6, button caps
+6.3x5.5x4.4 (x4), joystick cap 8.2 round x4.1. Author settings: PLA, 0.20 mm, 2 walls, 15%
+infill, no supports, about 40 min, caps on their own plate for a second color.
+Print inbox drops `20260908-224447-*` and `20260908-224448-*`. Untested by us.
