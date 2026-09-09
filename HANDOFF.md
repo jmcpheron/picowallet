@@ -1,6 +1,6 @@
 # HANDOFF
 
-For the next agent, or me after a context reset. State as of 2026-09-06. Plain facts, then how to
+For the next agent, or me after a context reset. State as of 2026-09-09. Plain facts, then how to
 run each piece, then gotchas, then what is open. Public repo, so no secrets here; they are named
 by file and location only.
 
@@ -106,13 +106,29 @@ README). The old vault `0x0336aD6a…` is legacy v1 with a mutable signer: the a
 for it. Do not fund it. `api/pair` is gone; the chip key is fixed at deployment. `SECURITY.md`
 has the threat model. All of that is committed on `main` now.
 
-## Case: stopped (2026-09-06)
+## Case: Zez0000 remix with caps (2026-09-09)
 
-Printed caps and a joystick hat three times; none fit. The button pitch used since 2026-09-05 was
-a guess (5.17), the real one is about 5.58, and the joystick's push-down stopped working during the
-tests. Austin stopped it: the wallet lives in the original white v0 case with bare buttons. The
-calipers and photo measurements are in `case/BUTTONS.md`. `gen.py v06` and `tools/lid` build the
-last, unprinted version. Do not restart this unless Austin asks.
+The v06 cap work stayed stopped. On 2026-09-08 Austin asked for a case with the buttons and joystick
+covered, and one exists: Zez0000's remix of the v0 case on MakerWorld (model 3230142, CC BY-NC,
+released 2026-08-28). Same base as v0, rounded corners, 4 button caps and a joystick cap already
+modeled. Nothing else like it exists for the Pico-LCD-1.3 on Printables, Thingiverse, Thangs,
+Cults or from Waveshare. The 7 STLs are in `case/zez0000/` (base, lid, 4 caps, joystick cap).
+
+Austin printed the stock set. Caps looked right, but the lid and base would not snap together
+even with force. Measured on the STLs: each base tab carries a full-length half-round ridge 0.44 mm
+proud of the lid wall, zero end clearance, 106 mm of interference at once. `tools/zezbase` builds
+`case/zez0000/base_v3.stl` from the stock base: ridge removed, tab shaved to 0.1 mm side and
+0.25 mm end clearance, four 10 mm ridges (r 0.4, 0.25 mm proud) put back at x = +-16 so they land
+in the stock lid groove, plus an 8 x 1 x 1 mm pry notch at the rim, middle of the +y long side.
+Only the base changed; the stock lid and caps are used as is. v3 is unprinted.
+
+Print inbox: full set requested in yellow PLA from AMS bay 2, one plate: drop
+`20260909-173200-base_v3` plus lid, button_cap_1..4 and joystick_cap from drops
+`20260908-224447-*` / `20260908-224448-*`. Skip `20260908-224451-lid` (duplicate) and
+`20260909-155436-base_v2` (superseded). The print Claude was told all this and waits for Austin.
+
+If v3 still fights: the ridge height is `RIDGE_PROUD` in `tools/zezbase` (0.25 now, stock 0.44).
+If it is loose: raise it, or lengthen `RIDGE_LEN`. Details in `case/README.md`.
 
 ## Sensitive things to know
 
@@ -127,10 +143,12 @@ last, unprinted version. Do not restart this unless Austin asks.
 2. Run the fresh-chip provisioning path on a real blank ATECC608 and fix what breaks.
 3. Host the app somewhere with a persistent store so "go to a website" works off the LAN.
 4. Battery (PLAN.md step 4).
-5. Case v1 (own design, battery pocket) only if Austin brings it up.
+5. Case: print the yellow set (Austin says go to the print Claude), test the base_v3 snap and pry
+   notch, check the ATECC608 breakout clears the rounded base. Tune `tools/zezbase` if needed.
+6. Case v1 (own design, battery pocket) only if Austin brings it up.
 
 ## Where the notes are
 
 `README.md` (build guide), `buildlog/BUILDLOG.md` (dated, with mistakes), `PLAN.md`,
-`SOLDERING.md`, `case/README.md` + `case/BUTTONS.md` (measurements, cap research, decisions),
+`SOLDERING.md`, `case/README.md` + `case/BUTTONS.md` (measurements, cap research, decisions, Zez0000 rework),
 `reference/pi/README.md` (fresh-chip walkthrough on a Pi), `reference/ATECC608-demo-HANDOFF.md`.
