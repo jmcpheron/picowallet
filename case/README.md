@@ -115,3 +115,14 @@ with the buttons and joystick covered. Parts: base 57x31x13, lid 57x31x15.6, but
 6.3x5.5x4.4 (x4), joystick cap 8.2 round x4.1. Author settings: PLA, 0.20 mm, 2 walls, 15%
 infill, no supports, about 40 min, caps on their own plate for a second color.
 Print inbox drops `20260908-224447-*` and `20260908-224448-*`. Untested by us.
+
+### base_v2 (2026-09-09): the stock base would not snap in
+
+Austin printed the set; lid and base would not click together even with force. Measured on the
+STLs: each base tab (53 x 2 mm, 2 mm above the rim) carries a full-length half-round ridge, r 0.5,
+0.44 mm proud of the lid's inner wall, with zero end clearance. The lid has a matching r 0.5
+groove centred 1.5 mm inside its mouth. That is 0.44 mm of interference along 106 mm at once.
+`tools/zezbase` builds `case/zez0000/base_v2.stl`: ridge removed, tab face shaved to 0.1 mm
+clearance, tab ends 0.25 mm clearance, then four 10 mm ridges (r 0.4, 0.25 mm proud) at
+x = +-16 on each side, same height as the stock ridge so they land in the lid groove. Base only;
+the stock lid and caps stay. Print inbox drop `20260909-*-base_v2`.
