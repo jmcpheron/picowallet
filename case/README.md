@@ -126,3 +126,12 @@ groove centred 1.5 mm inside its mouth. That is 0.44 mm of interference along 10
 clearance, tab ends 0.25 mm clearance, then four 10 mm ridges (r 0.4, 0.25 mm proud) at
 x = +-16 on each side, same height as the stock ridge so they land in the lid groove. Base only;
 the stock lid and caps stay. v3 adds an 8 x 1 x 1 mm pry notch in the outer wall at the rim, +y side, x centre. Print inbox drop `20260909-*-base_v3`; full set in yellow PLA requested.
+
+### base_v4 (2026-09-10): shorter posts, shorter case
+
+The four Pico posts were 5.5 mm tall (floor z 2 to 7.5); Austin wants 3 mm, just enough to keep
+BOOTSEL and the underside parts off the floor. `tools/zezbase` now also removes a 2.5 mm slab of
+wall and post right above the floor and drops everything above it, so the USB slot, tabs, ridges
+and pry notch keep their positions relative to the Pico. Output `case/zez0000/base_v4.stl`,
+57 x 31 x 10.5 mm (was 13). Lid and caps unchanged. Print inbox drop `20260910-163347-base_v4`,
+PLA fit check, base only. Knobs: `POST_H` (3.0) in `tools/zezbase`; `DROP` follows from it.
