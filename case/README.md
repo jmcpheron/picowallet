@@ -160,4 +160,5 @@ builds `button_cap_x.stl`: the stock (solid) button cap with a raised X on top, 
 45 degrees, 0.6 mm above the dome, for a cancel button. All three dropped for PLA, flange down.
 `tools/zezbtn check` builds `button_cap_check.stl`, the confirm button, same raised bars in a
 check mark. Later plan: print the symbols in a second color (green check, red X) on the AMS.
+Result 2026-09-10 evening: socket 2.00 mm is the winner on the 1.87 mm stem. 10 copies queued.
 
