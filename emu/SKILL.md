@@ -29,8 +29,8 @@ No browser: `tools/emu headless NAME --wait 300 --key A --wait 100 --shot emu/sh
 runs a scripted session and exits (steps run in order). Good for quick checks and CI.
 
 Austin sees the browser page (http://localhost:4242): editor, console, the 3D device. Keys on
-the page: arrows = joystick, Enter = joystick press, a/b/x/y = the buttons (click the device
-first so the editor does not eat them).
+the page: W A S D = joystick, space = joystick press, numpad 9 6 3 . = A B X Y (click the device
+first so the editor does not eat them; the 3D view shows the key next to each button).
 
 ## Ship it to the real Pico
 

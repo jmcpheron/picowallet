@@ -3,7 +3,10 @@
 import { createDevice3D } from "/web/device3d.js";
 
 const KEY_ORDER = ["A", "B", "X", "Y", "up", "down", "left", "right", "press"];
-const KEYMAP = { a: "A", b: "B", x: "X", y: "Y", 1: "A", 2: "B", 3: "X", 4: "Y", ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "press", " ": "press" };
+// keyboard -> device. Joystick: W A S D + space. Buttons: numpad 9 6 3 . (top row 9 6 3 . works too).
+const KEYMAP = { w: "up", a: "left", s: "down", d: "right", " ": "press", 9: "A", 6: "B", 3: "X", ".": "Y" };
+const CODEMAP = { Numpad9: "A", Numpad6: "B", Numpad3: "X", NumpadDecimal: "Y", Space: "press" };
+const keyOf = (e) => CODEMAP[e.code] || KEYMAP[e.key] || KEYMAP[e.key.toLowerCase()];
 const $ = (s) => document.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -248,20 +251,20 @@ function setKey(name, down) {
 const isTyping = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest?.(".CodeMirror"));
 window.addEventListener("keydown", (e) => {
   if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = KEYMAP[e.key] || KEYMAP[e.key.toLowerCase()];
+  const k = keyOf(e);
   if (!k) return;
   e.preventDefault();
   if (!e.repeat) setKey(k, true);
 });
-window.addEventListener("keyup", (e) => { const k = KEYMAP[e.key] || KEYMAP[e.key.toLowerCase()]; if (k) setKey(k, false); });
+window.addEventListener("keyup", (e) => { const k = keyOf(e); if (k) setKey(k, false); });
 window.addEventListener("blur", () => { for (const k of KEY_ORDER) setKey(k, false); });
 for (const b of document.querySelectorAll("#flat [data-key]")) {
   const k = b.dataset.key;
-  b.addEventListener("pointerdown", (e) => { e.preventDefault(); setKey(k, true); $("#right").focus(); });
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); setKey(k, true); $("#right").focus({ preventScroll: true }); });
   b.addEventListener("pointerup", () => setKey(k, false));
   b.addEventListener("pointerleave", () => setKey(k, false));
 }
-$("#stage").addEventListener("pointerdown", () => $("#right").focus());
+$("#stage").addEventListener("pointerdown", () => $("#right").focus({ preventScroll: true }));
 
 // ---- views -------------------------------------------------------------------------------
 function setView(v) {
@@ -301,7 +304,7 @@ setView(localStorage.getItem("emu.view") || "3d");
 if (!sab) appendLog("no SharedArrayBuffer: keys reach the device only while it is idle (busy loops will not see them)", "err");
 const booting = reboot(main).then(() => mark("booted"));
 try {
-  device3d = await createDevice3D($("#stage"), screen, { onKey: setKey, onGrab: () => $("#right").focus() });
+  device3d = await createDevice3D($("#stage"), screen, { onKey: setKey, onGrab: () => $("#right").focus({ preventScroll: true }) });
   device3d.updateScreen();
   mark("3d ready");
 } catch (e) {

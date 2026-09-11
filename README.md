@@ -194,7 +194,7 @@ digest the device computed.
 - **The screens:** `firmware/wallet.py`, functions `draw_home` and `draw_confirm`. 240×240,
   framebuf, an 8×8 font scaled up. Try it on the virtual wallet first: `tools/emu` opens
   http://localhost:4242 with the same MicroPython running the same files, the case in 3D and
-  the keyboard on the buttons; `tools/emu run NAME`, `key A`, `shot` drive it from a terminal
+  the keyboard on the buttons (W A S D, space, numpad 9 6 3 .); `tools/emu run NAME`, `key A`, `shot` drive it from a terminal
   (`emu/README.md`). To have an AI write for it, give it `emu/SKILL.md` and this repo; in Claude
   Code it is the `/pico-emu` skill. Then `./tools/push` and look.
 - **The case:** `case/gen.py`, CadQuery, every dimension is a named number at the top.

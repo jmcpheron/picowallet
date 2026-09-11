@@ -1,6 +1,6 @@
 # HANDOFF
 
-For the next agent, or me after a context reset. State as of 2026-09-09. Plain facts, then how to
+For the next agent, or me after a context reset. State as of 2026-09-11 evening. Plain facts, then how to
 run each piece, then gotchas, then what is open. Public repo, so no secrets here; they are named
 by file and location only.
 
@@ -142,13 +142,29 @@ captured into a 240x240 RGB565 frame (pixel exact), the SPI transfer time is mod
 38 ms a frame, `machine.freq(150e6, 150e6)` lifts it), timers are JS timers, heap 448 KB. The page
 (`emu/web/`) has an editor (CodeMirror), a REPL console, and the case from `case/zez0000/` STLs in
 three.js (black base_v5, white lid_v4, grey joystick cap, green A, grey B/X, red Y) with the live
-screen as a texture; click the caps or use arrows/Enter/a b x y. `tools/emu run|exec|key|keys|shot|
+screen as a texture; click the caps or use W A S D, space, numpad 9 6 3 . (labels in the 3D view). `tools/emu run|exec|key|keys|shot|
 log|state|reset|main` drive the page over SSE; `tools/emu headless MOD --wait --key --shot` needs no
 browser. `emu/SKILL.md` (linked from `.claude/skills/pico-emu`) is the bot's guide. Known: viper
 decorators are rewritten to plain functions on load (no native emitter in wasm), `@micropython.viper`
 code runs slow; wasm CPU is much faster than the RP2350, so timing of Python itself is optimistic.
 The wallet firmware itself runs in it (`main`) with the software signer. Chrome on this Mac was
 heavily loaded when built (5x slower than node), so the page booted in 8 s; normally a second or two.
+
+## Case: QR code in the bottom, AMS two-colour (2026-09-11, proved, parked)
+
+Austin's idea: the base prints bottom-down in black PETG, so lay white PETG in the first layers as
+a QR code on the underside. `tools/zezqr [TEXT] [base_vN]` (default the repo URL, base_v5) builds
+`case/zez0000/base_v5_qr_black.stl` + `base_v5_qr_white.stl` (same frame, z=0 on the bed) and
+`base_v5_qr.3mf` (one object, two parts, white part on extruder 2). 29 modules at 0.85 mm, 24.7 mm
+square, centred x -3.5 to miss the floor hole at x 12..15, white 0.6 mm deep in the 2.0 mm floor,
+mirrored so it reads from below. The script self-checks (module-for-module match, OpenCV decode).
+Printed 2026-09-11 from inbox drop `20260911-142041-base_v5_qr`: it worked and scans. Austin: proof
+done, parked; one day the vault address goes there, not now. Details in `case/README.md`.
+
+Bambu Studio 2.7 CLI gotchas, if you ever slice a two-part 3MF headless: it segfaults without a
+`Metadata/project_settings.config` (ours: `case/zez0000/p2s_petg_x2.project_settings.json`);
+the plate block needs `filament_maps` "1 1"; presets passed to `--load-settings`/`--load-filaments`
+must have `inherits` flattened or everything lands on filament 1; bed type must match the filament.
 
 ## Sensitive things to know
 
@@ -163,11 +179,18 @@ heavily loaded when built (5x slower than node), so the page booted in 8 s; norm
 2. Run the fresh-chip provisioning path on a real blank ATECC608 and fix what breaks.
 3. Host the app somewhere with a persistent store so "go to a website" works off the LAN.
 4. Battery (PLAN.md step 4).
-5. Case: AMS two-colour test, white QR code in the bottom of base_v5 (`tools/zezqr`, drops
-   `20260911-14204*-base_v5_qr*`, 2026-09-11). If it prints and scans, put the vault address in it.
-6. Case: print the yellow set (Austin says go to the print Claude), test the base_v3 snap and pry
+5. Case: print the yellow set (Austin says go to the print Claude), test the base_v3 snap and pry
    notch, check the ATECC608 breakout clears the rounded base. Tune `tools/zezbase` if needed.
-7. Case v1 (own design, battery pocket) only if Austin brings it up.
+6. Case v1 (own design, battery pocket) only if Austin brings it up.
+
+## Local state this checkout (2026-09-11)
+
+- All work is committed and pushed: `main` = `2d23c63`, origin in sync. Push mechanics in
+  `~/.clawd-accounts/.../memory/push-as-austin.md` (gh auth switch + gh credential helper).
+- Untracked, not mine, left alone: `firmware/demo.py`, `firmware/vid.py`, `tools/gif2pv`. Ask Austin.
+- This HANDOFF.md is tracked in git but Austin wants it treated as local notes now: it is in
+  `.git/info/exclude`, do not stage or commit further edits to it.
+- Bambu Studio 2.7 is installed on this Mac (`/Applications/BambuStudio.app`), CLI usable for slice checks.
 
 ## Where the notes are
 

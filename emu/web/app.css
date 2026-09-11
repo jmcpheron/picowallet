@@ -5,7 +5,7 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 -apple-system, "Segoe UI", sans-serif; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font: 13px/1.4 -apple-system, "Segoe UI", sans-serif; }
 body { display: flex; flex-direction: column; overflow: hidden; }
 #bar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .brand { font-weight: 700; letter-spacing: .04em; color: var(--yellow); margin-right: 6px; }
@@ -26,7 +26,7 @@ button:active { transform: translateY(1px); }
 #conn.ok { color: var(--accent); }
 #conn.bad { color: var(--red); }
 
-main { flex: 1; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; min-height: 0; }
+main { flex: 1; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; min-height: 0; overflow: hidden; }
 #left { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-width: 0; }
 #files { display: flex; align-items: stretch; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; }
 #tabs { display: flex; flex: 1; }
@@ -71,6 +71,7 @@ main { flex: 1; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; mi
 .joy button[data-key=down] { grid-column: 2; grid-row: 3; }
 .abxy { display: flex; flex-direction: column; gap: 14px; }
 .abxy button { width: 44px; height: 40px; border-radius: 8px; border: 2px solid #0004; color: #fff; font-weight: 700; box-shadow: 0 5px 0 #0006; padding: 0; }
+.abxy button small { display: block; font-size: 9px; font-weight: 400; opacity: .8; }
 .kA { background: #27b04b; } .kB, .kX { background: #7a7a7e; } .kY { background: var(--red); }
 .joy button.down, .abxy button.down { transform: translateY(4px); box-shadow: 0 1px 0 #0006; filter: brightness(1.2); }
 #legend { display: flex; gap: 18px; padding: 6px 12px; border-top: 1px solid var(--line); background: var(--panel); color: var(--dim); font-size: 12px; }

@@ -116,6 +116,29 @@ export async function createDevice3D(container, screenCanvas, { onKey, onGrab })
   screenMesh.position.set(0.4, LID_TOP - 1.85, 0.1);
   device.add(screenMesh);
 
+  // --- keyboard legend: which key hits which cap ----------------------------------------------
+  function label(text, w = 5, h = 2.6) {
+    const cv = document.createElement("canvas"); cv.width = 128 * (w / 2.6); cv.height = 128;
+    const g = cv.getContext("2d");
+    g.fillStyle = "rgba(10,10,14,0.82)";
+    g.beginPath(); g.roundRect(4, 4, cv.width - 8, cv.height - 8, 28); g.fill();
+    g.strokeStyle = "#ffdc00"; g.lineWidth = 6; g.stroke();
+    g.fillStyle = "#ffdc00"; g.font = "bold 72px Menlo, monospace"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(text, cv.width / 2, cv.height / 2 + 4);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false }));
+    sp.scale.set(w, h, 1); sp.renderOrder = 10;
+    device.add(sp);
+    return sp;
+  }
+  const KEYCAP_LABEL = { A: "9", B: "6", X: "3", Y: "." };
+  for (const k of ["A", "B", "X", "Y"]) label(KEYCAP_LABEL[k], 3.2, 2.6).position.set(CAP_X + 7.5, LID_TOP + 1.2, CAP_Z[k]);
+  label("W", 3, 2.6).position.set(JOY.x, LID_TOP + 1.5, JOY.z - 7.5);
+  label("S", 3, 2.6).position.set(JOY.x, LID_TOP + 1.5, JOY.z + 7.5);
+  label("A", 3, 2.6).position.set(JOY.x - 7.5, LID_TOP + 1.5, JOY.z);
+  label("D", 3, 2.6).position.set(JOY.x + 7.5, LID_TOP + 1.5, JOY.z);
+  label("space", 7, 2.6).position.set(JOY.x, LID_TOP + 6.5, JOY.z);
+
   // --- input ------------------------------------------------------------------------------
   const ray = new THREE.Raycaster();
   const ptr = new THREE.Vector2();

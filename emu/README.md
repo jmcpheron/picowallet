@@ -16,8 +16,9 @@ tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no br
 ```
 
 Page: left = files, editor (Cmd/Ctrl+Enter runs the open file), console with a REPL; right = the
-device (orbit with the mouse, click the caps) or the flat view. Keyboard: arrows and Enter for
-the joystick, a/b/x/y for the buttons, after clicking the device. `main` picks what boots on reset.
+device (orbit with the mouse, click the caps) or the flat view. Keyboard: W A S D and space for
+the joystick, numpad 9 6 3 . for A B X Y (top-row 9 6 3 . work too), after clicking the device.
+The 3D view labels each button with its key. `main` picks what boots on reset.
 
 The flash is `firmware/*.py` and `*.bin` (never `secrets.py`; a stub is generated with
 `APP_URL = "/app"`, which the server proxies to the wallet app, `--app http://host:port`,
