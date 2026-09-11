@@ -135,3 +135,11 @@ wall and post right above the floor and drops everything above it, so the USB sl
 and pry notch keep their positions relative to the Pico. Output `case/zez0000/base_v4.stl`,
 57 x 31 x 10.5 mm (was 13). Lid and caps unchanged. Print inbox drop `20260910-163347-base_v4`,
 PLA fit check, base only. Knobs: `POST_H` (3.0) in `tools/zezbase`; `DROP` follows from it.
+
+### joystick_cap_v2 (2026-09-10): looser stem socket
+
+The stock cap's square stem socket is 1.95 mm for the 1.87 mm stem (Austin's calipers) and would
+not push on. `tools/zezcap` opens it to 2.05 mm (`SOCKET`), same 1.8 mm depth, nothing else
+changed. Output `case/zez0000/joystick_cap_v2.stl`. Print inbox drop `20260910-181311-joystick_cap_v2`,
+on the PLA fit-check plate with base_v4.
+

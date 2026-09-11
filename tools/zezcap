@@ -1,0 +1,20 @@
+#!/bin/sh
+# Rework the Zez0000 joystick cap (case/zez0000/joystick_cap.stl): the square stem socket in its
+# bottom is 1.95 mm for a 1.87 mm stem and is too tight to push on. v2 opens it to SOCKET (2.05),
+# same 1.8 mm depth. Output case/zez0000/joystick_cap_v2.stl.
+cd "$(dirname "$0")/.." || exit 1
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
+import trimesh, numpy as np
+cap = trimesh.load("case/zez0000/joystick_cap.stl")
+cx, cy = (cap.bounds[0][:2] + cap.bounds[1][:2]) / 2
+cap.apply_translation((-cx, -cy, 0))
+SOCKET, DEPTH = 2.05, 1.8          # stock 1.95 square x 1.8 deep; stem 1.87 square (BUTTONS.md)
+cut = trimesh.creation.box(extents=(SOCKET, SOCKET, DEPTH + 1.0))
+cut.apply_translation((0, 0, (DEPTH + 1.0) / 2 - 1.0))
+c2 = trimesh.boolean.difference([cap, cut], engine="manifold")
+assert c2.is_watertight, "cap not watertight"
+c2.export("case/zez0000/joystick_cap_v2.stl")
+v = c2.vertices; w = v[(np.abs(v[:, 0]) < 1.2) & (np.abs(v[:, 1]) < 1.2) & (v[:, 2] > -0.01) & (v[:, 2] < 1.81)]
+
+print("joystick_cap_v2: socket %.2f x %.2f mm, %.1f deep; cap %.1f x %.1f x %.1f, watertight" % (2 * np.abs(w[:, 0]).max(), 2 * np.abs(w[:, 1]).max(), DEPTH, *c2.extents))
+PY
