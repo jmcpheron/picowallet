@@ -3,8 +3,8 @@
 # screen on the printed part (2026-09-10 photo) and are a hair tight on the caps. v2 moves the holes
 # SHIFT_X toward the screen and opens them GROW on every side. The cap recess on the inside is
 # untouched (8.51 wide, the shifted flange still lands inside it). Output case/zez0000/lid_<v>.stl.
-# Usage: tools/zezlid [v2|v3]. v2: GROW 0.05 (a hair tight, printed 2026-09-10). v3: GROW 0.35, i.e.
-# 0.3 mm more per side, same centres, to swallow print bumps (the print Claude's lid_v2_holes_p06).
+# Usage: tools/zezlid [v2|v3|v4]. v2: GROW 0.05 (a hair tight, printed 2026-09-10). v3: GROW 0.35, i.e.
+# 0.3 mm more per side, same centres, to swallow print bumps (the print Claude's lid_v2_holes_p06). v4: GROW 0.20, halfway, v3 was too loose.
 # Frame: lid STL as downloaded, centred in x,y; z 0 is the outer face, plate 2 mm; screen window at
 # x 0, buttons at x -22.25 (4.51 x 3.75), joystick at x +19.7.
 cd "$(dirname "$0")/.." || exit 1
@@ -16,7 +16,7 @@ lid = trimesh.load("case/zez0000/lid.stl")
 cx, cy = (lid.bounds[0][:2] + lid.bounds[1][:2]) / 2
 lid.apply_translation((-cx, -cy, 0))
 SHIFT_X = 0.6                                  # toward the screen (+x)
-GROW = {"v2": 0.05, "v3": 0.35}[V]              # per side
+GROW = {"v2": 0.05, "v3": 0.35, "v4": 0.20}[V]              # per side
 HOLE_X0, HOLE_X1 = -24.50, -20.00              # stock hole x
 HOLE_Y = [(-10.50, -6.75), (-4.75, -1.00), (1.00, 4.75), (6.75, 10.50)]
 def box(x0, x1, y0, y1, z0, z1):

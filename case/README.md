@@ -178,3 +178,8 @@ Claude opened the holes 0.3 mm per side directly on its copy of the v2 mesh (`li
 on the Mac mini) and printed it in PETG. `tools/zezlid v3` makes the same part from source:
 GROW 0.35 instead of 0.05, holes 5.20 x 4.45 mm on the same centres, x -24.25..-19.05. Output
 `case/zez0000/lid_v3.stl`. Cap body is 4.30 x 3.56, so about 0.45 mm clearance per side.
+
+### lid_v4 (2026-09-11): button holes halfway between v2 and v3
+
+v3 (0.3 mm extra per side) was too loose. `tools/zezlid v4` uses GROW 0.20, holes 4.90 x 4.15 mm,
+same centres. About 0.30 mm clearance per side on the 4.30 x 3.56 cap. Output `case/zez0000/lid_v4.stl`.
