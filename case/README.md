@@ -152,3 +152,10 @@ mouth (2.85 mm at the face) and a pyramid roof instead of the flat ceiling, and 
 sizes: `joystick_cap_v3_2.05.stl` and `joystick_cap_v3_2.15.stl`. Both dropped for a slow PLA
 print; keep whichever grips the 1.87 mm stem.
 
+### Smaller joystick sockets and an X button (2026-09-10, later)
+
+The v3 caps printed clean but the socket was loose on the stem. `tools/zezcap 1.95 2.00` builds
+`joystick_cap_v3_1.95.stl` and `joystick_cap_v3_2.00.stl`, same chamfer and roof. `tools/zezbtn`
+builds `button_cap_x.stl`: the stock (solid) button cap with a raised X on top, 0.7 mm bars at
+45 degrees, 0.6 mm above the dome, for a cancel button. All three dropped for PLA, flange down.
+
