@@ -1,22 +1,29 @@
 #!/bin/sh
-# Zez0000 button cap with a raised X on top (a cancel / no button). Stock cap is solid: 6.3 x 5.56
-# flange, 4.3 x 3.56 body, domed top at z 4.41. Two bars 0.7 wide at +-45 deg, top at z 5.0, so
-# the X stands 0.6 mm above the dome. Prints flange down, X up. Output case/zez0000/button_cap_x.stl
+# Zez0000 button cap with a raised symbol on top. Stock cap is solid: 6.3 x 5.56 flange, 4.3 x 3.56
+# body, domed top at z 4.41. Bars 0.7 wide, top at z 5.0, so the symbol stands 0.6 mm above the dome.
+# Prints flange down, symbol up. Usage: tools/zezbtn [x|check ...]  (default both)
+# Output case/zez0000/button_cap_x.stl (cancel / no) and button_cap_check.stl (confirm / yes).
 cd "$(dirname "$0")/.." || exit 1
-exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
-import trimesh, numpy as np
-cap = trimesh.load("case/zez0000/button_cap_1.stl")
-cx, cy = (cap.bounds[0][:2] + cap.bounds[1][:2]) / 2
-cap.apply_translation((-cx, -cy, 0))
-BAR_L, BAR_W, Z0, Z1 = 3.4, 0.7, 3.8, 5.0
-bars = []
-for a in (np.pi / 4, -np.pi / 4):
-    b = trimesh.creation.box(extents=(BAR_L, BAR_W, Z1 - Z0))
-    b.apply_transform(trimesh.transformations.rotation_matrix(a, (0, 0, 1)))
-    b.apply_translation((0, 0, (Z0 + Z1) / 2)); bars.append(b)
-x = trimesh.boolean.union([cap] + bars, engine="manifold")
-assert x.is_watertight, "cap not watertight"
-x.export("case/zez0000/button_cap_x.stl")
-s = x.section(plane_origin=[0, 0, 4.7], plane_normal=[0, 0, 1]); p, _ = s.to_2D()
-print("button_cap_x: %.1f x %.1f x %.2f mm, X at z 4.7 is %.2f x %.2f, watertight" % (*x.extents, p.bounds[1][0] - p.bounds[0][0], p.bounds[1][1] - p.bounds[0][1]))
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - ${*:-x check} <<'PY'
+import sys, trimesh, numpy as np
+BAR_W, Z0, Z1 = 0.7, 3.8, 5.0
+SYMBOLS = {   # line segments (x0, y0, x1, y1) on the cap top, mm from centre
+    "x":     [(-0.955, -0.955, 0.955, 0.955), (-0.955, 0.955, 0.955, -0.955)],   # 3.4 mm bars, as printed
+    "check": [(-1.3, 0.1, -0.35, -0.85), (-0.35, -0.85, 1.35, 0.95)],
+}
+for name in sys.argv[1:]:
+    cap = trimesh.load("case/zez0000/button_cap_1.stl")
+    cx, cy = (cap.bounds[0][:2] + cap.bounds[1][:2]) / 2
+    cap.apply_translation((-cx, -cy, 0))
+    bars = []
+    for x0, y0, x1, y1 in SYMBOLS[name]:
+        L = np.hypot(x1 - x0, y1 - y0) + BAR_W          # overlap at the joints, rounded look at the ends
+        b = trimesh.creation.box(extents=(L, BAR_W, Z1 - Z0))
+        b.apply_transform(trimesh.transformations.rotation_matrix(np.arctan2(y1 - y0, x1 - x0), (0, 0, 1)))
+        b.apply_translation(((x0 + x1) / 2, (y0 + y1) / 2, (Z0 + Z1) / 2)); bars.append(b)
+    out = trimesh.boolean.union([cap] + bars, engine="manifold")
+    assert out.is_watertight, name + " not watertight"
+    out.export("case/zez0000/button_cap_%s.stl" % name)
+    s = out.section(plane_origin=[0, 0, 4.7], plane_normal=[0, 0, 1]); p, _ = s.to_2D()
+    print("button_cap_%s: %.1f x %.1f x %.2f mm, symbol at z 4.7 spans %.2f x %.2f, watertight" % (name, *out.extents, p.bounds[1][0] - p.bounds[0][0], p.bounds[1][1] - p.bounds[0][1]))
 PY

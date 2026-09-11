@@ -158,4 +158,6 @@ The v3 caps printed clean but the socket was loose on the stem. `tools/zezcap 1.
 `joystick_cap_v3_1.95.stl` and `joystick_cap_v3_2.00.stl`, same chamfer and roof. `tools/zezbtn`
 builds `button_cap_x.stl`: the stock (solid) button cap with a raised X on top, 0.7 mm bars at
 45 degrees, 0.6 mm above the dome, for a cancel button. All three dropped for PLA, flange down.
+`tools/zezbtn check` builds `button_cap_check.stl`, the confirm button, same raised bars in a
+check mark. Later plan: print the symbols in a second color (green check, red X) on the AMS.
 
