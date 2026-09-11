@@ -163,9 +163,11 @@ heavily loaded when built (5x slower than node), so the page booted in 8 s; norm
 2. Run the fresh-chip provisioning path on a real blank ATECC608 and fix what breaks.
 3. Host the app somewhere with a persistent store so "go to a website" works off the LAN.
 4. Battery (PLAN.md step 4).
-5. Case: print the yellow set (Austin says go to the print Claude), test the base_v3 snap and pry
+5. Case: AMS two-colour test, white QR code in the bottom of base_v5 (`tools/zezqr`, drops
+   `20260911-14204*-base_v5_qr*`, 2026-09-11). If it prints and scans, put the vault address in it.
+6. Case: print the yellow set (Austin says go to the print Claude), test the base_v3 snap and pry
    notch, check the ATECC608 breakout clears the rounded base. Tune `tools/zezbase` if needed.
-6. Case v1 (own design, battery pocket) only if Austin brings it up.
+7. Case v1 (own design, battery pocket) only if Austin brings it up.
 
 ## Where the notes are
 

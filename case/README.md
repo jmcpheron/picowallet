@@ -191,3 +191,27 @@ from 0.25 to 0.50 mm proud (Austin: a quarter mm more) and fattens them from r 0
 neck on the tab stays about 1 mm wide. Everything else is v4. Output `case/zez0000/base_v5.stl`.
 Unprinted. Note 0.50 is above the stock 0.44 that would not snap at all, but stock had 106 mm of
 ridge and this has 40 mm. If v5 will not close, try 0.40.
+
+### base_v5_qr (2026-09-11): white QR code in the bottom, AMS two-colour test
+
+Austin's idea: the base prints bottom-down in black PETG, so put white PETG in the first layers to
+make a QR code on the underside. `tools/zezqr [TEXT] [base_vN]` (default the repo URL, base_v5)
+builds the QR with `qrcode` (EC L, 29 modules for the URL; a 0x address at M is also 29), lays it
+on the bottom at 0.85 mm a module (24.7 mm square, centred at x -3.5 to clear the 3 x 2.3 mm hole
+in the floor at x 12..15), mirrored so it reads from below, and cuts it 0.6 mm (three 0.2 mm layers)
+into the 2.0 mm floor. Dark modules are white PETG; the black base is the light modules and the
+quiet zone (an inverted QR, phones read those). Outputs, all in the base frame with z=0 on the bed:
+`base_v5_qr_black.stl`, `base_v5_qr_white.stl` (431 loose squares, never print alone), and
+`base_v5_qr.3mf`, a Bambu Studio project with both as parts of one object, white part on
+extruder 2. The script checks itself: it samples the white body from below and matches it module
+for module against the QR matrix, then decodes it with OpenCV.
+
+Bambu Studio 2.7 CLI notes, since the print Claude slices headless: the 3MF needs a
+`Metadata/project_settings.config` or the CLI segfaults on load (ours is
+`case/zez0000/p2s_petg_x2.project_settings.json`, a P2S 0.4 / 0.20 mm / PETG HF x2 export with
+`filament_colour`, `filament_map`, 2x2 `flush_volumes_matrix`, textured PEI plate); the plate
+block needs `filament_maps` "1 1"; and `--load-settings`/`--load-filaments` must be given presets
+with `inherits` already resolved (flatten the JSON chain) or every part ends up on filament 1.
+With that it sliced to 3 filament changes, white 0.2 g, and the white toolpaths in the gcode
+decode as the URL. Print inbox drops `20260911-142041-base_v5_qr` (3MF), `-142042-…_black` and
+`-142043-…_white` (STL fallback). Unprinted. Knobs: `MOD`, `QR_H`, `CX`, `EC` in `tools/zezqr`.

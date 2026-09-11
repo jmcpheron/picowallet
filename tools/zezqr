@@ -1,0 +1,113 @@
+#!/bin/sh
+# QR code inlaid in the bottom of the Zez0000 base for a two-colour AMS print.
+# Usage: tools/zezqr [TEXT] [base_vN]   (default text: the repo URL, base_v5)
+# Reads case/zez0000/base_vN.stl and writes, in the same frame (z=0 is the print bed):
+#   case/zez0000/base_vN_qr_black.stl  the base with the QR modules cut out of the bottom QR_H mm
+#   case/zez0000/base_vN_qr_white.stl  the QR modules, exactly filling those cuts (dark modules = white)
+#   case/zez0000/base_vN_qr.3mf        both as parts of one object, white part on filament 2
+#   case/zez0000/base_vN_qr_bottom.png the bottom view as printed, decoded back to check it scans
+# The QR is white on black, read from below. The black base is the light modules and the quiet zone.
+# The floor is 2.0 mm; the bottom flat is x +-26.2, y +-13.2 (2 mm rounded edge outside that); a
+# 3 x 2.3 mm hole sits at x 11.75..14.75, y -4.6..-2.3, so the QR is centred at x = -3.5.
+cd "$(dirname "$0")/.." || exit 1
+TEXT="${1:-https://github.com/austintgriffith/picowallet}"; BASE="${2:-base_v5}"; export TEXT BASE
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree --with qrcode --with opencv-python-headless python - <<'PY'
+import os, io, zipfile, trimesh, numpy as np, qrcode, cv2
+TEXT, BASE = os.environ["TEXT"], os.environ["BASE"]
+MOD = 0.85        # module size, mm (0.4 mm nozzle: two extrusion widths); 29 modules = 24.7 mm on the 26.4 mm flat
+QR_H = 0.60       # white inlay height: three 0.2 mm layers, floor is 2.0
+CX, CY = -3.5, 0  # QR centre on the bottom, clear of the floor hole on +x
+EC = "L"          # error correction; 29 modules for the repo URL at L and for a 0x address at M
+
+base = trimesh.load("case/zez0000/%s.stl" % BASE)
+cx, cy = (base.bounds[0][:2] + base.bounds[1][:2]) / 2
+base.apply_translation((-cx, -cy, 0))
+
+q = qrcode.QRCode(error_correction=getattr(qrcode.constants, "ERROR_CORRECT_" + EC), border=0)
+q.add_data(TEXT); q.make(fit=True)
+m = np.array(q.get_matrix(), dtype=bool); n = len(m)
+span = n * MOD
+assert span <= 26.4 - 1.0, "QR %.1f mm does not fit the 26.4 mm flat bottom" % span   # quiet zone continues onto the black rounded edge
+assert CX + span / 2 + 2 * MOD <= 11.75, "QR runs into the floor hole"
+
+# Seen from below (looking up +z, model +y up in the view) the viewer's right is model -x.
+# Column i runs to the viewer's right, so it runs to -x here; row j runs down the view, so -y.
+def box(x0, x1, y0, y1, z0, z1):
+    b = trimesh.creation.box(extents=(x1 - x0, y1 - y0, z1 - z0))
+    b.apply_translation(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)); return b
+cells = []
+for j in range(n):
+    for i in range(n):
+        if m[j, i]:
+            x1 = CX + span / 2 - i * MOD; y1 = CY + span / 2 - j * MOD
+            cells.append(box(x1 - MOD, x1, y1 - MOD, y1, -0.5, QR_H))
+white = trimesh.boolean.union(cells, engine="manifold")
+white = trimesh.boolean.intersection([white, base], engine="manifold")       # trims to z=0 and the fillet
+black = trimesh.boolean.difference([base, white], engine="manifold")
+assert white.is_watertight and black.is_watertight
+white.export("case/zez0000/%s_qr_white.stl" % BASE)
+black.export("case/zez0000/%s_qr_black.stl" % BASE)
+print("%s: %d modules of %.2f mm = %.1f mm square at (%.1f, %.1f), inlay %.1f mm tall, %d white cells, volumes white %.0f black %.0f mm3"
+      % (TEXT, n, MOD, span, CX, CY, QR_H, int(m.sum()), white.volume, black.volume))
+
+# Bottom view as printed: sample the white body on a 0.1 mm grid at mid inlay height, x mirrored, decode it.
+S = 10; W, H = 57 * S, 31 * S
+gx, gy = np.meshgrid((np.arange(W) + 0.5) / S - 28.5, (np.arange(H) + 0.5) / S - 15.5)   # image col -> model x, row -> model y
+pts = np.stack([-gx.ravel(), -gy.ravel(), np.full(gx.size, QR_H / 2)], 1)   # view from below: x mirrored, y down
+inside = white.contains(pts).reshape(H, W)
+img = np.where(inside, 255, 0).astype(np.uint8)
+cv2.imwrite("case/zez0000/%s_qr_bottom.png" % BASE, img)
+# Module-by-module: in the bottom view column i is at image x = (28.5 - (CX + span/2 - (i + 0.5) * MOD)) * S, row j at y = (15.5 - (CY + span/2 - (j + 0.5) * MOD)) * S
+ii, jj = np.meshgrid(np.arange(n), np.arange(n))
+px = ((28.5 - (CX + span / 2 - (ii + 0.5) * MOD)) * S).astype(int); py = ((15.5 - (CY + span / 2 - (jj + 0.5) * MOD)) * S).astype(int)
+assert np.array_equal(img[py, px] > 0, m), "bottom view does not match the QR matrix"
+data, _, _ = cv2.QRCodeDetectorAruco().detectAndDecode(255 - img)   # decoder wants dark modules on light
+print("bottom view matches the matrix module for module; decoded: %r" % data)
+assert data == TEXT, "bottom view does not decode to the text"
+
+# Bambu Studio 3MF (the layout Bambu Studio 2.7 itself exports): meshes in 3D/Objects/object_1.model, one
+# object of two parts in 3D/3dmodel.model, the white part on extruder 2 in Metadata/model_settings.config.
+def mesh_xml(oid, mesh):
+    v = "".join('<vertex x="%.4f" y="%.4f" z="%.4f"/>' % tuple(p) for p in mesh.vertices)
+    t = "".join('<triangle v1="%d" v2="%d" v3="%d"/>' % tuple(f) for f in mesh.faces)
+    return '<object id="%d" p:UUID="%08x-0000-4000-8000-000000000001" type="model"><mesh><vertices>%s</vertices><triangles>%s</triangles></mesh></object>' % (oid, oid, v, t)
+NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
+      'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"')
+ident = "1 0 0 0 1 0 0 0 1 0 0 0"
+objects = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" %s><metadata name="BambuStudio:3mfVersion">1</metadata>'
+           '<resources>%s%s</resources><build/></model>' % (NS, mesh_xml(1, black), mesh_xml(2, white)))
+model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" %s>'
+         '<metadata name="Application">BambuStudio-02.07.01.62</metadata><metadata name="BambuStudio:3mfVersion">1</metadata><metadata name="Title">%s_qr</metadata>'
+         '<resources><object id="3" p:UUID="00000003-0000-4000-8000-000000000003" type="model"><components>'
+         '<component p:path="/3D/Objects/object_1.model" objectid="1" p:UUID="00010000-0000-4000-8000-000000000001" transform="%s"/>'
+         '<component p:path="/3D/Objects/object_1.model" objectid="2" p:UUID="00020000-0000-4000-8000-000000000002" transform="%s"/>'
+         '</components></object></resources>'
+         '<build p:UUID="00000000-0000-4000-8000-00000000000b"><item objectid="3" p:UUID="00000004-0000-4000-8000-000000000004" transform="1 0 0 0 1 0 0 0 1 128 128 0" printable="1"/></build></model>'
+         % (NS, BASE, ident, ident))
+mat = "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"
+def part(pid, name, ext, mesh):
+    return ('<part id="%d" subtype="normal_part"><metadata key="name" value="%s"/><metadata key="matrix" value="%s"/><metadata key="extruder" value="%d"/>'
+            '<metadata key="source_file" value="%s"/><metadata key="source_object_id" value="0"/><metadata key="source_volume_id" value="%d"/>'
+            '<metadata key="source_offset_x" value="0"/><metadata key="source_offset_y" value="0"/><metadata key="source_offset_z" value="0"/>'
+            '<mesh_stat face_count="%d" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>'
+            % (pid, name, mat, ext, name, pid - 1, len(mesh.faces)))
+settings = ('<?xml version="1.0" encoding="UTF-8"?>\n<config><object id="3"><metadata key="name" value="%s_qr"/><metadata key="extruder" value="1"/>'
+            '<metadata face_count="%d"/>%s%s</object>'
+            '<plate><metadata key="plater_id" value="1"/><metadata key="plater_name" value=""/><metadata key="locked" value="false"/>'
+            '<metadata key="filament_map_mode" value="Auto For Flush"/><metadata key="filament_maps" value="1 1"/><metadata key="filament_volume_maps" value="0 0"/>'
+            '<model_instance><metadata key="object_id" value="3"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="15"/></model_instance></plate>'
+            '<assemble></assemble></config>'
+            % (BASE, len(black.faces) + len(white.faces), part(1, "%s_qr_black.stl" % BASE, 1, black), part(2, "%s_qr_white.stl" % BASE, 2, white)))
+types = ('<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+         '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="png" ContentType="image/png"/></Types>')
+rels = ('<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+mrels = ('<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+         '<Relationship Target="/3D/Objects/object_1.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+with zipfile.ZipFile("case/zez0000/%s_qr.3mf" % BASE, "w", zipfile.ZIP_DEFLATED) as z:
+    z.writestr("[Content_Types].xml", types); z.writestr("_rels/.rels", rels); z.writestr("3D/_rels/3dmodel.model.rels", mrels)
+    z.writestr("3D/3dmodel.model", model); z.writestr("3D/Objects/object_1.model", objects); z.writestr("Metadata/model_settings.config", settings)
+    z.write("case/zez0000/p2s_petg_x2.project_settings.json", "Metadata/project_settings.config")   # P2S 0.4, 0.20 mm, PETG HF x2 (black, white); exported by Bambu Studio 2.7 CLI, without it the CLI crashes on load
+print("wrote case/zez0000/%s_qr_{black,white}.stl, %s_qr.3mf, %s_qr_bottom.png" % (BASE, BASE, BASE))
+PY
