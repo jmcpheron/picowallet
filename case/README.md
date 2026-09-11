@@ -215,3 +215,5 @@ with `inherits` already resolved (flatten the JSON chain) or every part ends up 
 With that it sliced to 3 filament changes, white 0.2 g, and the white toolpaths in the gcode
 decode as the URL. Print inbox drops `20260911-142041-base_v5_qr` (3MF), `-142042-…_black` and
 `-142043-…_white` (STL fallback). Unprinted. Knobs: `MOD`, `QR_H`, `CX`, `EC` in `tools/zezqr`.
+Result 2026-09-11: printed on the AMS, the QR came out and scans. Proof done; parked. One day the
+vault address goes in the bottom (`tools/zezqr 0x... base_vN`), not now.
