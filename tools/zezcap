@@ -1,20 +1,35 @@
 #!/bin/sh
-# Rework the Zez0000 joystick cap (case/zez0000/joystick_cap.stl): the square stem socket in its
-# bottom is 1.95 mm for a 1.87 mm stem and is too tight to push on. v2 opens it to SOCKET (2.05),
-# same 1.8 mm depth. Output case/zez0000/joystick_cap_v2.stl.
+# Rework the Zez0000 joystick cap (case/zez0000/joystick_cap.stl). The square stem socket in its
+# bottom is 1.95 mm for a 1.87 mm stem and is too tight to push on. v2 opened it to 2.05.
+# v3 (2026-09-10): the v2 print closed up. The socket is in the first layer (flange on the bed) so the
+# mouth got squished shut, and its flat ceiling is a 2 mm bridge that sagged into the hole. v3 adds a
+# CHAMFER at the mouth and a self-supporting 45 degree pyramid roof instead of the flat ceiling.
+# Usage: tools/zezcap [socket_mm ...]   default 2.05 2.15 -> case/zez0000/joystick_cap_v3_<size>.stl
 cd "$(dirname "$0")/.." || exit 1
-exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
-import trimesh, numpy as np
-cap = trimesh.load("case/zez0000/joystick_cap.stl")
-cx, cy = (cap.bounds[0][:2] + cap.bounds[1][:2]) / 2
-cap.apply_translation((-cx, -cy, 0))
-SOCKET, DEPTH = 2.05, 1.8          # stock 1.95 square x 1.8 deep; stem 1.87 square (BUTTONS.md)
-cut = trimesh.creation.box(extents=(SOCKET, SOCKET, DEPTH + 1.0))
-cut.apply_translation((0, 0, (DEPTH + 1.0) / 2 - 1.0))
-c2 = trimesh.boolean.difference([cap, cut], engine="manifold")
-assert c2.is_watertight, "cap not watertight"
-c2.export("case/zez0000/joystick_cap_v2.stl")
-v = c2.vertices; w = v[(np.abs(v[:, 0]) < 1.2) & (np.abs(v[:, 1]) < 1.2) & (v[:, 2] > -0.01) & (v[:, 2] < 1.81)]
+SIZES="${*:-2.05 2.15}"
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - $SIZES <<'PY'
+import sys, trimesh, numpy as np
+DEPTH, CHAMFER = 1.8, 0.4          # stock socket 1.95 square x 1.8 deep; stem 1.87 square (calipers)
 
-print("joystick_cap_v2: socket %.2f x %.2f mm, %.1f deep; cap %.1f x %.1f x %.1f, watertight" % (2 * np.abs(w[:, 0]).max(), 2 * np.abs(w[:, 1]).max(), DEPTH, *c2.extents))
+def sq(h, z):                       # 4 corners of a square of side h at height z
+    return [(sx * h / 2, sy * h / 2, z) for sx in (1, -1) for sy in (1, -1)]
+
+for size in map(float, sys.argv[1:]):
+    cap = trimesh.load("case/zez0000/joystick_cap.stl")
+    cx, cy = (cap.bounds[0][:2] + cap.bounds[1][:2]) / 2
+    cap.apply_translation((-cx, -cy, 0))
+    shaft = trimesh.creation.box(extents=(size, size, DEPTH + 1.0)); shaft.apply_translation((0, 0, (DEPTH + 1.0) / 2 - 1.0))
+    mouth = trimesh.convex.convex_hull(np.array(sq(size + 2 * CHAMFER + 2, -1.0) + sq(size + 2 * CHAMFER, 0.0) + sq(size, CHAMFER)))
+    roof = trimesh.convex.convex_hull(np.array(sq(size, DEPTH - 0.01) + [(0, 0, DEPTH + size / 2)]))
+    c3 = trimesh.boolean.difference([cap, shaft, mouth, roof], engine="manifold")
+    assert c3.is_watertight, "cap not watertight"
+    out = "case/zez0000/joystick_cap_v3_%.2f.stl" % size
+    c3.export(out)
+    def w(z):                       # socket width at height z: the small square loop in the slice
+        s = c3.section(plane_origin=[0, 0, z], plane_normal=[0, 0, 1]); p, _ = s.to_2D()
+        q = [q for q in p.polygons_closed if 2 < q.area < 12 and max(abs(q.centroid.x), abs(q.centroid.y)) < 0.5]
+        assert len(q) == 1, "socket loop not found at z %.2f: %s" % (z, [round(x.area, 2) for x in p.polygons_closed])
+        return q[0].bounds[2] - q[0].bounds[0]
+    print("%s: mouth %.2f at z0, socket %.2f at z%.1f..%.1f, roof apex z%.2f; cap %.1f x %.1f x %.1f, watertight" % (
+        out, w(0.02), w(1.0), CHAMFER, DEPTH, DEPTH + size / 2,  *c3.extents))
 PY

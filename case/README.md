@@ -143,3 +143,12 @@ not push on. `tools/zezcap` opens it to 2.05 mm (`SOCKET`), same 1.8 mm depth, n
 changed. Output `case/zez0000/joystick_cap_v2.stl`. Print inbox drop `20260910-181311-joystick_cap_v2`,
 on the PLA fit-check plate with base_v4.
 
+### joystick_cap_v3 (2026-09-10): the v2 socket printed shut
+
+The v2 cap came off the printer with the socket mouth squished and a sagged line across the
+hole. Cause: the flange prints face down, so the 2 mm hole is in the squished first layer, and
+its flat ceiling is a 2 mm bridge. `tools/zezcap` now cuts a 0.4 mm 45 degree chamfer at the
+mouth (2.85 mm at the face) and a pyramid roof instead of the flat ceiling, and builds two
+sizes: `joystick_cap_v3_2.05.stl` and `joystick_cap_v3_2.15.stl`. Both dropped for a slow PLA
+print; keep whichever grips the 1.87 mm stem.
+
