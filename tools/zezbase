@@ -1,12 +1,16 @@
 #!/bin/sh
-# Rework the Zez0000 base (v3: + pry notch; v4: posts 3 mm, case 2.5 mm shorter) (case/zez0000/base.stl) so it snaps into the stock lid without a mallet.
+# Rework the Zez0000 base (v3: + pry notch; v4: posts 3 mm, case 2.5 mm shorter; v5: ridge 0.50 proud, r 0.5)
+# Usage: tools/zezbase [v4|v5]. v4 pried apart with a fingernail (2026-09-11), v5 is the stiffer snap.
+# Source case/zez0000/base.stl, reworked so it snaps into the stock lid without a mallet.
 # Stock: two 53 mm tabs, each with a full-length half-round ridge 0.44 mm proud of the lid wall,
 # zero end clearance. Here: ridge removed, tab shaved to 0.1 mm side clearance and 0.25 mm end
 # clearance, then four 10 mm ridges (r 0.4) put back, 0.25 mm proud, landing in the lid groove.
 # Frame: base STL as downloaded, z=0 floor, rim at z=11, tabs z 11..13. Centre of the shell in x,y.
 cd "$(dirname "$0")/.." || exit 1
+V="${1:-v5}"; export V
 exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
-import trimesh, numpy as np
+import trimesh, numpy as np, os
+V = os.environ["V"]
 base = trimesh.load("case/zez0000/base.stl")
 cx, cy = (base.bounds[0][:2] + base.bounds[1][:2]) / 2
 base.apply_translation((-cx, -cy, 0))
@@ -14,8 +18,9 @@ base.apply_translation((-cx, -cy, 0))
 WALL_IN = 27.13 / 2          # lid cavity half-width (inner face of the lid wall)
 TAB_OUT = WALL_IN - 0.10     # new tab outer face: 0.1 clearance to the lid wall
 TAB_END = 26.25              # new tab half-length (stock 26.4/26.6, lid pocket 26.5): 0.25 per end
-RIDGE_R, RIDGE_LEN, RIDGE_X, RIDGE_PROUD = 0.4, 10.0, 16.0, 0.25
-RIDGE_Y = WALL_IN + RIDGE_PROUD - RIDGE_R   # cylinder centre so the crest is 0.25 past the wall
+RIDGE_LEN, RIDGE_X = 10.0, 16.0
+RIDGE_R, RIDGE_PROUD = {"v4": (0.4, 0.25), "v5": (0.5, 0.50)}[V]   # v5: crest 0.25 further out, fatter so the neck on the tab stays ~1 mm wide
+RIDGE_Y = WALL_IN + RIDGE_PROUD - RIDGE_R   # cylinder centre so the crest is RIDGE_PROUD past the wall
 RIDGE_Z = 12.5               # stock ridge centre; meets the lid groove centre (lid z 14.1)
 NOTCH_W, NOTCH_D, NOTCH_H = 8.0, 1.0, 1.0   # pry slot in the outer wall at the rim, +y side, x centre
 FLOOR_TOP, POST_TOP, POST_H = 2.0, 7.5, 3.0  # stock posts 5.5 mm; v4 cuts a wall slab above the floor so posts are POST_H
@@ -47,10 +52,10 @@ lo = trimesh.boolean.intersection([b3, box(-40, 40, -20, 20, -1, FLOOR_TOP)], en
 hi = trimesh.boolean.intersection([b3, box(-40, 40, -20, 20, FLOOR_TOP + DROP, 20)], engine="manifold")
 hi.apply_translation((0, 0, -DROP))
 b4 = trimesh.boolean.union([lo, hi], engine="manifold")
-assert b4.is_watertight, "base_v4 not watertight"
-b4.export("case/zez0000/base_v4.stl")
+assert b4.is_watertight, "base not watertight"
+b4.export("case/zez0000/base_%s.stl" % V)
 pv = b4.vertices[(np.abs(np.abs(b4.vertices[:, 0]) - 23.25) < 2) & (np.abs(np.abs(b4.vertices[:, 1]) - 5.75) < 2) & (b4.vertices[:, 2] > FLOOR_TOP + 0.01)]
-print("base_v4: %.1f x %.1f x %.1f mm, posts %.2f mm tall, watertight" % (b4.extents[0], b4.extents[1], b4.extents[2], pv[:, 2].max() - FLOOR_TOP))
+print("base_%s: %.1f x %.1f x %.1f mm, posts %.2f mm tall, watertight" % (V, b4.extents[0], b4.extents[1], b4.extents[2], pv[:, 2].max() - FLOOR_TOP))
 
 v = b3.vertices; t = v[v[:, 2] > 11.01]
 print("tabs: x %.2f..%.2f, |y| max %.2f (wall at %.3f); ridges crest |y| %.2f, %d mm long at x=+-%.0f, z %.1f..%.1f" % (
