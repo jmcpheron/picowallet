@@ -170,3 +170,11 @@ holes, then cuts them 0.6 mm toward the screen (`SHIFT_X`) and 0.05 mm bigger pe
 Inside recess untouched. Output `case/zez0000/lid_v2.stl`. Queued with a base_v4 reprint as a
 full case.
 
+
+### lid_v3 (2026-09-10): button holes 0.3 mm bigger per side
+
+lid_v2 printed with the holes lined up but tight, with print bumps catching the caps. The print
+Claude opened the holes 0.3 mm per side directly on its copy of the v2 mesh (`lid_v2_holes_p06.stl`
+on the Mac mini) and printed it in PETG. `tools/zezlid v3` makes the same part from source:
+GROW 0.35 instead of 0.05, holes 5.20 x 4.45 mm on the same centres, x -24.25..-19.05. Output
+`case/zez0000/lid_v3.stl`. Cap body is 4.30 x 3.56, so about 0.45 mm clearance per side.
