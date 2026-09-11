@@ -182,4 +182,4 @@ GROW 0.35 instead of 0.05, holes 5.20 x 4.45 mm on the same centres, x -24.25..-
 ### lid_v4 (2026-09-11): button holes halfway between v2 and v3
 
 v3 (0.3 mm extra per side) was too loose. `tools/zezlid v4` uses GROW 0.20, holes 4.90 x 4.15 mm,
-same centres. About 0.30 mm clearance per side on the 4.30 x 3.56 cap. Output `case/zez0000/lid_v4.stl`.
+same centres. About 0.30 mm clearance per side on the 4.30 x 3.56 cap. Output `case/zez0000/lid_v4.stl`. Print inbox drop `20260911-100848-lid_v4`, PETG, print Claude told to go.
