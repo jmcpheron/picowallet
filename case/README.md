@@ -162,3 +162,11 @@ builds `button_cap_x.stl`: the stock (solid) button cap with a raised X on top, 
 check mark. Later plan: print the symbols in a second color (green check, red X) on the AMS.
 Result 2026-09-10 evening: socket 2.00 mm is the winner on the 1.87 mm stem. 10 copies queued.
 
+### lid_v2 (2026-09-10): button holes moved
+
+On the printed lid the four button holes sit 0.6 mm too far from the screen (the switch plunger
+is off-centre in each hole) and are a hair tight on the caps. `tools/zezlid` fills the stock
+holes, then cuts them 0.6 mm toward the screen (`SHIFT_X`) and 0.05 mm bigger per side (`GROW`).
+Inside recess untouched. Output `case/zez0000/lid_v2.stl`. Queued with a base_v4 reprint as a
+full case.
+

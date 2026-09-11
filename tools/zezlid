@@ -1,0 +1,33 @@
+#!/bin/sh
+# Rework the Zez0000 lid (case/zez0000/lid.stl): the four button holes sit 0.6 mm too far from the
+# screen on the printed part (2026-09-10 photo) and are a hair tight on the caps. v2 moves the holes
+# SHIFT_X toward the screen and opens them GROW on every side. The cap recess on the inside is
+# untouched (8.51 wide, the shifted flange still lands inside it). Output case/zez0000/lid_v2.stl.
+# Frame: lid STL as downloaded, centred in x,y; z 0 is the outer face, plate 2 mm; screen window at
+# x 0, buttons at x -22.25 (4.51 x 3.75), joystick at x +19.7.
+cd "$(dirname "$0")/.." || exit 1
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with manifold3d --with numpy --with scipy --with shapely --with networkx --with rtree python - <<'PY'
+import trimesh, numpy as np
+lid = trimesh.load("case/zez0000/lid.stl")
+cx, cy = (lid.bounds[0][:2] + lid.bounds[1][:2]) / 2
+lid.apply_translation((-cx, -cy, 0))
+SHIFT_X, GROW = 0.6, 0.05                      # toward the screen (+x); per side
+HOLE_X0, HOLE_X1 = -24.50, -20.00              # stock hole x
+HOLE_Y = [(-10.50, -6.75), (-4.75, -1.00), (1.00, 4.75), (6.75, 10.50)]
+def box(x0, x1, y0, y1, z0, z1):
+    b = trimesh.creation.box(extents=(x1 - x0, y1 - y0, z1 - z0))
+    b.apply_translation(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)); return b
+# fill each stock hole through the plate (z 0..2), then cut the shifted, grown hole
+fills = [box(HOLE_X0 - 0.2, HOLE_X1 + 0.2, y0 - 0.2, y1 + 0.2, 0.0, 2.0) for y0, y1 in HOLE_Y]
+cuts = [box(HOLE_X0 + SHIFT_X - GROW, HOLE_X1 + SHIFT_X + GROW, y0 - GROW, y1 + GROW, -1.0, 2.5) for y0, y1 in HOLE_Y]
+filled = trimesh.boolean.union([lid] + fills, engine="manifold")
+l2 = trimesh.boolean.difference([filled] + cuts, engine="manifold")
+assert l2.is_watertight, "lid not watertight"
+l2.export("case/zez0000/lid_v2.stl")
+s = l2.section(plane_origin=[0, 0, 1.0], plane_normal=[0, 0, 1])
+holes = [np.array(l) for l in s.discrete if -27 < np.array(l)[:, 0].min() and np.array(l)[:, 0].max() < -15]
+for h in sorted(holes, key=lambda h: h[:, 1].min()):
+    mn, mx = h.min(0), h.max(0)
+    print("hole x %.2f..%.2f y %.2f..%.2f (%.2f x %.2f, centre x %.2f)" % (mn[0], mx[0], mn[1], mx[1], mx[0] - mn[0], mx[1] - mn[1], (mn[0] + mx[0]) / 2))
+print("lid_v2: %.1f x %.1f x %.1f mm, watertight" % tuple(l2.extents))
+PY
