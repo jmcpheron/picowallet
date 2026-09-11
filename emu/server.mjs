@@ -41,6 +41,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   try {
     if (url.pathname === "/") return sendFile(res, join(EMU, "web/index.html"));
+    if (url.pathname === "/skill") { res.writeHead(200, { "content-type": "text/plain; charset=utf-8" }); return res.end(readFileSync(join(EMU, "SKILL.md"))); }
     if (url.pathname.startsWith("/app/")) return proxy(req, res, url.pathname.slice(4) + url.search);
     if (url.pathname.startsWith("/ctl/")) return control(req, res, url);
     for (const [prefix, dir] of STATIC) {

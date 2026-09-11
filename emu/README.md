@@ -23,8 +23,14 @@ The flash is `firmware/*.py` and `*.bin` (never `secrets.py`; a stub is generate
 `APP_URL = "/app"`, which the server proxies to the wallet app, `--app http://host:port`,
 default `http://localhost:3001`) plus `emu/sketches/*` on top. Saving in the editor writes to disk.
 
-`tools/emu run` and `--wait/--key/--shot` steps make the bot loop: see `SKILL.md`, also linked
-from `.claude/skills/pico-emu`.
+## Give it to your AI
+
+`emu/SKILL.md` is the skill file. It tells an AI what the screen and buttons are, how to write a
+sketch, how to run it here (`tools/emu run`, `key`, `shot`), and how to put it on the real Pico.
+Hand it over with a checkout of this repo (the skill runs `tools/emu`, which needs node). In
+Claude Code it loads on its own from `.claude/skills/pico-emu`; say "build Tetris for the Pico
+wallet" or `/pico-emu`. The page links to it too (top right, "skill file for your AI", also at
+http://localhost:4242/skill).
 
 What is modeled: pins (keys pull low when pressed), SPI display window commands, the SPI transfer
 time (24 MHz cap until `machine.freq(cpu, peri)` raises the peripheral clock, like rp2), PWM

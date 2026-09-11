@@ -20,6 +20,8 @@ button:active { transform: translateY(1px); }
 .seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
 .seg button.on { background: #2b3446; color: #fff; }
 .spacer { flex: 1; }
+#skill { color: var(--yellow); text-decoration: none; font-size: 12px; margin-right: 12px; }
+#skill:hover { text-decoration: underline; }
 #stat { color: var(--dim); font-family: var(--mono); font-size: 12px; }
 #conn.ok { color: var(--accent); }
 #conn.bad { color: var(--red); }
