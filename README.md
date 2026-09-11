@@ -192,7 +192,10 @@ digest the device computed.
 - **Another chain:** `targetNetworks` in `app/packages/nextjs/scaffold.config.ts`. The wallet
   shows the chain id it is told and bakes it into the digest.
 - **The screens:** `firmware/wallet.py`, functions `draw_home` and `draw_confirm`. 240×240,
-  framebuf, an 8×8 font scaled up. `./tools/push` and look.
+  framebuf, an 8×8 font scaled up. Try it on the virtual wallet first: `tools/emu` opens
+  http://localhost:4242 with the same MicroPython running the same files, the case in 3D and
+  the keyboard on the buttons; `tools/emu run NAME`, `key A`, `shot` drive it from a terminal
+  (`emu/README.md`, `emu/SKILL.md` for bots). Then `./tools/push` and look.
 - **The case:** `case/gen.py`, CadQuery, every dimension is a named number at the top.
 - **The contract:** `app/packages/foundry/contracts/ChipAccount.sol`, with 34 tests.
 
@@ -203,7 +206,8 @@ digest the device computed.
 | `firmware/` | MicroPython for the Pico: `wallet.py` loop and screens, `atecc.py` chip driver, `signer.py`, `eip712.py` + `keccak.py` + `p256.py` pure-Python crypto, `lcd.py`, `net.py` |
 | `app/` | contracts, tests, site, relay |
 | `case/` | STLs, the generator, the measurements |
-| `tools/` | `pico` console, `push` firmware, `qr` (QR of the vault for the screen) |
+| `emu/` | the virtual wallet: MicroPython in WebAssembly, `machine` shims, the case STLs in 3D, a CLI for bots |
+| `tools/` | `pico` console, `push` firmware, `qr` (QR of the vault for the screen), `emu` (the virtual wallet) |
 | `buildlog/` | dated notes and photos of what actually happened, including the mistakes |
 | `reference/` | the Pi signer this grew out of, with the fresh-chip guide; SeedSigner cap parts (MIT) |
 | `PLAN.md`, `SOLDERING.md` | the plan, and the wiring guide |

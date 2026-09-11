@@ -4,3 +4,5 @@ __pycache__/
 firmware/secrets.py
 firmware/qr.bin
 photo-review.html
+emu/node_modules/
+emu/shots/

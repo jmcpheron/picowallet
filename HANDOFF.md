@@ -130,6 +130,26 @@ Print inbox: full set requested in yellow PLA from AMS bay 2, one plate: drop
 If v3 still fights: the ridge height is `RIDGE_PROUD` in `tools/zezbase` (0.25 now, stock 0.44).
 If it is loose: raise it, or lengthen `RIDGE_LEN`. Details in `case/README.md`.
 
+## Emulator (2026-09-11)
+
+`emu/` is a virtual Pico wallet. `tools/emu` starts a node server on :4242 and opens the page: the
+official MicroPython 1.26 WebAssembly build runs the files from `firmware/` (never `secrets.py`; a
+stub with `APP_URL = "/app"` is generated, and the server proxies `/app` to the wallet app,
+`--app URL`, default :3001) plus `emu/sketches/`. `emu/core/shims/*.py` replace `machine`,
+`network`, `requests`, `socket`, `rp2`; `emu/core/runtime.mjs` is the JS side: key pins read a
+SharedArrayBuffer the page writes (so a `while True` still sees keys), the ST7789 SPI stream is
+captured into a 240x240 RGB565 frame (pixel exact), the SPI transfer time is modeled (24 MHz cap,
+38 ms a frame, `machine.freq(150e6, 150e6)` lifts it), timers are JS timers, heap 448 KB. The page
+(`emu/web/`) has an editor (CodeMirror), a REPL console, and the case from `case/zez0000/` STLs in
+three.js (black base_v5, white lid_v4, grey joystick cap, green A, grey B/X, red Y) with the live
+screen as a texture; click the caps or use arrows/Enter/a b x y. `tools/emu run|exec|key|keys|shot|
+log|state|reset|main` drive the page over SSE; `tools/emu headless MOD --wait --key --shot` needs no
+browser. `emu/SKILL.md` (linked from `.claude/skills/pico-emu`) is the bot's guide. Known: viper
+decorators are rewritten to plain functions on load (no native emitter in wasm), `@micropython.viper`
+code runs slow; wasm CPU is much faster than the RP2350, so timing of Python itself is optimistic.
+The wallet firmware itself runs in it (`main`) with the software signer. Chrome on this Mac was
+heavily loaded when built (5x slower than node), so the page booted in 8 s; normally a second or two.
+
 ## Sensitive things to know
 
 - An Alchemy API key was in `.env.example` and `scaffold.config.ts` from the first push until this
