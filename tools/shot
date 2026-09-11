@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pull the mock wallet's screens off the USB Pico as PNGs, one mpremote session for all of them.
+# Usage: tools/shot [screen-index|all] [outdir]   (port from PICO_PORT, default first /dev/cu.usbmodem*)
+cd "$(dirname "$0")/.." || exit 1
+PORT=${PICO_PORT:-$(ls /dev/cu.usbmodem* 2>/dev/null | head -1)}
+MP="$HOME/.local/bin/mpremote connect $PORT resume"
+OUT=${2:-shots}; mkdir -p "$OUT"
+NAMES=$($MP exec "import mock; print(' '.join(mock.NAMES))" | tr -d '\r') || exit 1
+set -- "${1:-all}" "$OUT"
+i=0; CMD=""; LIST=""
+for n in $NAMES; do
+  if [ "$1" = all ] || [ "$1" = "$i" ]; then
+    CMD="$CMD exec 'import mock; mock.show($i); mock.snap()' cp :shot.bin $OUT/$i-$n.bin +"
+    LIST="$LIST $OUT/$i-$n.bin"
+  fi
+  i=$((i+1))
+done
+eval "$MP $CMD" >/dev/null || exit 1
+"$HOME/.local/bin/uv" run --python 3.11 --with pillow python - $LIST <<'PY'
+import sys, os
+from PIL import Image
+for src in sys.argv[1:]:
+    b = open(src, "rb").read()
+    im = Image.new("RGB", (240, 240)); px = im.load()
+    for i in range(240 * 240):
+        c = (b[2 * i] << 8) | b[2 * i + 1]
+        px[i % 240, i // 240] = ((c >> 8) & 0xF8, (c >> 3) & 0xFC, (c << 3) & 0xF8)
+    dst = src[:-4] + ".png"
+    im.resize((480, 480), Image.NEAREST).save(dst); os.remove(src); print(dst)
+PY
