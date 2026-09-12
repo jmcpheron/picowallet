@@ -188,7 +188,7 @@ same centres. About 0.30 mm clearance per side on the 4.30 x 3.56 cap. Output `c
 
 base_v4 snaps and holds but pries apart with a fingernail. `tools/zezbase v5` raises the four ridges
 from 0.25 to 0.50 mm proud (Austin: a quarter mm more) and fattens them from r 0.4 to r 0.5 so the
-neck on the tab stays about 1 mm wide. Everything else is v4. Output `case/zez0000/base_v5.stl`.
+neck on the tab stays about 1 mm wide. Everything else is v4. Output `case/zez0000/base_v5.stl`. Print inbox drop `20260911-181009-base_v5`, black PETG, print Claude told to go 2026-09-11.
 Unprinted. Note 0.50 is above the stock 0.44 that would not snap at all, but stock had 106 mm of
 ridge and this has 40 mm. If v5 will not close, try 0.40.
 
