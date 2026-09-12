@@ -222,3 +222,17 @@ vault address goes in the bottom (`tools/zezqr 0x... base_vN`), not now.
 
 base_v5 printed but does not fit well. base_v4 (ridges 0.25 mm proud) is the winning base. Reprint
 requested plain, no QR: print inbox drop `20260912-100725-base_v4`, black PETG.
+
+## Official set (2026-09-12)
+
+The case as it stands. Print these, nothing else, unless Austin says otherwise.
+
+| Part | File | Why |
+|---|---|---|
+| Base | `case/zez0000/base_v4.stl` | v5 (taller ridges) was too tight |
+| Lid | `case/zez0000/lid_v4.stl` | v2 tight, v3 too loose, v4 right |
+| Button caps | `button_cap_1..4.stl` (or `button_cap_x` / `button_cap_check`) | stock |
+| Joystick cap | `joystick_cap_v3_2.00.stl` | 2.00 socket fits the 1.87 stem |
+
+Black PETG, 0.20 mm. Base floor down, lid outer face down. There is no lid v5 or v6 (checked
+git, branches and the print inbox 2026-09-12). The QR-bottom base is a side experiment, parked.
