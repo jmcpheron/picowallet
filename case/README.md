@@ -217,3 +217,8 @@ decode as the URL. Print inbox drops `20260911-142041-base_v5_qr` (3MF), `-14204
 `-142043-…_white` (STL fallback). Unprinted. Knobs: `MOD`, `QR_H`, `CX`, `EC` in `tools/zezqr`.
 Result 2026-09-11: printed on the AMS, the QR came out and scans. Proof done; parked. One day the
 vault address goes in the bottom (`tools/zezqr 0x... base_vN`), not now.
+
+### base_v5 result (2026-09-12): too tight, v4 is the keeper
+
+base_v5 printed but does not fit well. base_v4 (ridges 0.25 mm proud) is the winning base. Reprint
+requested plain, no QR: print inbox drop `20260912-100725-base_v4`, black PETG.
