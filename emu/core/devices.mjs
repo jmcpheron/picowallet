@@ -18,7 +18,7 @@ export const DEFAULT_MP_VERSION = process.env.MP_VERSION || "1.26.1";   // what 
 const BOARD_UF2 = { "RP2350": "RPI_PICO2_W", "RPI-RP2": "RPI_PICO_W" };
 
 export function serialPorts() {
-  return readdirSync("/dev").filter((n) => /^cu\.usbmodem|^ttyACM/.test(n)).sort().map((n) => join("/dev", n));
+  return readdirSync("/dev").filter((n) => /^cu\.(usbmodem|usbserial|wchusbserial|SLAB_USBtoUART)|^ttyACM|^ttyUSB/.test(n)).sort().map((n) => join("/dev", n));
 }
 
 export function bootselDrives() {
