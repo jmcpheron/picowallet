@@ -241,4 +241,4 @@ git, branches and the print inbox 2026-09-12). The QR-bottom base is a side expe
 
 v4 holds but can be pulled apart by hand; v5 (0.50 proud) would not fit. `tools/zezbase v6` is v4
 with the ridges 0.30 mm proud instead of 0.25, same r 0.4, same notch. Output
-`case/zez0000/base_v6.stl`. Unprinted. If it is still loose, 0.35 next; if tight, v4 stays official.
+`case/zez0000/base_v6.stl`. Print inbox drop `20260912-145004-base_v6`, black PETG, no brim (Austin: never brim these parts again). If it is still loose, 0.35 next; if tight, v4 stays official.
