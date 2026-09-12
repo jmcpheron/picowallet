@@ -301,6 +301,50 @@ $("#ship").onclick = async () => {
   pollDevices();
 };
 
+$("#shot").onclick = () => { const a = document.createElement("a"); a.href = shotDataURL(); a.download = `pico-${Date.now()}.png`; a.click(); };
+function shotDataURL() {
+  const c = document.createElement("canvas"); c.width = c.height = 480;
+  const g = c.getContext("2d"); g.imageSmoothingEnabled = false; g.drawImage(screen, 0, 0, 480, 480);
+  return c.toDataURL("image/png");
+}
+
+// ---- keys --------------------------------------------------------------------------------
+function setKey(name, down) {
+  const i = KEY_ORDER.indexOf(name);
+  if (i < 0) return;
+  if (sab) Atomics.store(keys, i, down ? 1 : 0);
+  else { keys[i] = down ? 1 : 0; if (worker) worker.postMessage({ type: "keys", state: Array.from(keys) }); }
+  if (device3d) device3d.setKey(name, down);
+  for (const b of document.querySelectorAll(`#flat [data-key="${name}"]`)) b.classList.toggle("down", down);
+}
+const isTyping = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest?.(".CodeMirror"));
+window.addEventListener("keydown", (e) => {
+  if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = keyOf(e);
+  if (!k) return;
+  e.preventDefault();
+  if (!e.repeat) setKey(k, true);
+});
+window.addEventListener("keyup", (e) => { const k = keyOf(e); if (k) setKey(k, false); });
+window.addEventListener("blur", () => { for (const k of KEY_ORDER) setKey(k, false); });
+for (const b of document.querySelectorAll("#flat [data-key]")) {
+  const k = b.dataset.key;
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); setKey(k, true); $("#right").focus({ preventScroll: true }); });
+  b.addEventListener("pointerup", () => setKey(k, false));
+  b.addEventListener("pointerleave", () => setKey(k, false));
+}
+$("#stage").addEventListener("pointerdown", () => $("#right").focus({ preventScroll: true }));
+
+// ---- views -------------------------------------------------------------------------------
+function setView(v) {
+  localStorage.setItem("emu.view", v);
+  $("#stage").hidden = v !== "3d"; $("#flat").hidden = v !== "flat";
+  $("#view3d").classList.toggle("on", v === "3d"); $("#viewflat").classList.toggle("on", v === "flat");
+  if (device3d) device3d.resize();
+}
+$("#view3d").onclick = () => setView("3d");
+$("#viewflat").onclick = () => setView("flat");
+
 // ---- control channel for tools/emu -------------------------------------------------------
 const handlers = {
   async run({ name }) { const r = await reboot(name); const f = files.get(name + ".py"); if (f) { openFile(name + ".py"); if (f.runnable) setMain(name); } return r; },
