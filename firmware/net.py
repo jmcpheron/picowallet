@@ -2,7 +2,10 @@
 # The console is passwordless arbitrary code execution and must remain disabled when holding value.
 import network, socket, os, time
 from machine import Pin
-import secrets
+try:
+    import secrets
+except ImportError:
+    secrets = None      # a board without secrets.py: no WiFi, no console; wallet.py says so on screen
 
 led = Pin("LED", Pin.OUT)
 PORT = 2323
@@ -10,8 +13,11 @@ _listen = None
 
 
 def connect(timeout_s=20):
-    network.hostname(secrets.HOSTNAME)
     wlan = network.WLAN(network.STA_IF)
+    if secrets is None:
+        print("no secrets.py: not joining WiFi")
+        return wlan
+    network.hostname(secrets.HOSTNAME)
     wlan.active(True)
     if not wlan.isconnected():
         wlan.connect(secrets.WIFI_SSID, secrets.WIFI_PASS)

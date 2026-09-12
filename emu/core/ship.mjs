@@ -7,6 +7,7 @@
 // module is imported with the same snippet the emulator uses. Output is followed for a few seconds; a module that never returns
 // (a `while True`) is reported as blocking and left running.
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FIRMWARE, SKETCHES, listWorkspace, entryFor } from "./workspace.mjs";
 import { runCode } from "./runtime.mjs";
@@ -53,13 +54,41 @@ async function doShip(name, file, src, port, target) {
   if (ls.code !== 0) return { ok: false, port, error: "cannot talk to the Pico at " + port, lines: lines(ls.out) };
   const have = ls.out.includes("'lcd.py'");
 
+  // Everything the module imports (recursively) that lives in firmware/ or emu/sketches/, plus any
+  // "x.bin" it names, goes too. mpremote cp skips files the board already has unchanged.
   const args = [];
-  if (!have) args.push("cp", join(FIRMWARE, "lcd.py"), ":lcd.py", "+");
-  args.push("cp", src, `:${file.name}`, "+", "exec", runCode(name, entryFor(name)));
+  for (const dep of dependencies(name)) {
+    const f = listWorkspace().find((x) => x.name === dep);
+    if (f && dep !== file.name) args.push("cp", join(f.src === "firmware" ? FIRMWARE : SKETCHES, dep), `:${dep}`, "+");
+  }
+  args.push("cp", src, `:${file.name}`);
+  const c = await mp(port, args, 120000);
+  if (c.code !== 0) return { ok: false, port, error: "copy failed", lines: lines(c.out) };
   // USB: soft reset for a clean slate. WiFi wallet: a soft reset would rerun boot.py and drop the
   // console, so keep resume there; runCode stops the old copy of the module instead.
-  const r = await mp(port, args, FOLLOW_MS, target === "wifi");
-  const out = lines(r.out);
+  const r = await mp(port, ["exec", runCode(name, entryFor(name))], FOLLOW_MS, target === "wifi");
+  const out = lines(c.out).concat(lines(r.out));
   const failed = out.some((l) => /^Traceback/.test(l));
-  return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out };
+  return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out,
+    copied: out.filter((l) => /^cp /.test(l)).map((l) => l.replace(/^cp .*\//, "").replace(/ :.*$/, "")) };
+}
+
+// Files (names with extension) the module needs from the workspace, the module itself last.
+export function dependencies(name) {
+  const ws = listWorkspace();
+  const text = (n) => { const f = ws.find((x) => x.name === n + ".py"); return f ? readFileSync(join(f.src === "firmware" ? FIRMWARE : SKETCHES, f.name), "utf8") : null; };
+  const seen = new Set(), order = [];
+  (function visit(n) {
+    if (seen.has(n)) return;
+    seen.add(n);
+    const t = text(n);
+    if (t == null) return;
+    for (const m of t.matchAll(/^\s*(?:import\s+([\w, ]+)|from\s+(\w+)\s+import)/gm)) {
+      const names = m[2] ? [m[2]] : m[1].split(",").map((x) => x.trim().split(/\s+as\s+/)[0]);
+      for (const d of names) if (d && d !== "secrets" && text(d) != null) visit(d);
+    }
+    for (const m of t.matchAll(/["'](\w+\.bin)["']/g)) if (ws.some((x) => x.name === m[1]) && !order.includes(m[1])) order.push(m[1]);
+    order.push(n + ".py");
+  })(name);
+  return order;
 }

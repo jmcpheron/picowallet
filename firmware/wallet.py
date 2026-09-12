@@ -11,9 +11,12 @@ import lcd as L
 import net
 import eip712
 import signer as S
-import secrets
+try:
+    import secrets
+except ImportError:
+    secrets = None      # fresh board: the home screen says "no secrets.py" instead of connecting
 
-APP = secrets.APP_URL
+APP = secrets.APP_URL if secrets else None
 NAME = getattr(secrets, "DEVICE_NAME", "picowallet")
 
 d = None
@@ -107,9 +110,17 @@ def draw_home():
         d.text("mainnet" if chain.get("id") == 1 else (chain.get("name", "?").lower()[:8]), 4, 4, L.GREEN if chain.get("id") == 1 else L.YELLOW)
     # top-right: pairing dot
     d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
+    # top-centre: which key. The chip is the point; a software key must never pass unnoticed.
+    if sig and sig.name != "atecc608":
+        d.center_text("NO CHIP", 4, L.RED)
     # balance, big
     if bal is None:
-        d.center_text("connecting...", 30, L.GREY, 2)
+        if secrets is None:
+            d.center_text("no secrets.py", 30, L.RED, 2)
+        elif not network.WLAN(network.STA_IF).isconnected():
+            d.center_text("no wifi", 30, L.RED, 2)
+        else:
+            d.center_text("connecting...", 30, L.GREY, 2)
     else:
         whole, _, frac = bal.partition(".")
         sbal = "$" + whole + "." + (frac + "00")[:2]
@@ -138,6 +149,12 @@ def draw_home():
         warn = "no app for %ds" % age
     if not paired:
         warn = "not paired" if qx else "no key"
+    if sig and sig.name != "atecc608":
+        warn = "no chip: software key"
+    if not network.WLAN(network.STA_IF).isconnected():
+        warn = "no wifi: check secrets.py"
+    if secrets is None:
+        warn = "copy secrets.py to the board"
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
         d.fill_rect(0, 224, 240, 16, L.DARK)
         d.center_text(msg[:30], 228, L.YELLOW)
@@ -481,7 +498,7 @@ def approve(yes):
 
 def net_work():
     global state, dirty, last_announce, last_fetch
-    if state in ("confirm", "working"):
+    if state in ("confirm", "working") or secrets is None:
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
@@ -521,6 +538,9 @@ def start():
     draw()
     sig = S.load()
     dirty = True
+    draw()
+    if secrets and not network.WLAN(network.STA_IF).isconnected():
+        net.connect()   # boot.py did this on the wallet Pico; a board that got wallet.py by hand did not
     start_timer()
 
 
