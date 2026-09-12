@@ -48,6 +48,17 @@ export function readWorkspace() {
   return out;
 }
 
+// What `run NAME` does after `import NAME`. Sketches and most firmware start themselves at import
+// (a `start()` call at the bottom); a few firmware modules only define functions, so the emulator
+// calls their entry point. Library modules (lcd, keccak, ...) have nothing to show and are not
+// offered in the run menu.
+export const ENTRY = { demo: "demo.run()", wallet: "wallet.start()" };
+export function entryFor(name) { return ENTRY[name] || ""; }
+export function isRunnable(name, text) {
+  if (name === "main" || ENTRY[name]) return true;
+  return /^(start|run|main)\(\)\s*$/m.test(text || "");
+}
+
 export function writeWorkspaceFile(name, content, src) {
   name = basename(name);
   if (!/^[\w.-]+$/.test(name) || SKIP.has(name)) throw new Error("bad file name");

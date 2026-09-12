@@ -10,12 +10,14 @@
 //   tools/emu state              what is running, fps, frames, files
 //   tools/emu reset              reboot the device and re-run the main module
 //   tools/emu main MODULE        set which module boots by default
+//   tools/emu ship MODULE        copy MODULE to the Pico on USB and import it (--wifi: the wallet Pico)
 //   tools/emu headless ...       no browser: see emu/headless.mjs
 //   tools/emu serve              run the server in the foreground
 import { spawn } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ship } from "./core/ship.mjs";
 
 const EMU = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.EMU_PORT || 4242;
@@ -100,6 +102,14 @@ try {
     }
     case "state": console.log(JSON.stringify(await send({ cmd: "state" }), null, 2)); break;
     case "reset": { const r = await send({ cmd: "reset" }); for (const l of r.lines || []) console.log(l); break; }
+    case "ship": {
+      if (!rest[0]) throw new Error("usage: tools/emu ship MODULE [--wifi]");
+      const r = await ship(rest[0], { target: rest.includes("--wifi") ? "wifi" : "usb" });
+      for (const l of r.lines || []) console.log(l);
+      if (r.error) console.error("emu: " + r.error);
+      else console.log(`${r.ok ? "running" : "failed"} ${modName(rest[0])} on ${r.port}${r.blocking ? " (blocking loop, left running)" : ""}${r.copiedLcd ? ", lcd.py copied too" : ""}`);
+      process.exit(r.ok ? 0 : 1);
+    }
     case "main": { await send({ cmd: "main", name: modName(rest[0] || "mock") }); console.log("main = " + modName(rest[0] || "mock")); break; }
     default:
       console.error("unknown command: " + cmd);

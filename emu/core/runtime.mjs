@@ -210,13 +210,11 @@ export async function createDevice(opts) {
     return s.replace(/^PythonError:\s*/, "").trimEnd();
   }
 
-  // Run a module fresh, the way `import name` at the Pico REPL does after a reset.
-  function run(name) {
-    name = name.replace(/\.py$/, "").replace(/^.*\//, "");
-    if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error("not a module name: " + name);
-    // `import name` at module level, so the name is bound in __main__ for later REPL lines.
-    const code = `import sys\nsys.modules.pop(${JSON.stringify(name)}, None)\ntry:\n    import ${name}\nexcept Exception as _e:\n    sys.print_exception(_e)\n`;
-    mp.runPython(code);
+  // Run a module fresh, the way `import name` at the Pico REPL does after a reset. `entry` is an
+  // optional line to run after the import (e.g. "demo.run()") for modules that do not start
+  // themselves; the same snippet is what `tools/emu ship` sends to the board.
+  function run(name, entry) {
+    mp.runPython(runCode(name, entry));
   }
 
   // One REPL line: expressions echo their value like the prompt does.
@@ -233,6 +231,15 @@ export async function createDevice(opts) {
   }
 
   return { mp, run, exec, writeFile, listFiles, dispose, frame, get frames() { return frames; } };
+}
+
+// Python for "import NAME fresh, then ENTRY", with the traceback printed instead of raised.
+export function runCode(name, entry) {
+  name = name.replace(/\.py$/, "").replace(/^.*\//, "");
+  if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error("not a module name: " + name);
+  const body = `    import ${name}\n` + (entry ? `    ${entry}\n` : "");
+  // `import name` at module level, so the name is bound in __main__ for later REPL lines.
+  return `import sys\nsys.modules.pop(${JSON.stringify(name)}, None)\ntry:\n${body}except Exception as _e:\n    sys.print_exception(_e)\n`;
 }
 
 function secretsPy(appUrl) {

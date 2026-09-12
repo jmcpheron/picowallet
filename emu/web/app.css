@@ -14,6 +14,7 @@ button, select { background: #1e222b; color: var(--text); border: 1px solid var(
 button:hover { border-color: #3a4050; background: #262b36; }
 button:active { transform: translateY(1px); }
 #run { color: var(--accent); }
+#ship.off { opacity: 0.45; }
 .seg { display: inline-flex; }
 .seg button { border-radius: 0; }
 .seg button:first-child { border-radius: 6px 0 0 6px; }

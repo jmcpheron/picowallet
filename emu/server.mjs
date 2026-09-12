@@ -9,7 +9,8 @@ import { join, extname, normalize } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { ROOT, listWorkspace, readWorkspaceFile, writeWorkspaceFile, readShims } from "./core/workspace.mjs";
+import { ROOT, listWorkspace, readWorkspaceFile, writeWorkspaceFile, readShims, entryFor, isRunnable } from "./core/workspace.mjs";
+import { ship, findUsbPort } from "./core/ship.mjs";
 
 const EMU = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -77,7 +78,9 @@ async function control(req, res, url) {
   if (p === "boot" && req.method === "GET") {
     const files = listWorkspace().map((f) => {
       const { data } = readWorkspaceFile(f.name);
-      return f.name.endsWith(".py") ? { ...f, text: data.toString("utf8") } : { ...f, b64: data.toString("base64") };
+      if (!f.name.endsWith(".py")) return { ...f, b64: data.toString("base64") };
+      const text = data.toString("utf8"), mod = f.name.slice(0, -3);
+      return { ...f, text, runnable: isRunnable(mod, text), entry: entryFor(mod) };
     });
     return json(res, 200, { files, shims: readShims(), appUrl: "/app", clients: clients.size });
   }
@@ -121,6 +124,12 @@ async function control(req, res, url) {
       return json(res, 504, { error: String(e.message || e) });
     }
   }
+  if (p === "ship" && req.method === "POST") {
+    const { name, target } = JSON.parse((await body(req)).toString("utf8"));
+    const r = await ship(name, { target });
+    return json(res, r.ok ? 200 : 500, r);
+  }
+  if (p === "usb" && req.method === "GET") return json(res, 200, { port: findUsbPort() });
   if (p === "state" && req.method === "GET") return json(res, 200, { ok: true, clients: clients.size, app: APP, port: PORT });
   json(res, 404, { error: "unknown control route" });
 }
