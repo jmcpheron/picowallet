@@ -3,8 +3,8 @@
 //   ship(name, { target: "usb" | "wifi" }) -> { ok, port, lines, blocking, error? }
 // usb: the first /dev/cu.usbmodem* (mac) or /dev/ttyACM* (linux). wifi: the wallet Pico's
 // socket console (PICO_HOST, default picowallet.local:2323), same as tools/pico.
-// The module is copied (lcd.py too if the board lacks it), then imported fresh with the same
-// snippet the emulator uses. Output is followed for a few seconds; a module that never returns
+// The module is copied (lcd.py too if the board lacks it), the board is soft-reset (USB), then the
+// module is imported with the same snippet the emulator uses. Output is followed for a few seconds; a module that never returns
 // (a `while True`) is reported as blocking and left running.
 import { readdirSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -21,9 +21,11 @@ export function findUsbPort() {
   return names.length ? join("/dev", names[0]) : null;
 }
 
-function mp(port, args, timeoutMs) {
+// resume=false lets mpremote soft-reset first: every timer from the last module dies, and main.py
+// does not run again (raw REPL skips it). That is what makes a send replace what is on the screen.
+function mp(port, args, timeoutMs, resume = true) {
   return new Promise((resolve) => {
-    const child = spawn(MPREMOTE, ["connect", port, "resume", ...args], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(MPREMOTE, ["connect", port, ...(resume ? ["resume"] : []), ...args], { stdio: ["ignore", "pipe", "pipe"] });
     let out = "", done = false;
     const finish = (code, killed) => { if (done) return; done = true; resolve({ code, killed, out }); };
     child.stdout.on("data", (d) => (out += d));
@@ -52,7 +54,9 @@ export async function ship(name, opts = {}) {
   const args = [];
   if (!have) args.push("cp", join(FIRMWARE, "lcd.py"), ":lcd.py", "+");
   args.push("cp", src, `:${file.name}`, "+", "exec", runCode(name, entryFor(name)));
-  const r = await mp(port, args, FOLLOW_MS);
+  // USB: soft reset for a clean slate. WiFi wallet: a soft reset would rerun boot.py and drop the
+  // console, so keep resume there; runCode stops the old copy of the module instead.
+  const r = await mp(port, args, FOLLOW_MS, target === "wifi");
   const out = lines(r.out);
   const failed = out.some((l) => /^Traceback/.test(l));
   return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out };

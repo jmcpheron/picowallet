@@ -238,8 +238,11 @@ export function runCode(name, entry) {
   name = name.replace(/\.py$/, "").replace(/^.*\//, "");
   if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error("not a module name: " + name);
   const body = `    import ${name}\n` + (entry ? `    ${entry}\n` : "");
-  // `import name` at module level, so the name is bound in __main__ for later REPL lines.
-  return `import sys\nsys.modules.pop(${JSON.stringify(name)}, None)\ntry:\n${body}except Exception as _e:\n    sys.print_exception(_e)\n`;
+  const n = JSON.stringify(name);
+  // On a board that was not reset, stop the old copy (sketches offer stop()) so its timer does not
+  // keep drawing. `import name` at module level, so the name is bound in __main__ for REPL lines.
+  const stopOld = `_o = sys.modules.pop(${n}, None)\nif _o and callable(getattr(_o, "stop", None)):\n    try:\n        _o.stop()\n    except Exception:\n        pass\n`;
+  return `import sys\n${stopOld}try:\n${body}except Exception as _e:\n    sys.print_exception(_e)\n`;
 }
 
 function secretsPy(appUrl) {
