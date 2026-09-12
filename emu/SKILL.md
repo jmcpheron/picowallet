@@ -38,13 +38,19 @@ first so the editor does not eat them; the 3D view shows the key next to each bu
 
 ## Ship it to the real Pico
 
-`tools/emu ship NAME` copies `NAME.py` to the Pico plugged into this Mac's USB (first
-`/dev/cu.usbmodem*`), adds `lcd.py` if the board lacks it, and imports the module fresh, printing
-its output for a few seconds (a `while True` module is left running and reported as "blocking
-loop"). Exit 1 on a traceback or no board. `--wifi` targets the wallet Pico's WiFi console instead
-(same as `./tools/pico`). The page has the same thing as the "⇪ send to Pico" button (greyed out
-until a board is on USB). Never change `main.py` on the wallet Pico unless asked. Firmware that
-should ship for good goes in `firmware/` and through `tools/push`.
+`tools/emu devices` lists every board on this Mac's USB: serial ports (MicroPython running, with
+the board name) and bootloader drives (a board plugged in with BOOTSEL held; it has no serial port
+and runs nothing until MicroPython is on it: `tools/emu flash`, default version 1.26.1 to match the
+wallet and the emulator, `--version latest` for newest; the board reboots and shows up as serial).
+
+`tools/emu ship NAME [--port /dev/cu.usbmodemN]` copies `NAME.py` to the board (first serial port
+if no `--port`), adds `lcd.py` if the board lacks it, soft-resets so the old module's timers stop,
+imports the module fresh and prints its output for a few seconds (a `while True` module is left
+running and reported as "blocking loop"). Exit 1 on a traceback or no board. `--wifi` targets the
+wallet Pico's WiFi console instead (no reset there; the old copy's `stop()` is called). The page
+has the same: a device picker in the top bar and the ⇪ send to Pico button (⚡ flash MicroPython
+when a bootloader board is picked). Never change `main.py` on the wallet Pico unless asked.
+Firmware that should ship for good goes in `firmware/` and through `tools/push`.
 
 ## The hardware, as seen from Python
 

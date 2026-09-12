@@ -258,70 +258,48 @@ $("#run").onclick = runMain;
 $("#reset").onclick = () => reboot(main);
 $("#main").onchange = (e) => { setMain(e.target.value); if (files.has(main + ".py")) openFile(main + ".py"); };
 
-// ⇪ send to Pico: the server copies the picked module to the board on USB and imports it.
-let usbPort = null;
-async function pollUsb() {
-  try { usbPort = (await (await fetch("/ctl/usb")).json()).port; } catch { usbPort = null; }
-  const b = $("#ship");
-  b.classList.toggle("off", !usbPort);
-  b.title = usbPort ? `copy ${main}.py to the Pico at ${usbPort} and import it` : "no Pico on USB (plug one into this Mac)";
+// Boards on USB: the server lists serial ports (MicroPython) and bootloader drives (BOOTSEL held
+// while plugging in) every 3 s. ⇪ sends the picked module to the picked board; for a bootloader
+// board the same button flashes MicroPython instead.
+let devices = [];
+const devSel = $("#device");
+function pickedDevice() { return devices.find((d) => (d.port || d.path) === devSel.value) || null; }
+async function pollDevices() {
+  try { devices = (await (await fetch("/ctl/devices")).json()).devices; } catch { devices = []; }
+  const was = devSel.value;
+  devSel.innerHTML = "";
+  for (const d of devices) { const o = document.createElement("option"); o.value = d.port || d.path; o.textContent = d.label; devSel.appendChild(o); }
+  if (!devices.length) { const o = document.createElement("option"); o.value = ""; o.textContent = "no board on USB"; devSel.appendChild(o); }
+  if (devices.some((d) => (d.port || d.path) === was)) devSel.value = was;
+  const d = pickedDevice(), b = $("#ship");
+  b.classList.toggle("off", !d);
+  b.textContent = d && d.kind === "bootsel" ? "⚡ flash MicroPython" : "⇪ send to Pico";
+  b.title = !d ? "plug a Pico into this Mac (hold BOOTSEL while plugging in for a fresh one)"
+    : d.kind === "bootsel" ? `put MicroPython on the board at ${d.path}` : `copy ${main}.py to ${d.port} and import it`;
 }
-pollUsb(); setInterval(pollUsb, 3000);
+pollDevices(); setInterval(pollDevices, 3000);
+devSel.onchange = pollDevices;
 $("#ship").onclick = async () => {
-  await saveAll();
+  const d = pickedDevice();
+  if (!d) { appendLog("no board on USB", "err"); return; }
   const b = $("#ship"); b.disabled = true;
-  appendLog(`── send ${main} to the Pico ──`, "sys");
   try {
-    const r = await (await fetch("/ctl/ship", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: main }) })).json();
-    for (const l of r.lines || []) appendLog(l);
-    if (r.error) appendLog(r.error, "err");
-    else appendLog(`${r.ok ? "running" : "failed"} ${main} on ${r.port}${r.blocking ? " (busy loop, left running)" : ""}${r.copiedLcd ? "; lcd.py copied too" : ""}`, r.ok ? "sys" : "err");
+    if (d.kind === "bootsel") {
+      appendLog(`── flash MicroPython onto ${d.path} ──`, "sys");
+      const r = await (await fetch("/ctl/flash", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: d.path }) })).json();
+      appendLog(r.error ? r.error : `flashed ${r.file}; ${r.note}`, r.error ? "err" : "sys");
+    } else {
+      await saveAll();
+      appendLog(`── send ${main} to ${d.port} ──`, "sys");
+      const r = await (await fetch("/ctl/ship", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: main, port: d.port }) })).json();
+      for (const l of r.lines || []) appendLog(l);
+      if (r.error) appendLog(r.error, "err");
+      else appendLog(`${r.ok ? "running" : "failed"} ${main} on ${r.port}${r.blocking ? " (busy loop, left running)" : ""}${r.copiedLcd ? "; lcd.py copied too" : ""}`, r.ok ? "sys" : "err");
+    }
   } catch (e) { appendLog("ship: " + e.message, "err"); }
   b.disabled = false;
+  pollDevices();
 };
-$("#shot").onclick = () => { const a = document.createElement("a"); a.href = shotDataURL(); a.download = `pico-${Date.now()}.png`; a.click(); };
-function shotDataURL() {
-  const c = document.createElement("canvas"); c.width = c.height = 480;
-  const g = c.getContext("2d"); g.imageSmoothingEnabled = false; g.drawImage(screen, 0, 0, 480, 480);
-  return c.toDataURL("image/png");
-}
-
-// ---- keys --------------------------------------------------------------------------------
-function setKey(name, down) {
-  const i = KEY_ORDER.indexOf(name);
-  if (i < 0) return;
-  if (sab) Atomics.store(keys, i, down ? 1 : 0);
-  else { keys[i] = down ? 1 : 0; if (worker) worker.postMessage({ type: "keys", state: Array.from(keys) }); }
-  if (device3d) device3d.setKey(name, down);
-  for (const b of document.querySelectorAll(`#flat [data-key="${name}"]`)) b.classList.toggle("down", down);
-}
-const isTyping = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest?.(".CodeMirror"));
-window.addEventListener("keydown", (e) => {
-  if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = keyOf(e);
-  if (!k) return;
-  e.preventDefault();
-  if (!e.repeat) setKey(k, true);
-});
-window.addEventListener("keyup", (e) => { const k = keyOf(e); if (k) setKey(k, false); });
-window.addEventListener("blur", () => { for (const k of KEY_ORDER) setKey(k, false); });
-for (const b of document.querySelectorAll("#flat [data-key]")) {
-  const k = b.dataset.key;
-  b.addEventListener("pointerdown", (e) => { e.preventDefault(); setKey(k, true); $("#right").focus({ preventScroll: true }); });
-  b.addEventListener("pointerup", () => setKey(k, false));
-  b.addEventListener("pointerleave", () => setKey(k, false));
-}
-$("#stage").addEventListener("pointerdown", () => $("#right").focus({ preventScroll: true }));
-
-// ---- views -------------------------------------------------------------------------------
-function setView(v) {
-  localStorage.setItem("emu.view", v);
-  $("#stage").hidden = v !== "3d"; $("#flat").hidden = v !== "flat";
-  $("#view3d").classList.toggle("on", v === "3d"); $("#viewflat").classList.toggle("on", v === "flat");
-  if (device3d) device3d.resize();
-}
-$("#view3d").onclick = () => setView("3d");
-$("#viewflat").onclick = () => setView("flat");
 
 // ---- control channel for tools/emu -------------------------------------------------------
 const handlers = {

@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { ROOT, listWorkspace, readWorkspaceFile, writeWorkspaceFile, readShims, entryFor, isRunnable } from "./core/workspace.mjs";
 import { ship, findUsbPort } from "./core/ship.mjs";
+import { listDevices, flash } from "./core/devices.mjs";
 
 const EMU = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -125,10 +126,16 @@ async function control(req, res, url) {
     }
   }
   if (p === "ship" && req.method === "POST") {
-    const { name, target } = JSON.parse((await body(req)).toString("utf8"));
-    const r = await ship(name, { target });
+    const { name, target, port } = JSON.parse((await body(req)).toString("utf8"));
+    const r = await ship(name, { target, port });
     return json(res, r.ok ? 200 : 500, r);
   }
+  if (p === "flash" && req.method === "POST") {
+    const { path, version } = JSON.parse((await body(req)).toString("utf8"));
+    let r; try { r = await flash(path, { version }); } catch (e) { r = { ok: false, error: String(e.message || e) }; }
+    return json(res, r.ok ? 200 : 500, r);
+  }
+  if (p === "devices" && req.method === "GET") return json(res, 200, { devices: listDevices() });
   if (p === "usb" && req.method === "GET") return json(res, 200, { port: findUsbPort() });
   if (p === "state" && req.method === "GET") return json(res, 200, { ok: true, clients: clients.size, app: APP, port: PORT });
   json(res, 404, { error: "unknown control route" });

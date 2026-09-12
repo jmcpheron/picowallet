@@ -12,7 +12,9 @@ tools/emu key A           # press a button (A B X Y up down left right press), k
 tools/emu shot            # emu/shots/latest.png
 tools/emu exec 'mock.goto("send")'
 tools/emu log             # console lines
-tools/emu ship hello      # copy hello.py to the Pico on USB and import it (--wifi: the wallet Pico)
+tools/emu devices         # boards on USB (serial ports, bootloader drives)
+tools/emu ship hello      # copy hello.py to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
+tools/emu flash           # MicroPython onto a board plugged in with BOOTSEL held (--version latest)
 tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no browser
 ```
 

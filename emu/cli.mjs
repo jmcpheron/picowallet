@@ -10,7 +10,9 @@
 //   tools/emu state              what is running, fps, frames, files
 //   tools/emu reset              reboot the device and re-run the main module
 //   tools/emu main MODULE        set which module boots by default
-//   tools/emu ship MODULE        copy MODULE to the Pico on USB and import it (--wifi: the wallet Pico)
+//   tools/emu devices            every board on USB (serial ports and bootloader drives)
+//   tools/emu ship MODULE        copy MODULE to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
+//   tools/emu flash [--version V] put MicroPython on a board plugged in with BOOTSEL held (default 1.26.1, or "latest")
 //   tools/emu headless ...       no browser: see emu/headless.mjs
 //   tools/emu serve              run the server in the foreground
 import { spawn } from "node:child_process";
@@ -18,6 +20,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ship } from "./core/ship.mjs";
+import { listDevices, flash, bootselDrives } from "./core/devices.mjs";
 
 const EMU = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.EMU_PORT || 4242;
@@ -102,9 +105,26 @@ try {
     }
     case "state": console.log(JSON.stringify(await send({ cmd: "state" }), null, 2)); break;
     case "reset": { const r = await send({ cmd: "reset" }); for (const l of r.lines || []) console.log(l); break; }
+    case "devices": {
+      const d = listDevices();
+      if (d.some((x) => x.kind === "serial" && !x.board)) { await new Promise((r) => setTimeout(r, 3000)); }
+      for (const x of listDevices()) console.log(`${x.kind.padEnd(8)} ${x.port || x.path}   ${x.label}`);
+      if (!d.length) console.log("nothing on USB");
+      break;
+    }
+    case "flash": {
+      const vi = rest.indexOf("--version");
+      const drives = bootselDrives();
+      if (!drives.length) throw new Error("no board in bootloader mode (hold BOOTSEL while plugging in; it mounts as RPI-RP2 or RP2350)");
+      const r = await flash(drives[0].path, { version: vi >= 0 ? rest[vi + 1] : undefined });
+      if (r.error) throw new Error(r.error);
+      console.log(`flashed ${r.file} onto ${drives[0].path}; ${r.note}`);
+      break;
+    }
     case "ship": {
-      if (!rest[0]) throw new Error("usage: tools/emu ship MODULE [--wifi]");
-      const r = await ship(rest[0], { target: rest.includes("--wifi") ? "wifi" : "usb" });
+      if (!rest[0]) throw new Error("usage: tools/emu ship MODULE [--port /dev/cu.usbmodemN] [--wifi]");
+      const pi = rest.indexOf("--port");
+      const r = await ship(rest[0], { target: rest.includes("--wifi") ? "wifi" : "usb", port: pi >= 0 ? rest[pi + 1] : undefined });
       for (const l of r.lines || []) console.log(l);
       if (r.error) console.error("emu: " + r.error);
       else console.log(`${r.ok ? "running" : "failed"} ${modName(rest[0])} on ${r.port}${r.blocking ? " (blocking loop, left running)" : ""}${r.copiedLcd ? ", lcd.py copied too" : ""}`);
