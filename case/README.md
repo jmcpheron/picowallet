@@ -242,3 +242,12 @@ git, branches and the print inbox 2026-09-12). The QR-bottom base is a side expe
 v4 holds but can be pulled apart by hand; v5 (0.50 proud) would not fit. `tools/zezbase v6` is v4
 with the ridges 0.30 mm proud instead of 0.25, same r 0.4, same notch. Output
 `case/zez0000/base_v6.stl`. Print inbox drop `20260912-145004-base_v6`, black PETG, no brim (Austin: never brim these parts again). If it is still loose, 0.35 next; if tight, v4 stays official.
+
+### lid_v5 (2026-09-12): 0.4 mm more cap clearance
+
+Pressing on the button side of the case clicks one or two buttons: the cap flange sits against the
+pocket ceiling with almost no gap to the switch plunger. `tools/zezlid v5` is lid_v4 with the
+cap-flange pocket inside (x -26.5..-18, y +-12.5) cut 0.4 mm deeper, so the plate over the button
+strip is 1.6 mm instead of 2.0 and the caps sit 0.4 mm further out. Outer face unchanged, still
+prints face down. Holes unchanged from v4. Output `case/zez0000/lid_v5.stl`. Print inbox drop `20260912-175600-lid_v5`, black PETG, no brim.
+Alternative if this is not enough: a 0.4 mm dimple in the cap underside where the plunger lands.
