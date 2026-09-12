@@ -258,6 +258,7 @@ EXPECTED_VAULT = None
 EXPECTED_TOKEN = None
 ALLOW_LOCK = False
 ALLOW_GENKEY = False
+ALLOW_SOFT_KEY = True   # no chip in the emulator: run the wallet on a software key anyway
 `;
 }
 

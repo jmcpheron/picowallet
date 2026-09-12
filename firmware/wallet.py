@@ -18,11 +18,14 @@ except ImportError:
 
 APP = secrets.APP_URL if secrets else None
 NAME = getattr(secrets, "DEVICE_NAME", "picowallet")
+# The account is the chip's key. Without a chip there is no account, so the wallet stops on a
+# NO CHIP screen. The emulator sets ALLOW_SOFT_KEY in its generated secrets.py to test the flow.
+SOFT_OK = bool(getattr(secrets, "ALLOW_SOFT_KEY", False)) if secrets else False
 
 d = None
 keys = None
 sig = None          # the signer backend
-state = "boot"      # boot | home | confirm | working | done | error
+state = "boot"      # boot | home | confirm | working | done | error | nochip
 page = 0            # confirm: 0 = summary, 1 = details
 req = None          # request on screen
 info = {}           # last /api/state
@@ -279,8 +282,22 @@ def draw_msg(title, color):
     d.show()
 
 
+def draw_nochip():
+    d.fill(L.BLACK)
+    d.fill_rect(0, 0, 240, 26, L.RED)
+    d.center_text("NO CHIP", 5, L.WHITE, 2)
+    y = 50
+    for line in ("no ATECC608 answered", "on I2C (GP4 SDA, GP5 SCL)", "", "the account is the",
+                 "chip's key, so there", "is no account here", "", "wire the chip, then", "press A to look again"):
+        d.center_text(line, y, L.WHITE if line else L.BLACK)
+        y += 16
+    d.show()
+
+
 def draw():
-    if state in ("boot", "home"):
+    if state == "nochip":
+        draw_nochip()
+    elif state in ("boot", "home"):
         draw_home()
     elif state == "confirm":
         draw_confirm()
@@ -311,7 +328,10 @@ def tick(t):
             finally:
                 start_timer()
         for k in keys.pressed():
-            if state == "confirm":
+            if state == "nochip":
+                if k == "A":
+                    probe_chip(); dirty = True
+            elif state == "confirm":
                 if k == "A":
                     approve(True)
                 elif k == "Y":
@@ -498,7 +518,7 @@ def approve(yes):
 
 def net_work():
     global state, dirty, last_announce, last_fetch
-    if state in ("confirm", "working") or secrets is None:
+    if state in ("confirm", "working", "nochip") or secrets is None:
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
@@ -530,13 +550,22 @@ def start_timer():
     timer = machine.Timer(period=50, mode=machine.Timer.PERIODIC, callback=tick)
 
 
+def probe_chip():
+    global sig, state
+    sig = S.load()
+    if sig.name != "atecc608" and not SOFT_OK:
+        state = "nochip"
+    elif state == "nochip":
+        state = "boot"
+
+
 def start():
     global d, keys, sig, dirty
     d = L.LCD()
     keys = L.Keys()
     load_qr()
     draw()
-    sig = S.load()
+    probe_chip()
     dirty = True
     draw()
     if secrets and not network.WLAN(network.STA_IF).isconnected():
