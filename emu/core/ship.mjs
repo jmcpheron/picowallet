@@ -50,7 +50,11 @@ export async function ship(name, opts = {}) {
 }
 
 async function doShip(name, file, src, port, target) {
-  const ls = await mp(port, ["exec", "import os; print(os.listdir())"], 15000);
+  // USB: soft reset first (kills the old module's timers; raw-REPL reset skips main.py), then copy,
+  // then run, all without another reset: a reset right after a copy can lose the write on LittleFS.
+  // WiFi wallet: a soft reset would rerun boot.py and drop the console, so no reset there; runCode
+  // stops the old copy of the module instead.
+  const ls = await mp(port, ["exec", "import os; print(os.listdir())"], 15000, target === "wifi");
   if (ls.code !== 0) return { ok: false, port, error: "cannot talk to the Pico at " + port, lines: lines(ls.out) };
   const have = ls.out.includes("'lcd.py'");
 
@@ -61,12 +65,10 @@ async function doShip(name, file, src, port, target) {
     const f = listWorkspace().find((x) => x.name === dep);
     if (f && dep !== file.name) args.push("cp", join(f.src === "firmware" ? FIRMWARE : SKETCHES, dep), `:${dep}`, "+");
   }
-  args.push("cp", src, `:${file.name}`);
+  args.push("cp", src, `:${file.name}`, "+", "exec", "import os\nif hasattr(os, 'sync'): os.sync()");
   const c = await mp(port, args, 120000);
   if (c.code !== 0) return { ok: false, port, error: "copy failed", lines: lines(c.out) };
-  // USB: soft reset for a clean slate. WiFi wallet: a soft reset would rerun boot.py and drop the
-  // console, so keep resume there; runCode stops the old copy of the module instead.
-  const r = await mp(port, ["exec", runCode(name, entryFor(name))], FOLLOW_MS, target === "wifi");
+  const r = await mp(port, ["exec", runCode(name, entryFor(name))], FOLLOW_MS);
   const out = lines(c.out).concat(lines(r.out));
   const failed = out.some((l) => /^Traceback/.test(l));
   return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out,
