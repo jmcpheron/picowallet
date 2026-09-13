@@ -223,19 +223,20 @@ vault address goes in the bottom (`tools/zezqr 0x... base_vN`), not now.
 base_v5 printed but does not fit well. base_v4 (ridges 0.25 mm proud) is the winning base. Reprint
 requested plain, no QR: print inbox drop `20260912-100725-base_v4`, black PETG.
 
-## Official set (2026-09-12)
+## Official set (2026-09-12, evening)
 
-The case as it stands. Print these, nothing else, unless Austin says otherwise.
+The case as it stands. Print these, nothing else, unless Austin says otherwise. One-file version
+with all seven parts laid out in print orientation: `case/zez0000/picowallet_case.stl`, built by
+`tools/zezplate`. Black PETG, 0.20 mm, no brim. Base floor down, lid outer face down, caps flange down.
 
 | Part | File | Why |
 |---|---|---|
-| Base | `case/zez0000/base_v4.stl` | v5 (taller ridges) was too tight |
-| Lid | `case/zez0000/lid_v4.stl` | v2 tight, v3 too loose, v4 right |
+| Base | `case/zez0000/base_v6.stl` | ridges 0.30 mm proud; v4 (0.25) pulled apart by hand, v5 (0.50) would not fit |
+| Lid | `case/zez0000/lid_v5.stl` | v4 holes plus a 0.4 mm deeper cap pocket, so pressing the case no longer clicks buttons |
 | Button caps | `button_cap_1..4.stl` (or `button_cap_x` / `button_cap_check`) | stock |
 | Joystick cap | `joystick_cap_v3_2.00.stl` | 2.00 socket fits the 1.87 stem |
 
-Black PETG, 0.20 mm. Base floor down, lid outer face down. There is no lid v5 or v6 (checked
-git, branches and the print inbox 2026-09-12). The QR-bottom base is a side experiment, parked.
+There is no lid v6 or base v7. The QR-bottom base is a parked side experiment.
 
 ### base_v6 (2026-09-12): a fifth of the way from v4 to v5
 
