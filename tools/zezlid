@@ -19,8 +19,8 @@ lid = trimesh.load("case/zez0000/lid.stl")
 cx, cy = (lid.bounds[0][:2] + lid.bounds[1][:2]) / 2
 lid.apply_translation((-cx, -cy, 0))
 SHIFT_X = 0.6                                  # toward the screen (+x)
-GROW = {"v2": 0.05, "v3": 0.35, "v4": 0.20, "v5": 0.20}[V]   # per side
-CLEAR = {"v5": 0.4}.get(V, 0.0)                                # extra cap-to-plunger clearance
+GROW = {"v2": 0.05, "v3": 0.35, "v4": 0.20, "v5": 0.20, "v6": 0.20}[V]   # per side
+CLEAR = {"v5": 0.4, "v6": 0.6}.get(V, 0.0)   # v6: pink Pico still clicked a little at 0.4                                # extra cap-to-plunger clearance
 POCKET = (-26.5, -18.0, -12.5, 12.5)                          # stock cap-flange pocket inside the lid, ceiling at z 2.0
 HOLE_X0, HOLE_X1 = -24.50, -20.00              # stock hole x
 HOLE_Y = [(-10.50, -6.75), (-4.75, -1.00), (1.00, 4.75), (6.75, 10.50)]

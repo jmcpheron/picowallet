@@ -266,3 +266,10 @@ two posts at the USB end are 8.0 mm apart face to face and the wall slot is 8 x 
 
 `tools/zezbase pink`. Drop 20260912-204053-base_pink, black PETG, no brim. Lid and caps unchanged.
 Printed and fits perfectly. Official: base_v6 for a Pico 2 W, base_pink for the pink USB-C Pico.
+
+### lid_v6 (2026-09-12, night): pocket 0.6 mm
+
+With the pink Pico in base_pink, pressing the case still clicked the buttons a little on lid_v5.
+Same fix, more of it: cap pocket 0.6 mm deep instead of 0.4, so the plate over the buttons is
+1.4 mm. Holes unchanged from v4/v5. `tools/zezlid v6`, drop `20260912-213327-lid_v6`, black PETG, no brim.
+Not official until it is tried.
