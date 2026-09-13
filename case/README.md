@@ -231,7 +231,8 @@ with all seven parts laid out in print orientation: `case/zez0000/picowallet_cas
 
 | Part | File | Why |
 |---|---|---|
-| Base | `case/zez0000/base_v6.stl` | ridges 0.30 mm proud; v4 (0.25) pulled apart by hand, v5 (0.50) would not fit |
+| Base, Pico 2 W (micro-USB) | `case/zez0000/base_v6.stl` | ridges 0.30 mm proud; v4 (0.25) pulled apart by hand, v5 (0.50) would not fit |
+| Base, pink Pico (USB-C) | `case/zez0000/base_pink.stl` | base_v6 with the USB-end posts spread, a divot under the jack, wider slot. Fits perfectly (2026-09-12) |
 | Lid | `case/zez0000/lid_v5.stl` | v4 holes plus a 0.4 mm deeper cap pocket, so pressing the case no longer clicks buttons |
 | Button caps | `button_cap_1..4.stl` (or `button_cap_x` / `button_cap_check`) | stock |
 | Joystick cap | `joystick_cap_v3_2.00.stl` | 2.00 socket fits the 1.87 stem |
@@ -264,3 +265,4 @@ two posts at the USB end are 8.0 mm apart face to face and the wall slot is 8 x 
 - Wall slot 9.2 wide, floor dropped to the divot floor (z 1.4..5.5).
 
 `tools/zezbase pink`. Drop 20260912-204053-base_pink, black PETG, no brim. Lid and caps unchanged.
+Printed and fits perfectly. Official: base_v6 for a Pico 2 W, base_pink for the pink USB-C Pico.
