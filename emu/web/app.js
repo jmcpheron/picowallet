@@ -282,6 +282,8 @@ async function pollDevices() {
     : d.mp === null ? "asking the board what it is…" : `copy ${main}.py to ${d.port} and import it`;
 }
 pollDevices(); setInterval(pollDevices, 3000);
+try { $("#boot").checked = localStorage.getItem("emu.boot") === "1"; } catch {}
+$("#boot").onchange = () => localStorage.setItem("emu.boot", $("#boot").checked ? "1" : "0");
 devSel.onchange = pollDevices;
 $("#ship").onclick = async () => {
   const d = pickedDevice();
@@ -296,7 +298,7 @@ $("#ship").onclick = async () => {
     } else {
       await saveAll();
       appendLog(`── send ${main} to ${d.port} ──`, "sys");
-      const r = await (await fetch("/ctl/ship", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: main, port: d.port }) })).json();
+      const r = await (await fetch("/ctl/ship", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: main, port: d.port, boot: $("#boot").checked }) })).json();
       for (const l of r.lines || []) appendLog(l);
       if (r.error) appendLog(r.error, "err");
       else appendLog(`${r.ok ? "running" : "failed"} ${main} on ${r.port}${r.blocking ? " (busy loop, left running)" : ""}${r.copiedLcd ? "; lcd.py copied too" : ""}`, r.ok ? "sys" : "err");

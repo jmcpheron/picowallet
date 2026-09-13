@@ -46,10 +46,12 @@ MicroPython on any of them: a running board is told to enter its bootloader over
 (default 1.26.1 to match the wallet and the emulator, `--version latest`), and the board comes
 back as a serial port. `--wifi` picks the Pico W / Pico 2 W build; the bootloader cannot tell.
 
-`tools/emu ship NAME [--port /dev/cu.usbmodemN]` copies `NAME.py` to the board (first serial port
-if no `--port`), adds `lcd.py` if the board lacks it, soft-resets so the old module's timers stop,
-imports the module fresh and prints its output for a few seconds (a `while True` module is left
-running and reported as "blocking loop"). Exit 1 on a traceback or no board. `--wifi` targets the
+`tools/emu ship NAME [--port /dev/cu.usbmodemN] [--boot]` copies `NAME.py` and every file it
+imports to the board (first serial port if no `--port`), soft-resets so the old module's timers
+stop, imports the module fresh and prints its output for a few seconds (a `while True` module is
+left running and reported as "blocking loop"). That is a one-time run: at power-up MicroPython
+only runs `main.py`, so a board without one boots to a dark screen. `--boot` (the "run at boot"
+box on the page) also writes a `main.py` that imports the module; refused on the wallet Pico. Exit 1 on a traceback or no board. `--wifi` targets the
 wallet Pico's WiFi console instead (no reset there; the old copy's `stop()` is called). The page
 has the same: a device picker in the top bar and the ⇪ send to Pico button (⚡ flash MicroPython
 when a bootloader board is picked). Never change `main.py` on the wallet Pico unless asked.

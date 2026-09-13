@@ -6,3 +6,4 @@ firmware/qr.bin
 photo-review.html
 emu/node_modules/
 emu/shots/
+emu/sketches/.main.py

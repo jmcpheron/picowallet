@@ -11,7 +11,8 @@
 //   tools/emu reset              reboot the device and re-run the main module
 //   tools/emu main MODULE        set which module boots by default
 //   tools/emu devices            every board on USB (serial ports and bootloader drives)
-//   tools/emu ship MODULE        copy MODULE to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
+//   tools/emu ship MODULE        copy MODULE (and what it imports) to the Pico on USB and import it
+//                                (--port /dev/cu.usbmodemN, --boot: also make it run at power-up, --wifi: the wallet Pico)
 //   tools/emu flash [--port P] [--wifi] [--version V]   put MicroPython on a board: one in bootloader mode (BOOTSEL held
 //                                while plugging in), or --port a running board of any firmware. --wifi picks the Pico W build.
 //   tools/emu headless ...       no browser: see emu/headless.mjs
@@ -126,7 +127,7 @@ try {
     case "ship": {
       if (!rest[0]) throw new Error("usage: tools/emu ship MODULE [--port /dev/cu.usbmodemN] [--wifi]");
       const pi = rest.indexOf("--port");
-      const r = await ship(rest[0], { target: rest.includes("--wifi") ? "wifi" : "usb", port: pi >= 0 ? rest[pi + 1] : undefined });
+      const r = await ship(rest[0], { target: rest.includes("--wifi") ? "wifi" : "usb", port: pi >= 0 ? rest[pi + 1] : undefined, boot: rest.includes("--boot") });
       for (const l of r.lines || []) console.log(l);
       if (r.error) console.error("emu: " + r.error);
       else console.log(`${r.ok ? "running" : "failed"} ${modName(rest[0])} on ${r.port}${r.blocking ? " (blocking loop, left running)" : ""}${r.copiedLcd ? ", lcd.py copied too" : ""}`);

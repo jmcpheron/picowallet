@@ -126,8 +126,8 @@ async function control(req, res, url) {
     }
   }
   if (p === "ship" && req.method === "POST") {
-    const { name, target, port } = JSON.parse((await body(req)).toString("utf8"));
-    const r = await ship(name, { target, port });
+    const { name, target, port, boot } = JSON.parse((await body(req)).toString("utf8"));
+    const r = await ship(name, { target, port, boot });
     return json(res, r.ok ? 200 : 500, r);
   }
   if (p === "flash" && req.method === "POST") {

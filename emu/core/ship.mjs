@@ -1,13 +1,15 @@
 // Put a module on the real Pico and run it. Used by `tools/emu ship NAME` and the page's
 // "send to Pico" button (server route /ctl/ship).
-//   ship(name, { target: "usb" | "wifi", port }) -> { ok, port, lines, blocking, error? }
+//   ship(name, { target: "usb" | "wifi", port, boot }) -> { ok, port, lines, blocking, error? }
+// boot: also write main.py so the module runs at power-up (USB only; refused on a board whose
+// main.py mentions the wallet, which is the wallet Pico).
 // usb: `port` from the device picker, else the first /dev/cu.usbmodem* (mac) or /dev/ttyACM* (linux). wifi: the wallet Pico's
 // socket console (PICO_HOST, default picowallet.local:2323), same as tools/pico.
 // The module is copied (lcd.py too if the board lacks it), the board is soft-reset (USB), then the
 // module is imported with the same snippet the emulator uses. Output is followed for a few seconds; a module that never returns
 // (a `while True`) is reported as blocking and left running.
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { FIRMWARE, SKETCHES, listWorkspace, entryFor } from "./workspace.mjs";
 import { runCode } from "./runtime.mjs";
@@ -46,17 +48,27 @@ export async function ship(name, opts = {}) {
 
   for (let i = 0; i < 20 && lock.busy; i++) await new Promise((r) => setTimeout(r, 500));
   lock.busy = true;
-  try { return await doShip(name, file, src, port, target); } finally { lock.busy = false; }
+  try { return await doShip(name, file, src, port, target, !!opts.boot); } finally { lock.busy = false; }
 }
 
-async function doShip(name, file, src, port, target) {
+async function doShip(name, file, src, port, target, boot) {
   // USB: soft reset first (kills the old module's timers; raw-REPL reset skips main.py), then copy,
   // then run, all without another reset: a reset right after a copy can lose the write on LittleFS.
   // WiFi wallet: a soft reset would rerun boot.py and drop the console, so no reset there; runCode
   // stops the old copy of the module instead.
-  const ls = await mp(port, ["exec", "import os; print(os.listdir())"], 15000, target === "wifi");
+  const probe = "import os; print(os.listdir()); print('MAIN:', open('main.py').read()[:200].replace('\\n', ' ') if 'main.py' in os.listdir() else '')";
+  const ls = await mp(port, ["exec", probe], 15000, target === "wifi");
   if (ls.code !== 0) return { ok: false, port, error: "cannot talk to the Pico at " + port, lines: lines(ls.out) };
   const have = ls.out.includes("'lcd.py'");
+  const mainNow = (ls.out.match(/MAIN:\s*(.*)/) || [])[1] || "";
+  let bootNote = "";
+  if (boot) {
+    if (target === "wifi" || /wallet/.test(mainNow)) bootNote = "main.py left alone: this looks like the wallet Pico";
+    else {
+      writeFileSync(join(SKETCHES, ".main.py"), `# written by the emulator's send: run ${name} at power-up\nimport sys\ntry:\n    import ${name}\n${entryFor(name) ? "    " + entryFor(name) + "\n" : ""}except Exception as e:\n    sys.print_exception(e)\n`);
+      bootNote = `main.py now runs ${name} at power-up`;
+    }
+  }
 
   // Everything the module imports (recursively) that lives in firmware/ or emu/sketches/, plus any
   // "x.bin" it names, goes too. mpremote cp skips files the board already has unchanged.
@@ -65,13 +77,16 @@ async function doShip(name, file, src, port, target) {
     const f = listWorkspace().find((x) => x.name === dep);
     if (f && dep !== file.name) args.push("cp", join(f.src === "firmware" ? FIRMWARE : SKETCHES, dep), `:${dep}`, "+");
   }
-  args.push("cp", src, `:${file.name}`, "+", "exec", "import os\nif hasattr(os, 'sync'): os.sync()");
+  args.push("cp", src, `:${file.name}`, "+");
+  if (bootNote.startsWith("main.py now")) args.push("cp", join(SKETCHES, ".main.py"), ":main.py", "+");
+  args.push("exec", "import os\nif hasattr(os, 'sync'): os.sync()");
   const c = await mp(port, args, 120000);
   if (c.code !== 0) return { ok: false, port, error: "copy failed", lines: lines(c.out) };
   const r = await mp(port, ["exec", runCode(name, entryFor(name))], FOLLOW_MS);
   const out = lines(c.out).concat(lines(r.out));
   const failed = out.some((l) => /^Traceback/.test(l));
-  return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out,
+  if (bootNote) out.push(bootNote);
+  return { ok: !failed && (r.killed || r.code === 0), port, blocking: r.killed, copiedLcd: !have, lines: out, bootNote,
     copied: out.filter((l) => /^cp /.test(l)).map((l) => l.replace(/^cp .*\//, "").replace(/ :.*$/, "")) };
 }
 

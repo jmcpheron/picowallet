@@ -13,7 +13,7 @@ tools/emu shot            # emu/shots/latest.png
 tools/emu exec 'mock.goto("send")'
 tools/emu log             # console lines
 tools/emu devices         # boards on USB (serial ports, bootloader drives)
-tools/emu ship hello      # copy hello.py to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
+tools/emu ship hello      # copy hello.py (+ imports) to the Pico on USB and run it (--port /dev/cu.usbmodemN, --boot: run at power-up too)
 tools/emu flash --port /dev/cu.usbmodemN [--wifi]   # MicroPython onto any board (also works on a BOOTSEL drive without --port)
 tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no browser
 ```
