@@ -273,9 +273,13 @@ async function pollDevices() {
   if (devices.some((d) => (d.port || d.path) === was)) devSel.value = was;
   const d = pickedDevice(), b = $("#ship");
   b.classList.toggle("off", !d);
-  b.textContent = d && d.kind === "bootsel" ? "⚡ flash MicroPython" : "⇪ send to Pico";
-  b.title = !d ? "plug a Pico into this Mac (hold BOOTSEL while plugging in for a fresh one)"
-    : d.kind === "bootsel" ? `put MicroPython on the board at ${d.path}` : `copy ${main}.py to ${d.port} and import it`;
+  const needsMp = d && (d.kind === "bootsel" || d.mp === false);
+  b.textContent = needsMp ? "⚡ install MicroPython" : "⇪ send to Pico";
+  b.disabled = !!(d && d.kind === "serial" && d.mp === null);
+  b.title = !d ? "plug a Pico into this Mac"
+    : d.kind === "bootsel" ? `put MicroPython on the board at ${d.path}`
+    : d.mp === false ? `this board runs something else; reboot it into its bootloader and put MicroPython on it`
+    : d.mp === null ? "asking the board what it is…" : `copy ${main}.py to ${d.port} and import it`;
 }
 pollDevices(); setInterval(pollDevices, 3000);
 devSel.onchange = pollDevices;
@@ -284,10 +288,11 @@ $("#ship").onclick = async () => {
   if (!d) { appendLog("no board on USB", "err"); return; }
   const b = $("#ship"); b.disabled = true;
   try {
-    if (d.kind === "bootsel") {
-      appendLog(`── flash MicroPython onto ${d.path} ──`, "sys");
-      const r = await (await fetch("/ctl/flash", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: d.path }) })).json();
-      appendLog(r.error ? r.error : `flashed ${r.file}; ${r.note}`, r.error ? "err" : "sys");
+    if (d.kind === "bootsel" || d.mp === false) {
+      const wifi = confirm("Is this a Pico W / Pico 2 W (has WiFi)?\n\nOK = WiFi build, Cancel = plain build");
+      appendLog(`── install MicroPython (${wifi ? "WiFi" : "plain"} build) on ${d.port || d.path} ──`, "sys");
+      const r = await (await fetch("/ctl/flash", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: d.path, port: d.port, wifi }) })).json();
+      appendLog(r.error ? r.error : `installed ${r.file}; ${r.note}`, r.error ? "err" : "sys");
     } else {
       await saveAll();
       appendLog(`── send ${main} to ${d.port} ──`, "sys");

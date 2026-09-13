@@ -131,8 +131,8 @@ async function control(req, res, url) {
     return json(res, r.ok ? 200 : 500, r);
   }
   if (p === "flash" && req.method === "POST") {
-    const { path, version } = JSON.parse((await body(req)).toString("utf8"));
-    let r; try { r = await flash(path, { version }); } catch (e) { r = { ok: false, error: String(e.message || e) }; }
+    const { path, port, version, wifi } = JSON.parse((await body(req)).toString("utf8"));
+    let r; try { r = await flash({ path, port }, { version, wifi }); } catch (e) { r = { ok: false, error: String(e.message || e) }; }
     return json(res, r.ok ? 200 : 500, r);
   }
   if (p === "devices" && req.method === "GET") return json(res, 200, { devices: listDevices() });

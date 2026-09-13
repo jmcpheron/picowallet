@@ -38,10 +38,13 @@ first so the editor does not eat them; the 3D view shows the key next to each bu
 
 ## Ship it to the real Pico
 
-`tools/emu devices` lists every board on this Mac's USB: serial ports (MicroPython running, with
-the board name) and bootloader drives (a board plugged in with BOOTSEL held; it has no serial port
-and runs nothing until MicroPython is on it: `tools/emu flash`, default version 1.26.1 to match the
-wallet and the emulator, `--version latest` for newest; the board reboots and shows up as serial).
+`tools/emu devices` lists every board on this Mac's USB: MicroPython boards (with the board name),
+boards running something else (Arduino etc., "not MicroPython", with what they print), and
+bootloader drives (plugged in with BOOTSEL held). `tools/emu flash --port P [--wifi]` puts
+MicroPython on any of them: a running board is told to enter its bootloader over USB first
+(`machine.bootloader()`, or the 1200-baud touch for Arduino firmware), then the .uf2 is copied
+(default 1.26.1 to match the wallet and the emulator, `--version latest`), and the board comes
+back as a serial port. `--wifi` picks the Pico W / Pico 2 W build; the bootloader cannot tell.
 
 `tools/emu ship NAME [--port /dev/cu.usbmodemN]` copies `NAME.py` to the board (first serial port
 if no `--port`), adds `lcd.py` if the board lacks it, soft-resets so the old module's timers stop,

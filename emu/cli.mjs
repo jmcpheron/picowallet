@@ -12,7 +12,8 @@
 //   tools/emu main MODULE        set which module boots by default
 //   tools/emu devices            every board on USB (serial ports and bootloader drives)
 //   tools/emu ship MODULE        copy MODULE to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
-//   tools/emu flash [--version V] put MicroPython on a board plugged in with BOOTSEL held (default 1.26.1, or "latest")
+//   tools/emu flash [--port P] [--wifi] [--version V]   put MicroPython on a board: one in bootloader mode (BOOTSEL held
+//                                while plugging in), or --port a running board of any firmware. --wifi picks the Pico W build.
 //   tools/emu headless ...       no browser: see emu/headless.mjs
 //   tools/emu serve              run the server in the foreground
 import { spawn } from "node:child_process";
@@ -113,12 +114,13 @@ try {
       break;
     }
     case "flash": {
-      const vi = rest.indexOf("--version");
+      const vi = rest.indexOf("--version"), pi = rest.indexOf("--port");
       const drives = bootselDrives();
-      if (!drives.length) throw new Error("no board in bootloader mode (hold BOOTSEL while plugging in; it mounts as RPI-RP2 or RP2350)");
-      const r = await flash(drives[0].path, { version: vi >= 0 ? rest[vi + 1] : undefined });
+      const target = pi >= 0 ? { port: rest[pi + 1] } : drives.length ? { path: drives[0].path } : null;
+      if (!target) throw new Error("no board in bootloader mode and no --port (hold BOOTSEL while plugging in, or --port /dev/cu.usbmodemN)");
+      const r = await flash(target, { version: vi >= 0 ? rest[vi + 1] : undefined, wifi: rest.includes("--wifi") });
       if (r.error) throw new Error(r.error);
-      console.log(`flashed ${r.file} onto ${drives[0].path}; ${r.note}`);
+      console.log(`flashed ${r.file}; ${r.note}`);
       break;
     }
     case "ship": {

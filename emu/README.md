@@ -14,11 +14,13 @@ tools/emu exec 'mock.goto("send")'
 tools/emu log             # console lines
 tools/emu devices         # boards on USB (serial ports, bootloader drives)
 tools/emu ship hello      # copy hello.py to the Pico on USB and import it (--port /dev/cu.usbmodemN, --wifi: the wallet Pico)
-tools/emu flash           # MicroPython onto a board plugged in with BOOTSEL held (--version latest)
+tools/emu flash --port /dev/cu.usbmodemN [--wifi]   # MicroPython onto any board (also works on a BOOTSEL drive without --port)
 tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no browser
 ```
 
-Page: the module menu top left picks what ▶ run, ↻ reset and ⇪ send to Pico act on (only modules
+Page: the device menu lists every board on USB; for one that is not running MicroPython the
+send button becomes ⚡ install MicroPython. The module menu top left picks what ▶ run, ↻ reset and
+⇪ send to Pico act on (only modules
 that show something are listed: they start themselves at import, or the server knows their entry
 point, `ENTRY` in `core/workspace.mjs`). Left = files, editor (Cmd/Ctrl+Enter runs the open file),
 console with a REPL; right = the device (orbit with the mouse, click the caps) or the flat view.
