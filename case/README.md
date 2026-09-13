@@ -252,3 +252,15 @@ cap-flange pocket inside (x -26.5..-18, y +-12.5) cut 0.4 mm deeper, so the plat
 strip is 1.6 mm instead of 2.0 and the caps sit 0.4 mm further out. Outer face unchanged, still
 prints face down. Holes unchanged from v4. Output `case/zez0000/lid_v5.stl`. Print inbox drop `20260912-175600-lid_v5`, black PETG, no brim.
 Alternative if this is not enough: a 0.4 mm dimple in the cap underside where the plunger lands.
+
+### base_pink (2026-09-12, night): base_v6 for the USB-C (pink) Pico
+
+The pink Pico has a USB-C jack: 8.89 wide, 3.15 tall (micro-USB is ~7.5 x 2.7). On base_v6 the
+two posts at the USB end are 8.0 mm apart face to face and the wall slot is 8 x 3 with its floor
+0.5 above the case floor, so the jack hits both. base_pink is base_v6 plus:
+
+- USB-end posts moved out 0.75 mm each: gap 8.0 -> 9.5 mm. Other end unchanged.
+- 0.6 mm divot in the floor under the jack, 9.1 wide x 7.4 in from the wall. 1.4 mm floor left.
+- Wall slot 9.2 wide, floor dropped to the divot floor (z 1.4..5.5).
+
+`tools/zezbase pink`. Drop 20260912-204053-base_pink, black PETG, no brim. Lid and caps unchanged.

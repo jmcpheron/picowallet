@@ -1,5 +1,7 @@
 #!/bin/sh
 # Rework the Zez0000 base (v3: + pry notch; v4: posts 3 mm, case 2.5 mm shorter; v5: ridge 0.50 proud, r 0.5)
+# Usage: tools/zezbase [v4|v5|v6|pink]. pink = v6 for a USB-C Pico: USB-end posts 0.75 mm further apart each,
+# a 0.6 mm divot in the floor under the connector, wall slot widened to 9.2 and dropped to the divot floor.
 # Usage: tools/zezbase [v4|v5|v6]. v4 pries apart with a fingernail, v5 (0.50) would not fit, v6 is 0.30, a fifth of the way.
 # Source case/zez0000/base.stl, reworked so it snaps into the stock lid without a mallet.
 # Stock: two 53 mm tabs, each with a full-length half-round ridge 0.44 mm proud of the lid wall,
@@ -19,7 +21,7 @@ WALL_IN = 27.13 / 2          # lid cavity half-width (inner face of the lid wall
 TAB_OUT = WALL_IN - 0.10     # new tab outer face: 0.1 clearance to the lid wall
 TAB_END = 26.25              # new tab half-length (stock 26.4/26.6, lid pocket 26.5): 0.25 per end
 RIDGE_LEN, RIDGE_X = 10.0, 16.0
-RIDGE_R, RIDGE_PROUD = {"v4": (0.4, 0.25), "v5": (0.5, 0.50), "v6": (0.4, 0.30)}[V]   # v5: crest 0.25 further out, fatter so the neck on the tab stays ~1 mm wide
+RIDGE_R, RIDGE_PROUD = {"v4": (0.4, 0.25), "v5": (0.5, 0.50), "v6": (0.4, 0.30), "pink": (0.4, 0.30)}[V]   # v5: crest 0.25 further out, fatter so the neck on the tab stays ~1 mm wide
 RIDGE_Y = WALL_IN + RIDGE_PROUD - RIDGE_R   # cylinder centre so the crest is RIDGE_PROUD past the wall
 RIDGE_Z = 12.5               # stock ridge centre; meets the lid groove centre (lid z 14.1)
 NOTCH_W, NOTCH_D, NOTCH_H = 8.0, 1.0, 1.0   # pry slot in the outer wall at the rim, +y side, x centre
@@ -53,6 +55,29 @@ hi = trimesh.boolean.intersection([b3, box(-40, 40, -20, 20, FLOOR_TOP + DROP, 2
 hi.apply_translation((0, 0, -DROP))
 b4 = trimesh.boolean.union([lo, hi], engine="manifold")
 assert b4.is_watertight, "base not watertight"
+if V == "pink":
+    # USB-C Pico: connector 8.89 wide, 3.15 tall (micro-USB 2.7). Posts 3 mm tall put the board at z 5.0, so the
+    # connector top is at z 1.85, 0.15 into the floor (top z 2.0). Posts: centre +-5.75 r 1.76 -> 8.0 mm gap.
+    PX, PY, PR = 23.24, 5.75, 1.76        # stock USB-end posts (+x end)
+    SPREAD = 0.75                         # each post out by this: gap 8.0 -> 9.5
+    DIV_L, DIV_W, DIV_D = 7.4, 9.1, 0.6   # divot: from the wall inward, y centred, into the floor
+    SLOT_W, SLOT_TOP = 9.2, 5.5           # wall slot: was 8.0 wide, z 2.5..5.5; now z (2.0-DIV_D)..5.5
+    posts, holes = [], []
+    for sy in (1, -1):
+        y0, y1 = sorted((sy * (PY - PR - 0.1), sy * (PY + PR + 0.1)))
+        post = trimesh.boolean.intersection([b4, box(PX - PR - 0.1, 24.99, y0, y1, FLOOR_TOP + 0.001, POST_TOP + 1)], engine="manifold")
+        holes.append(box(PX - PR - 0.1, 24.99, y0, y1, FLOOR_TOP + 0.001, POST_TOP + 1))
+        post.apply_translation((0, sy * SPREAD, 0)); posts.append(post)
+    b4 = trimesh.boolean.difference([b4] + holes, engine="manifold")
+    b4 = trimesh.boolean.difference([b4, box(25.0 - DIV_L, 25.0, -DIV_W / 2, DIV_W / 2, FLOOR_TOP - DIV_D, FLOOR_TOP + 0.5),
+                                     box(24.9, 30, -SLOT_W / 2, SLOT_W / 2, FLOOR_TOP - DIV_D, SLOT_TOP)], engine="manifold")
+    b4 = trimesh.boolean.union([b4] + posts, engine="manifold")
+    assert b4.is_watertight, "pink base not watertight"
+    pp = b4.vertices[(b4.vertices[:, 0] > 21) & (b4.vertices[:, 0] < 25) & (b4.vertices[:, 2] > 2.05) & (b4.vertices[:, 2] < 5.05) & (np.abs(b4.vertices[:, 1]) < 10)]
+    inner = np.abs(pp[:, 1]).min()
+    loc, _, _ = b4.ray.intersects_location([[21.0, 0, 20]], [[0, 0, -1]]); zz = sorted(np.asarray(loc).reshape(-1, 3)[:, 2])
+    print("pink: USB-end posts gap %.2f mm (inner faces at |y| %.2f), divot floor z %.2f (floor left %.2f mm), slot %.1f wide z %.1f..%.1f" % (
+        2 * inner, inner, zz[-1], zz[-1], SLOT_W, FLOOR_TOP - DIV_D, SLOT_TOP))
 b4.export("case/zez0000/base_%s.stl" % V)
 pv = b4.vertices[(np.abs(np.abs(b4.vertices[:, 0]) - 23.25) < 2) & (np.abs(np.abs(b4.vertices[:, 1]) - 5.75) < 2) & (b4.vertices[:, 2] > FLOOR_TOP + 0.01)]
 print("base_%s: %.1f x %.1f x %.1f mm, posts %.2f mm tall, watertight" % (V, b4.extents[0], b4.extents[1], b4.extents[2], pv[:, 2].max() - FLOOR_TOP))
