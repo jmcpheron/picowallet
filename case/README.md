@@ -2,23 +2,71 @@
 
 ## v0: print this first
 
-`waveshare-13-pico-lcd-case-tomas-plass.stl`, from
-[Waveshare Pico 1.3 LCD Case by Tomáš Plass](https://www.printables.com/model/1322102-waveshare-pico-13-lcd-case)
-on Printables. License CC BY-NC 4.0 (remix ok, attribution required, no commercial use).
+`waveshare-raspberry-pi-pico.stl`: both halves in one file, side by side, flat side down. PLA,
+0.2 mm layers, no supports. Top = lid, bottom = base; they are also in
+`waveshare-raspberry-pi-pico/` as `top.stl` and `bottom.stl` if you want them one at a time.
+
+The design is [Waveshare Pico 1.3 LCD Case by Tomáš Plass](https://www.printables.com/model/1322102-waveshare-pico-13-lcd-case)
+on Printables, CC BY-NC 4.0 (remix ok, attribution required, no commercial use). Plass published a
+mesh; `waveshare-raspberry-pi-pico/waveshare-raspberry-pi-pico.step` is a parametric recreation of
+it in Onshape (Jason McPheron, same license) so the case can be changed and the changes read. The mesh Plass published,
+the one Austin printed on 2026-09-05, is kept in `reference/plass/` and is what the recreation is
+checked against.
 
 What it is: a two-piece snap-fit box for exactly our stack, Pico plugged into the Pico-LCD-1.3.
-Both halves are in the one STL, side by side. Closed box about 60 x 34 x 26 mm.
+Closed box about 57 x 31 x 26 mm.
 
-- Lid: screen window, a slot the four bare A/B/X/Y buttons poke through, a diamond hole the
+- Top: screen window, a slot the four bare A/B/X/Y buttons poke through, a diamond hole the
   joystick stem pokes through. No caps, you press the parts directly. That is the honest state of
   the art for this board: nobody has published floating caps for it.
 - End: micro-USB slot (the Pico 2 W is micro-USB, not USB-C).
-- Base: four M2 posts for the Pico, optional.
-- Print: 0.2 mm layers, no supports (author says a small one under the USB cutout is optional).
+- Bottom: four M2 posts for the Pico, optional.
+- Print: 0.2 mm layers, no supports (Plass says a small one under the USB cutout is optional).
 
 Fit risk for us: the ATECC breakout and the four wedged wires live in the 11 mm gap between the
 boards, inside the box footprint, so they should be fine. The wires leave the header at the USB end
 and bend into the gap; keep them flat. Print it and see.
+
+### How the case is tracked (2026-09-13)
+
+The STEP is the source. The STL in `case/` and everything else in `waveshare-raspberry-pi-pico/`
+is generated from it by `tools/step` and committed with it, so a change to the case is one commit
+with the STEP, the per-part files, the print plate and the numbers all moving together:
+
+```
+case/waveshare-raspberry-pi-pico.stl          print plate: every part flat on the bed, side by side
+case/waveshare-raspberry-pi-pico/
+  waveshare-raspberry-pi-pico.step            Onshape export (AP242), the assembly: top + bottom
+  top.step  bottom.step                       one part per file, in its own frame
+  top.stl   bottom.stl                        one part per STL (binary, chord 0.01 mm), z = 0 on the bed
+  parts.md                                    bbox, volume, face count per part
+```
+
+- Change the model in Onshape, export STEP (AP242, keep the part names `top` and `bottom`, they
+  become the file names) over `waveshare-raspberry-pi-pico/waveshare-raspberry-pi-pico.step`, run
+  `tools/step`, commit.
+- Reading a change on GitHub: `parts.md` diffs as text (a tolerance tweak shows up as a volume or
+  bbox change), and GitHub renders `.stl` files in a 3D viewer with a before/after diff on the pull
+  request. The STEP itself is text too, but Onshape renumbers every entity on export, so its diff
+  only says "changed".
+- `tools/step` is deterministic: rerun it on an unchanged STEP and git stays quiet. The part STEP
+  files carry the source export's timestamp, not the write time.
+- `tools/step check` compares each generated part with the matching half of the Plass mesh
+  (bbox, volume, surface distance, and where the far points are). Use it after a re-export to see
+  what moved. Needs `uv` in `~/.local/bin` like the other tools.
+- Two boards, two shapes: one folder per variant, `case/<variant>/<variant>.step` (e.g. a second
+  Onshape configuration for a Pico with a different footprint). `tools/step case/<variant>/<variant>.step`
+  writes the folder and `case/<variant>.stl` the same way, so the printable files for every variant
+  sit together in `case/`. A part the variants share is one file in each folder, identical bytes,
+  or the variant can be a second assembly that references the shared top. No flags, no central
+  registry: a variant is a folder with a STEP in it and a plate STL next to it.
+
+State 2026-09-13, `tools/step check` against the Plass mesh: top within 0.1 mm everywhere except
+the joystick diamond (0.7 mm toward the screen, 0.3 mm smaller across). Bottom: floor 1.5 mm
+(Plass 2.0), so the posts and the whole inside sit 0.5 mm lower; posts at x ±24.0 y ±6.5 (Plass
+±23.25, ±5.75; the Pico's holes are 47 x 11.4 mm, so ±23.5, ±5.7) with a 2.0 mm through hole
+(Plass: solid post, blind hole from the top); floor hole centred on y = 0 (Plass at y -1.5). USB
+slot, snap tabs, walls and outer size match. Fix in Onshape, re-export, rerun.
 
 ## v1: our own
 
