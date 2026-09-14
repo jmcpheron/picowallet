@@ -61,12 +61,15 @@ case/waveshare-raspberry-pi-pico/
   or the variant can be a second assembly that references the shared top. No flags, no central
   registry: a variant is a folder with a STEP in it and a plate STL next to it.
 
-State 2026-09-13, `tools/step check` against the Plass mesh: top within 0.1 mm everywhere except
-the joystick diamond (0.7 mm toward the screen, 0.3 mm smaller across). Bottom: floor 1.5 mm
-(Plass 2.0), so the posts and the whole inside sit 0.5 mm lower; posts at x ±24.0 y ±6.5 (Plass
-±23.25, ±5.75; the Pico's holes are 47 x 11.4 mm, so ±23.5, ±5.7) with a 2.0 mm through hole
-(Plass: solid post, blind hole from the top); floor hole centred on y = 0 (Plass at y -1.5). USB
-slot, snap tabs, walls and outer size match. Fix in Onshape, re-export, rerun.
+State 2026-09-14 (second export), `tools/step check` against the Plass mesh: bottom volume within
+0.4 %, floor 2.0 mm, posts at x ±23.25 y ±5.75 like Plass and the Pico. Left: the post bore is
+2.1 mm and runs the full 5.5 mm to the floor (Plass: 2.0 mm, blind, 2.7 mm deep from the top); the
+3 x 2 mm floor hole at x +16 is centred on the case centreline (Plass has it 1.5 mm toward -y, the
+side away from the button column); Plass's mesh has a 0.15 mm slit between the tab wall and the
+outer wall on both long sides, z 2 to 11, which the recreation fills solid (the slicer would not
+print a 0.15 mm gap anyway; if the tab needs to flex for the snap, that is where to put it back).
+Top: within 0.1 mm except the joystick diamond, 0.7 mm toward the screen and 0.5 mm toward -y,
+0.3 mm smaller across; the stem is 3.2 mm in a 10 mm hole, so it clears either way.
 
 ## v1: our own
 
