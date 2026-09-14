@@ -1,0 +1,30 @@
+#!/bin/sh
+# Convert a GIF (or any PIL-readable animation) to a .pv file the Pico plays with firmware/vid.py.
+# Usage: tools/gif2pv in.gif out.pv [size=120] [maxframes=0]
+# Format: 'PV1' + u8 pad + u16 w, h, nframes, frame_ms + 512 B palette (RGB565 big-endian) + w*h u8 per frame.
+exec uv run --python 3.11 --with pillow python - "$@" <<'PY'
+import sys, struct
+from PIL import Image, ImageSequence
+src, dst = sys.argv[1], sys.argv[2]
+size = int(sys.argv[3]) if len(sys.argv) > 3 else 120
+maxf = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+im = Image.open(src)
+ms = im.info.get("duration", 50) or 50
+frames = []
+for f in ImageSequence.Iterator(im):
+    frames.append(f.convert("RGB").resize((size, size), Image.LANCZOS))
+    if maxf and len(frames) >= maxf: break
+strip = Image.new("RGB", (size, size * len(frames)))
+for i, f in enumerate(frames): strip.paste(f, (0, size * i))
+q = strip.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
+pal = q.getpalette()[:768] + [0] * (768 - len(q.getpalette()[:768]))
+pal565 = bytearray()
+for i in range(256):
+    r, g, b = pal[3*i:3*i+3]
+    c = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+    pal565 += bytes([c >> 8, c & 0xFF])
+data = q.tobytes()
+with open(dst, "wb") as o:
+    o.write(b"PV1\0" + struct.pack("<HHHH", size, size, len(frames), ms) + pal565 + data)
+print(f"{len(frames)} frames {size}x{size} @ {ms} ms, {(len(data)+524)//1024} KB -> {dst}")
+PY
