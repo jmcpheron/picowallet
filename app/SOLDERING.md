@@ -18,13 +18,13 @@ Component side up, USB at the top. Pin numbers count down the left side then up 
                      USB
               ┌─────┤   ├─────┐
      GP0   1  │ o           o │ 40  VBUS
-     GP1   2  │ o           o │ 39  VSYS
-     GND   3  │ o           o │ 38  GND      <- black
+     GP1   2  │ o           o │ 39  VSYS     (battery +, see WIRING.md)
+     GND   3  │ o           o │ 38  GND      (battery -, see WIRING.md)
      GP2   4  │ o           o │ 37  3V3_EN
      GP3   5  │ o           o │ 36  3V3 OUT  <- red
 blue ->  GP4   6  │ o  SDA        o │ 35  ADC_VREF
 yellow-> GP5   7  │ o  SCL        o │ 34  GP28
-     GND   8  │ o           o │ 33  GND
+black->  GND   8  │ o           o │ 33  GND
      GP6   9  │ o           o │ 32  GP27
      ...      │              │
 ```
@@ -32,13 +32,15 @@ yellow-> GP5   7  │ o  SCL        o │ 34  GP28
 | wire | breakout | Pico pin | Pico label |
 |---|---|---|---|
 | red | VIN | 36 | 3V3 (OUT) |
-| black | GND | 38 | GND |
+| black | GND | 8 | GND |
 | blue | SDA | 6 | GP4 |
 | yellow | SCL | 7 | GP5 |
 
 All four are within the top 8 pins, near the USB end. Solder to the existing header solder blobs
-on the component side. Pins 6 and 7 are next to each other, so that is where a bridge happens.
-Pin 37 sits between 36 and 38, keep solder off it.
+on the component side, which is the side facing out of the stack (the Pico plugs in pins first, so
+the chip, BOOTSEL and the pin stubs are on the outside). Pins 6, 7 and 8 are next to each other,
+so that is where a bridge happens. Pin 37 sits between 36 and 38, keep solder off it. GND is pin 8
+rather than 38 so that 38 and 39 stay free for the battery leads (`WIRING.md`); any GND pin works.
 
 ## Doing it after 20 years
 
@@ -50,8 +52,8 @@ Pin 37 sits between 36 and 38, keep solder off it.
 5. Hold the tinned wire against the blob with tweezers. Touch the iron to the blob for 1 to 2 s until
    it melts, push the wire in, lift the iron, hold still 2 s. Done. Do not keep the iron on longer
    than 3 s, the pad does not care but the wire insulation does.
-6. Wires should leave the board flat along the surface, not poke up, since the LCD board sits about
-   11 mm above.
+6. Wires should leave the board flat along the surface, not poke up: this face sits against the
+   case bottom, and the wires wrap around the end of the Pico into the gap where the breakout sits.
 7. Check with a multimeter on continuity before powering: GP4 to GP5 must NOT beep, 3V3 to GND must
    NOT beep. Each wire to its pin must beep.
 8. A blob of hot glue over the four joints keeps them from flexing off.

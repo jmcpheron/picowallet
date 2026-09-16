@@ -86,8 +86,8 @@ joystick poke through. Keycaps and a joystick dome are in `case/out/` (PLA, 0.12
 
 ![the stack: Pico on the LCD board, ATECC breakout in the gap](buildlog/images/2026-09-05-22-stack-with-atecc.jpg)
 
-1. Plug the Pico into the LCD board's female header, component side toward the LCD, USB at the
-   joystick end.
+1. Plug the Pico into the LCD board's female header, pins first, USB at the joystick end. The
+   chip side (RP2350, BOOTSEL, the pin stubs) ends up facing out, away from the LCD board.
 2. Plug the STEMMA QT cable into the ATECC breakout.
 3. Push the cable's four bare wires into the LCD board's header socket **beside** the Pico pins.
    The spring contact grips both. Counting from the USB end, right side: red into 3V3 (pin 36),
@@ -96,7 +96,9 @@ joystick poke through. Keycaps and a joystick dome are in `case/out/` (PLA, 0.12
 
 ![ATECC608 breakout jammed in the gap](buildlog/images/2026-09-05-21-atecc-jammed-in-the-gap.jpg)
 
-`SOLDERING.md` has the pinout diagram and the soldered version if you want it permanent.
+`app/SOLDERING.md` has the pinout diagram and the soldered version if you want it permanent.
+`WIRING.md` is the v1 hardware wiring: the chip soldered, plus an 18650 cell through a footswitch
+and a Schottky diode into VSYS.
 
 ## 4. Flash the firmware
 
@@ -211,7 +213,7 @@ digest the device computed.
 | `tools/` | `pico` console, `push` firmware, `qr` (QR of the vault for the screen), `emu` (the virtual wallet) |
 | `buildlog/` | dated notes and photos of what actually happened, including the mistakes |
 | `reference/` | the Pi signer this grew out of, with the fresh-chip guide; SeedSigner cap parts (MIT) |
-| `PLAN.md`, `SOLDERING.md` | the plan, and the wiring guide |
+| `PLAN.md`, `WIRING.md`, `app/SOLDERING.md` | the plan, the v1 wiring (chip + battery + switch), the soldering guide |
 
 ## Trust model, short
 

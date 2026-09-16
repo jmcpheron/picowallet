@@ -24,10 +24,10 @@ Goal: a working wallet you can hold, that signs a real transaction, built from A
 - Testnet first, then a small mainnet amount.
 
 ## 4. Battery
-Pick one:
-- **TP4056 USB-C charger module** (~17×19 mm) wired to a LiPo and to VSYS through a Schottky diode. Charge over its own USB-C. Two more solder joints plus the battery leads.
-- **Pimoroni LiPo SHIM for Pico** — solders to the header pins under the Pico, has charger, protection and a power button. Cleanest, needs stacking headers because the SHIM sits where the LCD's header wants to be.
-- Cell: 502030 (5×20×30 mm, 250 mAh) fits the gap. Pico + backlight ≈ 50–100 mA, so ~3 h on, days in sleep.
+Decided 2026-09-16, wiring in `WIRING.md`: a protected 18650 in a holder, a latching guitar-pedal footswitch in the + lead, a Schottky diode, into VSYS (pin 39) and GND (pin 38). Charge the cell out of the wallet for now. The case gets redesigned around the cell and the switch.
+- Later, in-place charging: a **TP4056 USB-C module** between the cell and the switch (cell to B+/B−, OUT+ to the switch, keep the diode).
+- Later, firmware: read VSYS/3 on ADC3 for a battery icon and a low-battery shutdown. On the W boards GP29 is shared with the radio, so check how MicroPython wants it read.
+- Not chosen: Pimoroni LiPo SHIM (needs stacking headers under the LCD board), 502030 LiPo in the gap (too small once the case is our own).
 
 ## 5. Case
 - Print "Waveshare Pico 1.3 LCD Case" (printables.com/model/1322102) first to check fit.

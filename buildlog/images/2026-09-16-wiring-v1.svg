@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" font-family="Helvetica, Arial, sans-serif">
+<rect width="1280" height="760" fill="#fafafa"/>
+<text x="24" y="38" font-size="24" font-weight="bold" fill="#111">picowallet wiring v1: ATECC608 + 18650 + power switch</text>
+<text x="24" y="62" font-size="14" fill="#444">Pico 2 W seen from its chip side (the side facing OUT of the stack, away from the LCD board). USB at the top. Solder to the header pin stubs.</text>
+<rect x="470" y="110" width="240" height="560" rx="8" fill="#1d7a4a" stroke="#0e4a2b" stroke-width="2"/>
+<rect x="568.0" y="96" width="44" height="30" rx="3" fill="#bbb" stroke="#666"/>
+<text x="590.0" y="90" font-size="12" text-anchor="middle" fill="#333">micro-USB</text>
+<rect x="565.0" y="275" width="50" height="50" fill="#111"/>
+<text x="590.0" y="306" font-size="10" text-anchor="middle" fill="#ddd">RP2350</text>
+<rect x="555.0" y="410" width="70" height="90" fill="#c9c9c9" stroke="#888"/>
+<text x="590.0" y="460" font-size="10" text-anchor="middle" fill="#333">radio</text>
+<rect x="579.0" y="170" width="22" height="22" rx="3" fill="#eee" stroke="#666"/>
+<text x="590.0" y="206" font-size="9" text-anchor="middle" fill="#dfe">BOOTSEL</text>
+<circle cx="482" cy="132" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="136" font-size="10" fill="#eee" font-weight="normal">1 GP0</text>
+<circle cx="698" cy="132" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="136" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">VBUS 40</text>
+<circle cx="482" cy="159" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="163" font-size="10" fill="#eee" font-weight="normal">2 GP1</text>
+<circle cx="698" cy="159" r="7" fill="#d62828" stroke="#000" stroke-width="3"/>
+<text x="686" y="163" font-size="10" fill="#fff" font-weight="bold" text-anchor="end">VSYS 39</text>
+<rect x="475" y="179" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="190" font-size="10" fill="#eee" font-weight="normal">3 GND</text>
+<rect x="691" y="179" width="14" height="14" fill="#222" stroke="#000" stroke-width="3"/>
+<text x="686" y="190" font-size="10" fill="#fff" font-weight="bold" text-anchor="end">GND 38</text>
+<circle cx="482" cy="213" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="217" font-size="10" fill="#9fd" font-weight="normal">4 GP2</text>
+<circle cx="698" cy="213" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="217" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">3V3_EN 37</text>
+<circle cx="482" cy="240" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="244" font-size="10" fill="#9fd" font-weight="normal">5 GP3</text>
+<circle cx="698" cy="240" r="7" fill="#d62828" stroke="#000" stroke-width="3"/>
+<text x="686" y="244" font-size="10" fill="#fff" font-weight="bold" text-anchor="end">3V3 OUT 36</text>
+<circle cx="482" cy="267" r="7" fill="#1f6fd6" stroke="#000" stroke-width="3"/>
+<text x="494" y="271" font-size="10" fill="#fff" font-weight="bold">6 GP4</text>
+<circle cx="698" cy="267" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="271" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">ADC_VREF 35</text>
+<circle cx="482" cy="294" r="7" fill="#e0b400" stroke="#000" stroke-width="3"/>
+<text x="494" y="298" font-size="10" fill="#fff" font-weight="bold">7 GP5</text>
+<circle cx="698" cy="294" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="298" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GP28 34</text>
+<rect x="475" y="314" width="14" height="14" fill="#222" stroke="#000" stroke-width="3"/>
+<text x="494" y="325" font-size="10" fill="#fff" font-weight="bold">8 GND</text>
+<rect x="691" y="314" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="325" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GND 33</text>
+<circle cx="482" cy="348" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="352" font-size="10" fill="#eee" font-weight="normal">9 GP6</text>
+<circle cx="698" cy="348" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="352" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GP27 32</text>
+<circle cx="482" cy="375" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="379" font-size="10" fill="#eee" font-weight="normal">10 GP7</text>
+<circle cx="698" cy="375" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="379" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GP26 31</text>
+<circle cx="482" cy="402" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="406" font-size="10" fill="#9fd" font-weight="normal">11 GP8</text>
+<circle cx="698" cy="402" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="406" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">RUN 30</text>
+<circle cx="482" cy="429" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="433" font-size="10" fill="#9fd" font-weight="normal">12 GP9</text>
+<circle cx="698" cy="429" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="433" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GP22 29</text>
+<rect x="475" y="449" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="460" font-size="10" fill="#eee" font-weight="normal">13 GND</text>
+<rect x="691" y="449" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="460" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GND 28</text>
+<circle cx="482" cy="483" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="487" font-size="10" fill="#9fd" font-weight="normal">14 GP10</text>
+<circle cx="698" cy="483" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="487" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP21 27</text>
+<circle cx="482" cy="510" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="514" font-size="10" fill="#9fd" font-weight="normal">15 GP11</text>
+<circle cx="698" cy="510" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="514" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP20 26</text>
+<circle cx="482" cy="537" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="541" font-size="10" fill="#9fd" font-weight="normal">16 GP12</text>
+<circle cx="698" cy="537" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="541" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP19 25</text>
+<circle cx="482" cy="564" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="568" font-size="10" fill="#9fd" font-weight="normal">17 GP13</text>
+<circle cx="698" cy="564" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="568" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP18 24</text>
+<rect x="475" y="584" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="595" font-size="10" fill="#eee" font-weight="normal">18 GND</text>
+<rect x="691" y="584" width="14" height="14" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="595" font-size="10" fill="#eee" font-weight="normal" text-anchor="end">GND 23</text>
+<circle cx="482" cy="618" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="622" font-size="10" fill="#eee" font-weight="normal">19 GP14</text>
+<circle cx="698" cy="618" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="622" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP17 22</text>
+<circle cx="482" cy="645" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="494" y="649" font-size="10" fill="#9fd" font-weight="normal">20 GP15</text>
+<circle cx="698" cy="645" r="7" fill="#d8c27a" stroke="#7a6a30" stroke-width="1"/>
+<text x="686" y="649" font-size="10" fill="#9fd" font-weight="normal" text-anchor="end">GP16 21</text>
+<text x="590.0" y="692" font-size="11" text-anchor="middle" fill="#333">pale labels = pins the LCD board already uses. Square pads = GND. Bold = solder here.</text>
+<rect x="60" y="300" width="150" height="100" rx="6" fill="#1a1a1a" stroke="#000"/>
+<text x="135" y="332" font-size="14" font-weight="bold" fill="#eee" text-anchor="middle">ATECC608</text>
+<text x="135" y="350" font-size="11" fill="#bbb" text-anchor="middle">Adafruit STEMMA QT</text>
+<rect x="210" y="358" width="22" height="30" fill="#ddd" stroke="#555"/>
+<text x="135" y="382" font-size="10" fill="#bbb" text-anchor="middle">JST cable, bare ends</text>
+<path d="M 232 362 H 300 V 715 H 740 V 240 H 698" fill="none" stroke="#d62828" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 232 370 H 452 V 321 H 482" fill="none" stroke="#222" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 232 378 H 452 V 267 H 482" fill="none" stroke="#1f6fd6" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M 232 386 H 452 V 294 H 482" fill="none" stroke="#e0b400" stroke-width="3.5" stroke-linejoin="round"/>
+<line x1="60" y1="430" x2="90" y2="430" stroke="#d62828" stroke-width="4"/>
+<text x="98" y="434" font-size="12" fill="#222">red: VIN → pin 36 (3V3 OUT)</text>
+<line x1="60" y1="448" x2="90" y2="448" stroke="#222" stroke-width="4"/>
+<text x="98" y="452" font-size="12" fill="#222">black: GND → pin 8 (GND)</text>
+<line x1="60" y1="466" x2="90" y2="466" stroke="#1f6fd6" stroke-width="4"/>
+<text x="98" y="470" font-size="12" fill="#222">blue: SDA → pin 6 (GP4)</text>
+<line x1="60" y1="484" x2="90" y2="484" stroke="#e0b400" stroke-width="4"/>
+<text x="98" y="488" font-size="12" fill="#222">yellow: SCL → pin 7 (GP5)</text>
+<rect x="930" y="130" width="220" height="70" rx="12" fill="#3a6ea5" stroke="#1d3d5c" stroke-width="2"/>
+<rect x="916" y="152" width="14" height="26" fill="#bbb" stroke="#555"/>
+<text x="1040" y="160" font-size="15" font-weight="bold" fill="#fff" text-anchor="middle">18650 cell (protected)</text>
+<text x="1040" y="182" font-size="11" fill="#dfe" text-anchor="middle">3.0 – 4.2 V, in a holder with two leads</text>
+<text x="906" y="142" font-size="18" font-weight="bold" fill="#d62828">+</text>
+<text x="1154" y="142" font-size="18" font-weight="bold" fill="#222">−</text>
+<path d="M 916 165 H 890 V 270 H 1040 V 316" fill="none" stroke="#d62828" stroke-width="4" stroke-linejoin="round"/>
+<text x="894" y="262" font-size="11" fill="#d62828">red, battery +</text>
+<rect x="970" y="316" width="150" height="96" rx="6" fill="#e8e8e8" stroke="#666" stroke-dasharray="4 3"/>
+<text x="1045" y="428" font-size="11" fill="#333" text-anchor="middle">one pole of the footswitch (3 lugs)</text>
+<rect x="1034" y="322" width="12" height="12" fill="#f5c542" stroke="#333"/>
+<rect x="1034" y="358" width="12" height="12" fill="#f5c542" stroke="#333"/>
+<rect x="1034" y="394" width="12" height="12" fill="#c8c8c8" stroke="#333"/>
+<text x="1052" y="332" font-size="10" fill="#333">lug A: from battery +</text>
+<text x="1052" y="368" font-size="10" fill="#333">common (middle): to diode</text>
+<text x="1052" y="404" font-size="10" fill="#999">lug B: leave empty</text>
+<line x1="1038" y1="360" x2="1012" y2="334" stroke="#333" stroke-width="3"/>
+<text x="974" y="380" font-size="9" fill="#333">closed = ON</text>
+<path d="M 1040 370 V 450" fill="none" stroke="#d62828" stroke-width="4"/>
+<polygon points="1028,452 1052,452 1040,476" fill="#333"/>
+<line x1="1028" y1="476" x2="1052" y2="476" stroke="#333" stroke-width="4"/>
+<text x="1060" y="460" font-size="12" font-weight="bold" fill="#111">Schottky diode</text>
+<text x="1060" y="474" font-size="11" fill="#333">1N5817 / 1N5819 / SS14</text>
+<text x="1060" y="488" font-size="11" fill="#333">band toward the Pico</text>
+<path d="M 1040 476 V 520 H 790 V 159 H 698" fill="none" stroke="#d62828" stroke-width="4" stroke-linejoin="round"/>
+<text x="800" y="538" font-size="11" fill="#d62828">→ pin 39 VSYS</text>
+<path d="M 1150 165 H 1215 V 550 H 760 V 186 H 698" fill="none" stroke="#222" stroke-width="4" stroke-linejoin="round"/>
+<text x="1160" y="222" font-size="11" fill="#222">black,</text>
+<text x="1160" y="236" font-size="11" fill="#222">battery −</text>
+<text x="800" y="568" font-size="11" fill="#222">→ pin 38 GND</text>
+<rect x="820" y="600" width="450" height="114" rx="6" fill="#fff6d5" stroke="#c9a227"/>
+<text x="832" y="622" font-size="11" fill="#333">No diode = never plug in USB with the switch on: the Pico's own USB</text>
+<text x="832" y="640" font-size="11" fill="#333">diode would push ~4.7 V straight into the cell, with no current limit.</text>
+<text x="832" y="658" font-size="11" fill="#333">With the diode, USB and battery can both be on; USB wins, the cell just sits there.</text>
+<text x="832" y="676" font-size="11" fill="#333">Charge the cell out of the wallet, or add a TP4056 later (WIRING.md).</text>
+<text x="832" y="694" font-size="11" fill="#333">Keep solder off pin 37 (3V3_EN); never bridge 38 to 39 (dead short).</text>
+</svg>
