@@ -198,6 +198,8 @@ digest the device computed.
   (`emu/README.md`). To have an AI write for it, give it `emu/SKILL.md` and this repo; in Claude
   Code it is the `/pico-emu` skill. Then `./tools/push` and look.
 - **The case:** `case/gen.py`, CadQuery, every dimension is a named number at the top.
+- **The hardware:** `HARDWARE.md` maps the alternatives: sibling chips to the ATECC608, other
+  boards and screens, the key as a plug-in cartridge, a wired desk unit. Research, nothing built.
 - **The contract:** `app/packages/foundry/contracts/ChipAccount.sol`, with 34 tests.
 
 ## What is where
