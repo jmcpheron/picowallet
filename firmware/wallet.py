@@ -13,6 +13,7 @@ import eip712
 import signer as S
 import slots as SL
 import power
+import splash
 try:
     import secrets
 except ImportError:
@@ -20,6 +21,8 @@ except ImportError:
 
 APP = secrets.APP_URL if secrets else None
 NAME = getattr(secrets, "DEVICE_NAME", "picowallet")
+SSID = getattr(secrets, "WIFI_SSID", "") if secrets else ""
+APP_HOST = (APP or "").replace("http://", "").replace("https://", "").rstrip("/")
 # The account is the chip's key. Without a chip there is no account, so the wallet stops on a
 # NO CHIP screen. The emulator sets ALLOW_SOFT_KEY in its generated secrets.py to test the flow.
 SOFT_OK = bool(getattr(secrets, "ALLOW_SOFT_KEY", False)) if secrets else False
@@ -29,6 +32,9 @@ keys = None
 sig = None          # the signer backend
 state = "boot"      # boot | home | confirm | working | done | error | keys | nochip
 slots_ui = None     # the KEYS screen (slots.py): X on the home screen
+chip_st = {}        # sig.status() as of the last probe or key change, plus "part" and "state" (new | empty | key)
+net_err = ""        # last app error, shown on the status home until a fetch succeeds
+splash_until = 0    # the boot screen stays up until then (ticks_ms), then home
 page = 0            # confirm: 0 = summary, 1 = details
 req = None          # request on screen
 info = {}           # last /api/state
@@ -129,14 +135,9 @@ def draw_home():
     # top-centre: which key. The chip is the point; a software key must never pass unnoticed.
     if sig and sig.name != "atecc608":
         d.center_text("NO CHIP", 4, L.RED)
-    # balance, big
+    # balance, big; without one, what the board is (chip, wifi, app) instead of a bare "connecting"
     if bal is None:
-        if secrets is None:
-            d.center_text("no secrets.py", 30, L.RED, 2)
-        elif not network.WLAN(network.STA_IF).isconnected():
-            d.center_text("no wifi", 30, L.RED, 2)
-        else:
-            d.center_text("connecting...", 30, L.GREY, 2)
+        draw_status()
     else:
         whole, _, frac = bal.partition(".")
         sbal = "$" + whole + "." + (frac + "00")[:2]
@@ -150,8 +151,8 @@ def draw_home():
         else:
             d.center_text(acct[:21], 80 + box + 4, L.GREY)
             d.center_text(acct[21:], 80 + box + 14, L.GREY)
-    else:
-        d.center_text(ens_name or (short(acct) if acct else ""), 130, L.YELLOW if ens_name else L.GREY)
+    elif acct:
+        d.center_text(ens_name or short(acct), 130, L.YELLOW if ens_name else L.GREY)
         d.center_text("run tools/qr", 150, L.RED)
     # status bar: a flash message beats a warning beats nothing
     warn = None
@@ -165,6 +166,8 @@ def draw_home():
         warn = "no app for %ds" % age
     if not paired:
         warn = "not paired" if qx else "no key"
+    if not paired and chip_st.get("state") == "new":
+        warn = "new chip, untouched: X to look"
     if pw["low"] and not pw["usb"]:
         warn = "battery low %.2fV" % pw["vbat"]
     if sig and sig.name != "atecc608":
@@ -180,6 +183,71 @@ def draw_home():
         d.fill_rect(0, 224, 240, 16, L.DARK)
         d.center_text(warn, 228, L.RED)
     d.show()
+
+
+def draw_status():
+    """Home without a balance to show: the board at a glance. Is the chip new, set up, or holding a
+    key; wifi; the app. Nothing here touches the chip, it reads chip_st from the last probe."""
+    st = chip_st
+    soft = sig is not None and sig.name != "atecc608"
+    if secrets is None:
+        d.center_text("no secrets.py", 22, L.RED, 2)
+        d.center_text("copy it to the board", 44, L.GREY)
+    elif soft:
+        d.center_text("SOFTWARE KEY", 22, L.RED, 2)
+        d.center_text("no chip on the bus", 44, L.GREY)
+    elif st.get("state") == "new":
+        d.center_text("NEW CHIP", 22, L.YELLOW, 2)
+        d.center_text("config open, never set up", 44, L.GREY)
+    elif st.get("state") == "empty":
+        d.center_text("LOCKED, NO KEY", 22, L.YELLOW, 2)
+        d.center_text("set up, slot %d is empty" % st.get("activeSlot", 0), 44, L.GREY)
+    elif paired:
+        d.center_text("connecting...", 22, L.GREY, 2)
+    else:
+        d.center_text("KEY " + st.get("fingerprint", "?")[:8], 22, L.WHITE, 2)
+        d.center_text("waiting for the app to pair", 44, L.GREY)
+    y, X = 64, 60
+    if sig is not None:
+        d.text("chip", 4, y, L.GREY)
+        d.text(((st.get("part") or sig.name) + ("  i2c " + st["i2cAddr"] if st.get("i2cAddr") else ""))[:22], X, y, L.WHITE); y += 12
+        if st.get("serial"):
+            d.text("serial", 4, y, L.GREY); d.text(st["serial"], X, y, L.WHITE); y += 12
+        cfg, data = st.get("configLocked"), st.get("dataLocked")
+        d.text("config", 4, y, L.GREY); d.text("LOCKED" if cfg else "OPEN", X, y, L.GREEN if cfg else L.RED)
+        d.text("data", 124, y, L.GREY); d.text("LOCKED" if data else "open", 164, y, L.GREEN if data else L.YELLOW); y += 12
+        d.text("slot %d" % st.get("activeSlot", 0), 4, y, L.GREY)
+        d.text(("key " + st["fingerprint"]) if st.get("hasKey") else "no key", X, y, L.WHITE if st.get("hasKey") else L.YELLOW); y += 16
+    w = network.WLAN(network.STA_IF)
+    d.text("wifi", 4, y, L.GREY)
+    if secrets is None:
+        d.text("no secrets.py", X, y, L.RED); y += 12
+    elif w.isconnected():
+        d.text(SSID[:22], X, y, L.WHITE); y += 12
+        d.text(w.ifconfig()[0], X, y, L.GREEN); y += 12
+    else:
+        d.text(("not joined: " + SSID)[:22], X, y, L.RED); y += 12
+    d.text("app", 4, y, L.GREY)
+    d.text(APP_HOST[:22] if APP_HOST else "none in secrets.py", X, y, L.WHITE); y += 12
+    if last_fetch:
+        d.text("ok %ds ago" % (time.ticks_diff(time.ticks_ms(), last_fetch) // 1000), X, y, L.GREEN)
+    elif net_err:
+        d.text(net_err[:22], X, y, L.RED)
+    elif secrets is not None:
+        d.text("not reached yet", X, y, L.GREY)
+    # what to do next, by state
+    if secrets is None or soft:
+        hint = ()
+    elif st.get("state") == "new":
+        hint = ("next: X, chip page, WRITE +", "LOCK CONFIG (needs ALLOW_LOCK)")
+    elif st.get("state") == "empty":
+        hint = ("next: X, slot %d, NEW KEY" % st.get("activeSlot", 0), "(ALLOW_GENKEY in secrets.py)")
+    elif not paired:
+        hint = ("next: run the app, it pairs", "a vault to this key")
+    else:
+        hint = ()
+    for i, line in enumerate(hint):
+        d.center_text(line, 192 + 12 * i, L.GREY)
 
 
 def tri_right(x, y, h, c):
@@ -310,6 +378,9 @@ def draw_nochip():
 
 
 def draw():
+    if state == "boot" and splash_until and time.ticks_diff(splash_until, time.ticks_ms()) > 0:
+        splash.draw()
+        return
     if state == "nochip":
         draw_nochip()
     elif state in ("boot", "home"):
@@ -331,7 +402,7 @@ _n = 0
 
 
 def tick(t):
-    global dirty, page, state, _busy, _n
+    global dirty, page, state, _busy, _n, splash_until
     if _busy:
         return
     _busy = True
@@ -367,8 +438,14 @@ def tick(t):
             elif state in ("home", "boot") and k in ("X", "press"):   # boot: no app yet, provisioning still works
                 slots_ui.open()
                 state = "keys"; dirty = True
-        if state == "home" and (time.ticks_diff(msg_until, time.ticks_ms()) > 0 or _n % 100 == 0):
-            dirty = True  # keep the status line fresh
+        if splash_until:
+            if time.ticks_diff(splash_until, time.ticks_ms()) > 0:
+                if _n % 3 == 0:
+                    dirty = True    # the boot screen's legs walk
+            else:
+                splash_until = 0; dirty = True
+        if state in ("home", "boot") and (time.ticks_diff(msg_until, time.ticks_ms()) > 0 or _n % 100 == 0):
+            dirty = True  # keep the status line, wifi and app rows fresh
         if dirty:
             draw()
             dirty = False
@@ -542,8 +619,17 @@ def approve(yes):
     start_timer()
 
 
+def short_err(e):
+    """An app error in the width of one status row: the usual OSErrors by name, the rest as repr."""
+    a = getattr(e, "args", ())
+    if isinstance(e, OSError) and a and isinstance(a[0], int):
+        return {-2: "dns: host not found", 104: "connection reset", 110: "timed out",
+                111: "connection refused", 113: "host unreachable"}.get(a[0], "OSError %d" % a[0])
+    return repr(e)[:23]
+
+
 def net_work():
-    global state, dirty, last_announce, last_fetch
+    global state, dirty, last_announce, last_fetch, net_err
     if state in ("confirm", "working", "keys", "nochip") or secrets is None:
         return
     try:
@@ -556,14 +642,16 @@ def net_work():
             _log("announced, paired=%s" % paired)
         if last_fetch == 0 or time.ticks_diff(now, last_fetch) > STATE_EVERY_MS:
             fetch_state()
+            net_err = ""
             if state == "boot":
                 state = "home"; dirty = True
         run_commands()
         if paired:
             poll_requests()
     except Exception as e:
+        net_err = short_err(e)
         _log("net: %r" % e)
-        say("net: %r" % e, 5)
+        say("app: " + net_err, 5)
     gc.collect()
 
 
@@ -587,10 +675,34 @@ def read_key():
         _log("no key in slot %s: %r" % (getattr(sig, "slot", 0), e))
 
 
+def read_chip():
+    """Cache sig.status() for the home screen, with the part name and whether the chip is new
+    (config open), set up but empty, or holding a key in the active slot."""
+    global chip_st
+    try:
+        st = sig.status()
+    except Exception as e:
+        st = {"note": str(e)}
+    rev = st.get("revision", "")
+    st["part"] = {"00006002": "ATECC608A", "00006003": "ATECC608B", "00005000": "ATECC508A"}.get(rev, "ATECC?" if rev else "")
+    st["state"] = "new" if not st.get("configLocked") else ("key" if st.get("hasKey") else "empty")
+    chip_st = st
+
+
+def chip_line():
+    """One boot-screen row: part, address, and new / no key / key fp."""
+    st = chip_st
+    if sig.name != "atecc608":
+        return "none, software key"
+    what = {"new": "new", "empty": "no key", "key": "key " + st.get("fingerprint", "")[:8]}.get(st.get("state"), "?")
+    return "%s %s %s" % (st.get("part") or "ATECC", st.get("i2cAddr", ""), what)
+
+
 def key_changed():
     """The KEYS screen switched or replaced the signing key: announce it again, from scratch."""
     global paired, last_announce
     read_key()
+    read_chip()
     paired = False
     last_announce = 0
 
@@ -606,20 +718,29 @@ def probe_chip():
     if state == "nochip":
         state = "boot"
     read_key()
+    read_chip()
     slots_ui = SL.SlotsUI(d, sig, key_changed)
 
 
 def start():
-    global d, keys, sig, dirty, slots_ui
-    d = L.LCD()
+    global d, keys, sig, dirty, slots_ui, splash_until
+    d = splash.begin()      # the LCD boot.py already drew on, or a new one
     keys = L.Keys()
     load_qr()
-    draw()
+    splash.step("chip", "probing i2c...", L.GREY)
     probe_chip()
+    if state == "nochip":
+        splash.step("chip", "none on i2c", L.RED)
+    else:
+        splash.step("chip", chip_line(), L.GREEN if sig.name == "atecc608" else L.RED)
+    w = network.WLAN(network.STA_IF)
+    if secrets and not w.isconnected():
+        # boot.py did this on the wallet Pico; a board that got wallet.py by hand, or the emulator, did not
+        net.connect(progress=lambda ms: splash.spin("wifi", ("joining " + SSID)[:20]))
+    splash.wifi_row(w, SSID if secrets else "")
+    splash.step("app", APP_HOST[:20] if APP_HOST else "none", L.GREY)
+    splash_until = time.ticks_add(time.ticks_ms(), 1500)
     dirty = True
-    draw()
-    if secrets and not network.WLAN(network.STA_IF).isconnected():
-        net.connect()   # boot.py did this on the wallet Pico; a board that got wallet.py by hand did not
     start_timer()
 
 

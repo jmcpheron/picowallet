@@ -211,9 +211,17 @@ also has **Cancel on Pico**. Monitor `RecoveryStarted` events. See `SECURITY.md`
 
 ![SIGN? $69 USDS to atg.eth, green bar at A, red bar at Y](buildlog/images/2026-09-05-20-sign-screen-69-usds.jpg)
 
+**Boot:** a chip icon whose legs light up while the board comes up, and a checklist that fills in:
+screen, wifi (joining, then the IP), chip (part, address, and whether it is new, empty or holds a
+key), app.
+
 **Home:** balance in dollars, a QR of the vault to deposit into, chain label top-left so test money
 and real money never look alike, pairing dot top-right, a warning line along the bottom (relay
 gas low, unpaired, app unreachable). Refreshes every 12 s and flashes the delta when money moves.
+Until there is a balance to show, the same screen is a status page instead: NEW CHIP (config zone
+open, never set up), LOCKED, NO KEY, or KEY and the fingerprint; the part, I2C address and serial;
+both lock states; the WiFi name and IP; the app host and its last answer; and what to do next.
+So a board with a chip fresh from the bag says so at a glance.
 
 **Sign:** green SIGN bar in line with the A button, red REJECT bar in line with Y. Amount,
 recipient name and address between them. Joystick down shows nonce, deadline, chain, vault and the

@@ -12,7 +12,9 @@ PORT = 2323
 _listen = None
 
 
-def connect(timeout_s=20):
+def connect(timeout_s=20, progress=None):
+    """Join the WiFi in secrets.py. progress(elapsed_ms), if given, is called while waiting (the boot
+    screen animates on it); the LED blinks either way."""
     wlan = network.WLAN(network.STA_IF)
     if secrets is None:
         print("no secrets.py: not joining WiFi")
@@ -24,6 +26,11 @@ def connect(timeout_s=20):
         t0 = time.ticks_ms()
         while not wlan.isconnected() and time.ticks_diff(time.ticks_ms(), t0) < timeout_s * 1000:
             led.toggle()
+            if progress:
+                try:
+                    progress(time.ticks_diff(time.ticks_ms(), t0))
+                except Exception:
+                    pass
             time.sleep_ms(150)
     if wlan.isconnected():
         led.on()
@@ -63,8 +70,8 @@ def console(port=PORT):
     print("console listening on", port)
 
 
-def start():
-    wlan = connect()
+def start(progress=None):
+    wlan = connect(progress=progress)
     if wlan.isconnected() and getattr(secrets, "ENABLE_NETWORK_CONSOLE", False):
         console()
     elif wlan.isconnected():
