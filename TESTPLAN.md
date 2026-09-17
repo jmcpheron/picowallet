@@ -10,15 +10,15 @@ until phase 6. Phases 1 to 5 change nothing on the chip.
 
 ## 0. Before touching hardware
 
-- [ ] Dev machine has `mpremote` (`uv tool install mpremote` or `pip install mpremote`).
-- [ ] This branch checked out; `git log --oneline -3` shows the "Perfboard wiring guide" and
+- [x] Dev machine has `mpremote` (`uv tool install mpremote` or `pip install mpremote`).
+- [x] This branch checked out; `git log --oneline -3` shows the "Perfboard wiring guide" and
       "Pluggable signing keys" commits.
-- [ ] Rehearse once on the emulator so the screens are familiar:
+- [x] Rehearse once on the emulator so the screens are familiar:
       `tools/emu chip fresh`, `tools/emu run main`, X, X, walk the chip page.
-- [ ] `firmware/secrets.py` exists (copy of `secrets.example.py`) with your WiFi and app URL,
+- [x] `firmware/secrets.py` exists (copy of `secrets.example.py`) with your WiFi and app URL,
       `ENABLE_NETWORK_CONSOLE = False`, both ALLOW flags False.
 
-Record: mpremote version `________`, MicroPython build on the Pico (step 2) `________`.
+Record: mpremote version `1.29.0`, MicroPython build on the Pico (step 2) `v1.26.1 (2025-09-11) RPI_PICO2_W`.
 
 ## 1. Bench checks with nothing powered
 
@@ -50,11 +50,11 @@ tools/usb push                  # copies firmware/*.py (not secrets.example.py) 
 Then, separately, copy your secrets: `tools/usb cp firmware/secrets.py :secrets.py`, then
 `tools/usb reset`.
 
-- [ ] `tools/usb ls` lists `atecc.py chipcheck.py power.py signer.py slots.py wallet.py ...`
-- [ ] After reset the screen shows the home screen with `usb` at the top, `X keys` at the right,
+- [x] `tools/usb ls` lists `atecc.py chipcheck.py power.py signer.py slots.py wallet.py ...`
+- [x] After reset the screen shows the home screen with `usb` at the top, `X keys` at the right,
       a red dot, and `no key` in the status bar (no app reachable is fine, it says `connecting...`).
 
-Record: what the REPL banner printed (MicroPython version line): `________`
+Record: what the REPL banner printed (MicroPython version line): `MicroPython v1.26.1 on 2025-09-11; Raspberry Pi Pico 2 W with RP2350`
 
 ## 3. Chip alive, read-only
 
@@ -73,34 +73,38 @@ Expected on a fresh Adafruit breakout:
 - `config zone: unlocked   data zone: unlocked   (byte 87 = 0x55, byte 86 = 0x55)`
 - a raw dump of 128 bytes
 - `matches the reference table: no` (it is the factory table)
-- a slot table where nothing is `P256` yet (factory KeyConfig), or whatever Microchip ships
-- `random (32 bytes): ...` different every run
+- a slot table with slots 0, 1, 2 as `P256` (Microchip's factory KeyConfig `0x0033` on the
+  Adafruit 608A, GenKey allowed) and the rest `DATA`; the key column is `-` until the lock
+- `random (32 bytes): ffff0000ffff0000...`, the same every run: before the config lock the Random
+  command returns a fixed test pattern (datasheet). Real random bytes only after the lock.
 - the NOTE about GenKey and Sign refusing until lock
 
 If `i2c scan` finds nothing: swap blue and yellow (SDA/SCL are the usual mistake), check red is on
 3V3 not VSYS, check black. If it finds `0x35` or `0x6a`: that is a Trust&Go or TrustFLEX part, not
 a blank one; stop and read its slot table before deciding anything.
 
-- [ ] Paste the whole chipcheck output into `UPSTREAM.md` section "Factory config of a fresh
+- [x] Paste the whole chipcheck output into `UPSTREAM.md` section "Factory config of a fresh
       ATECC608" (that dump is useful upstream: nobody has recorded what a blank part reports).
-- [ ] Run chipcheck a second time; serial and config identical, random different.
+- [x] Run chipcheck a second time; output byte-identical (random included, until the lock).
 
-Record: serial `__________________`, revision `________`, address `____`.
+Record: serial `0123f3acfd2a826bee`, revision `00006002 (608A)`, address `0x60`.
 
 ## 4. The KEYS screen on the real chip
 
 `tools/usb reset`, wait for the home screen. Then on the device:
 
-- [ ] X: the slot list. Header reads `KEYS atecc608 cfg OPEN`. Rows show `-` or whatever the
+- [x] X: the slot list. Header reads `KEYS atecc608 cfg OPEN`. Rows show `-` or whatever the
       factory table decodes to. Joystick up/down moves the cursor; Y goes home.
-- [ ] X again from the list: the chip page. `i2c 0x60`, the serial from step 3, the revision,
+- [x] X again from the list: the chip page. `i2c 0x60`, the serial from step 3, the revision,
       `permanent actions off`, `config zone OPEN`, `data zone open`.
-- [ ] Cursor on `WRITE + LOCK CONFIG (off)`, press A: red ERROR screen saying ALLOW_LOCK is False,
+- [x] Cursor on `WRITE + LOCK CONFIG (off)`, press A: red ERROR screen saying ALLOW_LOCK is False,
       nothing was changed. A to dismiss. Re-run chipcheck later to prove byte 87 is still 0x55.
-- [ ] `RAW CONFIG ZONE`: 16 rows of 8 bytes; row 80 shows `55 55` at the end in yellow. Compare a
+- [x] `RAW CONFIG ZONE`: 16 rows of 8 bytes; row 80 shows `55 55` at the end in yellow. Compare a
       few bytes against the chipcheck dump.
-- [ ] `RANDOM (chip alive?)`: a DONE screen with 64 hex chars. Do it twice, different both times.
-- [ ] Open slot 0: `untyped` or the factory kind; `nothing to do here` or a `(off)` item.
+- [x] `RANDOM (chip alive?)`: a DONE screen with 64 hex chars: `ffff0000` repeated on an unlocked
+      chip (the fixed pattern until the config lock; still proves the wire and the protocol),
+      different every time once the chip is locked.
+- [x] Open slot 0: `untyped` or the factory kind; `nothing to do here` or a `(off)` item.
 
 Record: the screen photos are worth keeping (`buildlog/images/`, no feet in the shot).
 
@@ -109,7 +113,8 @@ Record: the screen photos are worth keeping (`buildlog/images/`, no feet in the 
 Cell out, USB in, switch OFF:
 
 - [ ] Home screen top row shows `usb`. `tools/usb exec 'import power; print(power.status())'`
-      shows `usb: True`, `vbat` near 0.
+      shows `usb: True`, `percent: None`. `vbat` can read up to about 1 V with the switch off
+      (1.08 V seen: Schottky reverse leakage through the divider); under 2.5 V counts as no cell.
 
 Cell IN, USB in, switch ON:
 
@@ -133,7 +138,7 @@ Plug USB back in, switch still OFF:
 - [ ] Boots normally. Now switch ON while on USB: no glitch, `vbat` appears.
 
 If `usb` never shows or is wrong: `power.py` tries `WL_GPIO2` then GP24 for VBUS sense; note which
-one the Pico 2 W actually reports and whether it toggles. Record: `________`.
+one the Pico 2 W actually reports and whether it toggles. Record: `WL_GPIO2` (2026-09-16, USB in; toggling untested, no cell).
 
 If `vbat` reads high or noisy: check the 100 nF is at GP28 and that the divider taps before the
 diode. Record raw ADC: `tools/usb exec 'from machine import ADC, Pin; print(ADC(Pin(28)).read_u16())'`.

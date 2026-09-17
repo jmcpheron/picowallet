@@ -80,8 +80,63 @@ Paste the `chipcheck` output from TESTPLAN phase 3 here. Of interest upstream: t
 whether anything works before the config lock.
 
 ```
-(chipcheck output)
+== picowallet chipcheck ==
+i2c scan: ['0x60']
+using address: 0x60
+wake: ok (3 ms)
+serial:   0123f3acfd2a826bee
+revision: 00006002 (ATECC608A)
+i2c address byte 16: 0xc0 (7-bit 0x60)
+config zone: unlocked   data zone: unlocked   (byte 87 = 0x55, byte 86 = 0x55; 0x55 = unlocked, 0x00 = locked)
+slot locked bytes 88-89: ff ff
+raw config zone (128 bytes, 16 per row):
+    0: 01 23 f3 ac 00 00 60 02 fd 2a 82 6b ee c1 55 00
+   16: c0 00 00 00 83 20 87 20 8f 20 c4 8f 8f 8f 8f 8f
+   32: 9f 8f af 8f 00 00 00 00 00 00 00 00 00 00 00 00
+   48: 00 00 af 8f ff ff ff ff 00 00 00 00 ff ff ff ff
+   64: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   80: 00 00 00 00 00 00 55 55 ff ff 00 00 00 00 00 00
+   96: 33 00 33 00 33 00 1c 00 1c 00 1c 00 1c 00 1c 00
+  112: 3c 00 3c 00 3c 00 3c 00 3c 00 3c 00 3c 00 1c 00
+matches the reference table (bytes 16-83, 88-127): no
+slot table as the chip has it:
+  slot kind  ext-sign genkey privwrite pubinfo lockable locked  key
+     0 P256  True     True   False     True    True     False   -
+     1 P256  True     True   False     True    True     False   -
+     2 P256  True     True   False     True    True     False   -
+     3 DATA  False    False  False     False   False    False   -
+     4 DATA  False    False  False     False   False    False   -
+     5 DATA  False    False  False     False   False    False   -
+     6 DATA  False    False  False     False   False    False   -
+     7 DATA  False    False  False     False   False    False   -
+     8 DATA  False    False  False     False   True     False   -
+     9 DATA  False    False  False     False   True     False   -
+    10 DATA  False    False  False     False   True     False   -
+    11 DATA  False    False  False     False   True     False   -
+    12 DATA  False    False  False     False   True     False   -
+    13 DATA  False    False  False     False   True     False   -
+    14 DATA  False    False  False     False   True     False   -
+    15 DATA  False    False  False     False   False    False   -
+random (32 bytes): ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000
+NOTE: config zone is unlocked. GenKey and Sign will refuse (status 0x0f) until it is locked; that is normal.
+== end ==
 ```
+
+Read off it (2026-09-16, Adafruit 4314 breakout, run twice, output byte-identical):
+
+- ATECC608**A** (revision `00006002`), serial `0123f3acfd2a826bee`, I2C address byte `0xC0`
+  (7-bit 0x60), both zones unlocked (bytes 86, 87 = `0x55`), SlotLocked `ffff`.
+- The factory slot table is not blank. SlotConfig `2083 2087 208f` and KeyConfig `0033` for slots
+  0, 1 and 2: Microchip ships them typed as P-256 private keys with external sign and GenKey
+  allowed; 3 to 15 are data, 8 to 14 lockable. `matches the reference table: no`, as expected.
+  The emulator's blank part has an all-zero table, so its KEYS list shows `-` where the real
+  chip shows `P256`; `atecc_sim.FRESH` should carry these factory bytes.
+- `random` is `ffff0000` repeated, identical on both runs. That is datasheet behaviour: before
+  the config zone is locked, Random returns a fixed test pattern. The test plan expected it to
+  differ; corrected in TESTPLAN.md and SOLDERING.md.
+- GenKey is refused (`status 0x0f`) on the unlocked zone even though the factory KeyConfig
+  allows it, so the wallet says `no key` until the lock, as designed.
+- Wake 3 ms.
 
 ## 4. Flashing this branch's firmware
 
@@ -102,15 +157,28 @@ What changed for someone flashing from upstream `main`:
 - The emulator now has a virtual chip and starts blank; `tools/emu chip ready` gives a provisioned
   one. The generated emulator `secrets.py` sets both ALLOW flags True (virtual chip, no harm).
 
-Flashing log *(fill in)*: mpremote version, MicroPython build, port, anything that needed a retry.
+Flashing log (2026-09-16, macOS, perfboard build): mpremote 1.29.0, MicroPython v1.26.1
+(2025-09-11, RPI_PICO2_W), port `/dev/cu.usbmodem112301`. `tools/usb push` copied 18 files in
+one session, no retry; every `.py` on the board matched its local size afterwards (`os.stat`).
+The serial port took more than 10 s to come back after the hard reset, so anything scripted
+has to wait for `/dev/cu.usbmodem*` before the next mpremote call.
 
-## 5. What worked and what did not on hardware *(fill in)*
+## 5. What worked and what did not on hardware (2026-09-16, read-only session)
 
-- Chip found at: `____`
-- KEYS screen: `____`
-- Permanent-action gate refused with flags off: `____`
-- Battery: `usb` detection via `WL_GPIO2` / GP24: `____`; `vbat` vs meter: `____`
-- Anything the emulator got wrong compared with the board: `____`
+- Chip found at: `0x60`, first try, wake 3 to 4 ms, ATECC608A.
+- KEYS screen: list, chip page, raw config, random, slot 0 all as designed. Rows 0 to 2 read
+  `P256` on the factory table (section 3), the rest `DATA`.
+- Permanent-action gate refused with flags off: yes. `WRITE + LOCK CONFIG (off)` + A gave the red
+  ERROR naming ALLOW_LOCK; chipcheck afterwards showed byte 87 still `0x55`.
+- Battery: `usb` detection via `WL_GPIO2` works on the Pico 2 W (the pin prints as `EXT_GPIO2`).
+  With the cell out and the switch off, GP28 read 1.08 V, most likely the Schottky's reverse
+  leakage from VSYS through the divider; the home screen showed an empty bar and `1.1V` instead of
+  `usb`. `power.py` now treats anything under 2.5 V as no cell. `vbat` vs a meter: not measured,
+  no cell yet.
+- Anything the emulator got wrong compared with the board: two things, both for `atecc_sim.py`.
+  Its blank part has an all-zero slot table where the real factory part types slots 0 to 2 as
+  P-256 (SlotConfig `2083 2087 208f`, KeyConfig `0033`), and its Random is random before the
+  config lock where the real chip returns the fixed `ffff0000` pattern.
 
 ## 6. Open questions for upstream
 

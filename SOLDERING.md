@@ -124,7 +124,8 @@ refuses with an explanation. In that state you can, from the wallet alone:
 3. **RAW CONFIG ZONE**: the 128 bytes as the factory shipped them. Bytes 84 to 87 (yellow) are the
    lock bytes, `55` = unlocked. The white rows are the slot table the chip will freeze at lock time.
 4. **RANDOM (chip alive?)**: 32 bytes from the chip's hardware RNG. Proof the wiring and the
-   protocol work, with no side effects.
+   protocol work, with no side effects. Until the config zone is locked it is the datasheet's
+   fixed test pattern, `ffff0000` repeated, not random bytes; that is still the proof.
 
 From a laptop over the console the same things are `sig.status()`, `sig.config()`,
 `sig.random()`, `atecc.scan()`. When you are ready to commit the chip, the steps in the README

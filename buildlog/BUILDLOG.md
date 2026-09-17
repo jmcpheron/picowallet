@@ -154,72 +154,120 @@ serial, and `TESTPLAN.md` for the next session.
 Lesson from the emulator: a top-level `raise SystemExit` in a module you `import` at the
 MicroPython REPL soft-reboots the board. `chipcheck.py` runs inside a function now.
 
-## 2026-09-__ — a fresh chip, read only
+## 2026-09-16 — a fresh chip, read only
 
-*(Template for the hardware session. Replace the bracketed prompts with what happened; delete
-the ones that did not apply. Photos go in `images/` named by content, `2026-09-__-NN-what.jpg`,
-no feet. Keep the numbers, they are the point of this entry: nobody in this repo has recorded
-what a blank ATECC608 looks like before anyone touches it.)*
-
-The chip: Adafruit ATECC608 breakout (4314), bought from [Amazon / Adafruit, order date],
-sealed [yes/no], marking on the chip package `[what is printed on it]`. Wired to the Pico's
-pin tails on the perfboard per `SOLDERING.md`: red 3V3 (36), black GND (8), blue SDA (6), yellow
-SCL (7). Battery [not yet / wired, cell out]. Firmware: this branch at `[git rev]`, MicroPython
-`[version from the REPL banner]`, deployed with `tools/usb push` from `[machine]`.
+The perfboard build's first session with the chip: an Adafruit ATECC608 breakout (4314) on the
+Pico's pin tails per `SOLDERING.md` (VIN 36, GND 8, SDA 6, SCL 7), the 18650 holder, switch,
+Schottky and divider wired as well, no cell in the holder, USB only. Firmware: branch
+`claude/pico-wallet-signing-keys-uyr7mc` with upstream `main` (`87c717c`) merged in first,
+MicroPython v1.26.1 (2025-09-11), deployed with `tools/usb push` from the Mac on
+`/dev/cu.usbmodem112301`.
 
 Rule for today: `ALLOW_LOCK = False`, `ALLOW_GENKEY = False`. Nothing written to the chip.
 
-![the perfboard with the chip wired](images/2026-09-__-01-perfboard-chip-wired.jpg)
+**Before the flash.** Upstream had moved 21 commits past the branch point. The one that mattered
+here is `261b373`: a reset straight after a copy lost writes on LittleFS (atecc.py landed at 3584
+of 7021 bytes). `tools/usb push` did exactly that sequence, so it now soft-resets first, chains
+every copy, calls `os.sync()`, and only then resets. The merge also brought the NO CHIP screen,
+the secrets-less boot and demo/vid. Rehearsed on the emulator (blank virtual chip: home, KEYS,
+chip page, chipcheck; provisioned: slot 0 ACTIVE), then a read-only I2C scan on the board before
+copying anything: `['0x60']`, first try.
 
-**Bench, nothing powered.** Continuity on all four wires [ok / what was wrong]. 3V3 to GND open
-[yes]. [Anything that surprised you.]
-
-**First power, USB only.** Screen came up [first try / after ...]. Home screen: `usb` top row,
-`X keys`, red dot, `no key`. [Time from plug-in to home screen, roughly.]
+**First power, USB only.** The board was already up on the mock screens; after the push it came
+back on the wallet's home screen: `X keys`, red dot, `no key`, WiFi joined (secrets.py with real
+credentials, console off, app URL a placeholder so the log says `net: OSError(-2,)`). No
+`error.log`. Every `.py` on the board matched its local size (`os.stat`). The serial port took
+over 10 s to come back after the hard reset.
 
 **What an untouched chip reports.** `tools/usb exec 'import wallet; wallet.stop()'` then
-`tools/usb run firmware/chipcheck.py`. The whole output, verbatim:
+`tools/usb run firmware/chipcheck.py`, three times over the session (twice before the KEYS walk,
+once after). The whole output, verbatim:
 
 ```
-[paste chipcheck output]
+== picowallet chipcheck ==
+i2c scan: ['0x60']
+using address: 0x60
+wake: ok (3 ms)
+serial:   0123f3acfd2a826bee
+revision: 00006002 (ATECC608A)
+i2c address byte 16: 0xc0 (7-bit 0x60)
+config zone: unlocked   data zone: unlocked   (byte 87 = 0x55, byte 86 = 0x55; 0x55 = unlocked, 0x00 = locked)
+slot locked bytes 88-89: ff ff
+raw config zone (128 bytes, 16 per row):
+    0: 01 23 f3 ac 00 00 60 02 fd 2a 82 6b ee c1 55 00
+   16: c0 00 00 00 83 20 87 20 8f 20 c4 8f 8f 8f 8f 8f
+   32: 9f 8f af 8f 00 00 00 00 00 00 00 00 00 00 00 00
+   48: 00 00 af 8f ff ff ff ff 00 00 00 00 ff ff ff ff
+   64: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+   80: 00 00 00 00 00 00 55 55 ff ff 00 00 00 00 00 00
+   96: 33 00 33 00 33 00 1c 00 1c 00 1c 00 1c 00 1c 00
+  112: 3c 00 3c 00 3c 00 3c 00 3c 00 3c 00 3c 00 1c 00
+matches the reference table (bytes 16-83, 88-127): no
+slot table as the chip has it:
+  slot kind  ext-sign genkey privwrite pubinfo lockable locked  key
+     0 P256  True     True   False     True    True     False   -
+     1 P256  True     True   False     True    True     False   -
+     2 P256  True     True   False     True    True     False   -
+     3 DATA  False    False  False     False   False    False   -
+     4 DATA  False    False  False     False   False    False   -
+     5 DATA  False    False  False     False   False    False   -
+     6 DATA  False    False  False     False   False    False   -
+     7 DATA  False    False  False     False   False    False   -
+     8 DATA  False    False  False     False   True     False   -
+     9 DATA  False    False  False     False   True     False   -
+    10 DATA  False    False  False     False   True     False   -
+    11 DATA  False    False  False     False   True     False   -
+    12 DATA  False    False  False     False   True     False   -
+    13 DATA  False    False  False     False   True     False   -
+    14 DATA  False    False  False     False   True     False   -
+    15 DATA  False    False  False     False   False    False   -
+random (32 bytes): ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000
+NOTE: config zone is unlocked. GenKey and Sign will refuse (status 0x0f) until it is locked; that is normal.
+== end ==
 ```
 
 Read off it:
-- I2C scan found `[0x60]`. [If anything else answered, what and why.]
-- Serial `[...]`, revision `[00006002 = 608A / 00006003 = 608B]`, address byte 16 `[0xC0]`.
-- Config zone `[unlocked, byte 87 = 0x55]`, data zone `[unlocked, byte 86 = 0x55]`.
-- The factory slot table: `[what the SlotConfig rows 16-51 and KeyConfig rows 96-127 held; all
-  zero? Microchip defaults? which slots, if any, decode as P256 before anyone writes a table]`.
-- Random block changed between two runs `[yes]`.
-- Second run: serial and config identical `[yes]`.
+- I2C scan found `['0x60']`, nothing else.
+- Serial `0123f3acfd2a826bee`, revision `00006002` = 608A, address byte 16 `0xc0`.
+- Config zone unlocked (byte 87 = 0x55), data zone unlocked (byte 86 = 0x55), SlotLocked `ff ff`.
+- The factory slot table is not blank: SlotConfig `2083 2087 208f` and KeyConfig `0033` for slots
+  0, 1, 2, so Microchip ships them as P-256 private keys, external sign, GenKey allowed; slots 3
+  to 15 data, 8 to 14 lockable. `matches the reference table: no`, as expected.
+- Random did NOT change between runs: `ffff0000` repeated. Datasheet behaviour before the config
+  lock (a fixed test pattern). The test plan expected it to differ; corrected.
+- Second and third runs: serial, config and random byte-identical (only the wake time moved, 3 to
+  4 ms).
 
-This is the "as shipped" state. Compare against the reference table in `atecc.py`: `[matches:
-no, as expected]`.
+This is the "as shipped" state.
 
-**The KEYS screen on the real chip.** X: `[what the list showed; the header said cfg OPEN]`.
-X again: chip page `[i2c 0x60, serial, rev, permanent actions off]`. RAW CONFIG ZONE `[agreed
-with the chipcheck dump; row 80 ended 55 55]`. RANDOM twice `[different both times]`. Cursor on
-`WRITE + LOCK CONFIG (off)`, A: `[the red ERROR screen naming ALLOW_LOCK; nothing changed]`.
-Re-ran chipcheck after: byte 87 still `[0x55]`.
+**The KEYS screen on the real chip.** X: header `KEYS atecc608 cfg OPEN`, rows 0 to 2 `P256`, the
+rest `DATA` (the emulator's blank part shows `-` everywhere; its fresh table should be these
+factory bytes). X again: the chip page, `i2c 0x60`, the serial, `rev 00006002 608A`, `permanent
+actions off`, `config zone OPEN`. Cursor on `WRITE + LOCK CONFIG (off)`, A: the red ERROR naming
+ALLOW_LOCK, nothing changed. RAW CONFIG ZONE agreed with the dump, row 80 ended `55 55`. RANDOM
+twice: `ffff0000...` both times, as above. Slot 0: `P256` with the `(off)` item. Chipcheck after
+the walk: byte 87 still `0x55`.
 
-![KEYS list on the fresh chip](images/2026-09-__-02-keys-list-fresh.jpg)
-![chip page, permanent actions off](images/2026-09-__-03-chip-page-off.jpg)
-![raw config zone](images/2026-09-__-04-raw-config.jpg)
+**Timings.** Wake 3 to 4 ms; the whole chipcheck (config read, slot decode, random) well under a
+second. Nothing flaky over the session.
 
-**Timings.** Wake `[n ms]`, config read `[n ms]`, random `[n ms]` (from chipcheck / the REPL).
-[Anything slower or flakier than the old wedged-wire build.]
-
-**Battery** (if wired today): meter on the cell `[V]`, screen `[V]`, `usb` shown with USB in
-`[yes/no, and which pin power.py ended up using: WL_GPIO2 or GP24]`, VSYS with USB `[V]`, VSYS on
-cell `[V]`, ran on cell for `[minutes]`, switch off read `[0 V]` at GP28.
+**Battery** (wired, cell out, switch off): `power.status()` said `usb: True` via `WL_GPIO2`, and
+`vbat: 1.08` where 0 was expected. With the switch off the divider's top is open, so the volt at
+GP28 is most likely the Schottky's reverse leakage from VSYS through the divider. The home screen
+showed an empty bar and `1.1V` instead of `usb`. Fixed in `power.py`: anything under 2.5 V counts
+as no cell (a protected 18650 cuts off near 2.5 V, and the Pico's regulator quits before that).
 
 Decisions today:
-- [Locking waits until ... / the app side needs ... before the key is made.]
-- [Keep the perfboard layout / move the chip / shorten the I2C wires.]
-- [Anything to change in the firmware after seeing the real chip.]
+- Locking waits. The app side (vault deployment, recovery address) is not planned yet, and the key
+  made at lock time is the one the next vault gets.
+- The perfboard layout stays; the chip answered first try.
 
 Gotchas:
-- [Whatever cost time. Port name, mpremote retry, a swapped wire, the screen hint.]
+- A hard reset drops the USB port for over 10 s; anything scripted must wait for
+  `/dev/cu.usbmodem*` before the next mpremote call.
+- Random before the lock is a fixed pattern, and the factory table already types slots 0 to 2 as
+  P-256: two things the emulator's chip model does not do. Both in `UPSTREAM.md` for `atecc_sim.py`.
 
 Not done today, on purpose: config lock, GenKey, data-zone lock, slot lock. The chip leaves this
-session exactly as it arrived. Next: `TESTPLAN.md` phase 6, when the vault deployment is planned.
+session exactly as it arrived. Not done for lack of a cell: TESTPLAN phase 5. Next: the battery
+phase when a cell is here; `TESTPLAN.md` phase 6 when the vault deployment is planned.
