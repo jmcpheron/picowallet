@@ -188,7 +188,7 @@ same centres. About 0.30 mm clearance per side on the 4.30 x 3.56 cap. Output `c
 
 base_v4 snaps and holds but pries apart with a fingernail. `tools/zezbase v5` raises the four ridges
 from 0.25 to 0.50 mm proud (Austin: a quarter mm more) and fattens them from r 0.4 to r 0.5 so the
-neck on the tab stays about 1 mm wide. Everything else is v4. Output `case/zez0000/base_v5.stl`.
+neck on the tab stays about 1 mm wide. Everything else is v4. Output `case/zez0000/base_v5.stl`. Print inbox drop `20260911-181009-base_v5`, black PETG, print Claude told to go 2026-09-11.
 Unprinted. Note 0.50 is above the stock 0.44 that would not snap at all, but stock had 106 mm of
 ridge and this has 40 mm. If v5 will not close, try 0.40.
 
@@ -217,3 +217,59 @@ decode as the URL. Print inbox drops `20260911-142041-base_v5_qr` (3MF), `-14204
 `-142043-…_white` (STL fallback). Unprinted. Knobs: `MOD`, `QR_H`, `CX`, `EC` in `tools/zezqr`.
 Result 2026-09-11: printed on the AMS, the QR came out and scans. Proof done; parked. One day the
 vault address goes in the bottom (`tools/zezqr 0x... base_vN`), not now.
+
+### base_v5 result (2026-09-12): too tight, v4 is the keeper
+
+base_v5 printed but does not fit well. base_v4 (ridges 0.25 mm proud) is the winning base. Reprint
+requested plain, no QR: print inbox drop `20260912-100725-base_v4`, black PETG.
+
+## Official set (2026-09-12, evening)
+
+The case as it stands. Print these, nothing else, unless Austin says otherwise. One-file version
+with all seven parts laid out in print orientation: `case/zez0000/picowallet_case.stl`, built by
+`tools/zezplate`. Black PETG, 0.20 mm, no brim. Base floor down, lid outer face down, caps flange down.
+
+| Part | File | Why |
+|---|---|---|
+| Base, Pico 2 W (micro-USB) | `case/zez0000/base_v6.stl` | ridges 0.30 mm proud; v4 (0.25) pulled apart by hand, v5 (0.50) would not fit |
+| Base, pink Pico (USB-C) | `case/zez0000/base_pink.stl` | base_v6 with the USB-end posts spread, a divot under the jack, wider slot. Fits perfectly (2026-09-12) |
+| Lid | `case/zez0000/lid_v5.stl` | v4 holes plus a 0.4 mm deeper cap pocket, so pressing the case no longer clicks buttons |
+| Button caps | `button_cap_1..4.stl` (or `button_cap_x` / `button_cap_check`) | stock |
+| Joystick cap | `joystick_cap_v3_2.00.stl` | 2.00 socket fits the 1.87 stem |
+
+There is no lid v6 or base v7. The QR-bottom base is a parked side experiment.
+
+### base_v6 (2026-09-12): a fifth of the way from v4 to v5
+
+v4 holds but can be pulled apart by hand; v5 (0.50 proud) would not fit. `tools/zezbase v6` is v4
+with the ridges 0.30 mm proud instead of 0.25, same r 0.4, same notch. Output
+`case/zez0000/base_v6.stl`. Print inbox drop `20260912-145004-base_v6`, black PETG, no brim (Austin: never brim these parts again). If it is still loose, 0.35 next; if tight, v4 stays official.
+
+### lid_v5 (2026-09-12): 0.4 mm more cap clearance
+
+Pressing on the button side of the case clicks one or two buttons: the cap flange sits against the
+pocket ceiling with almost no gap to the switch plunger. `tools/zezlid v5` is lid_v4 with the
+cap-flange pocket inside (x -26.5..-18, y +-12.5) cut 0.4 mm deeper, so the plate over the button
+strip is 1.6 mm instead of 2.0 and the caps sit 0.4 mm further out. Outer face unchanged, still
+prints face down. Holes unchanged from v4. Output `case/zez0000/lid_v5.stl`. Print inbox drop `20260912-175600-lid_v5`, black PETG, no brim.
+Alternative if this is not enough: a 0.4 mm dimple in the cap underside where the plunger lands.
+
+### base_pink (2026-09-12, night): base_v6 for the USB-C (pink) Pico
+
+The pink Pico has a USB-C jack: 8.89 wide, 3.15 tall (micro-USB is ~7.5 x 2.7). On base_v6 the
+two posts at the USB end are 8.0 mm apart face to face and the wall slot is 8 x 3 with its floor
+0.5 above the case floor, so the jack hits both. base_pink is base_v6 plus:
+
+- USB-end posts moved out 0.75 mm each: gap 8.0 -> 9.5 mm. Other end unchanged.
+- 0.6 mm divot in the floor under the jack, 9.1 wide x 7.4 in from the wall. 1.4 mm floor left.
+- Wall slot 9.2 wide, floor dropped to the divot floor (z 1.4..5.5).
+
+`tools/zezbase pink`. Drop 20260912-204053-base_pink, black PETG, no brim. Lid and caps unchanged.
+Printed and fits perfectly. Official: base_v6 for a Pico 2 W, base_pink for the pink USB-C Pico.
+
+### lid_v6 (2026-09-12, night): pocket 0.6 mm
+
+With the pink Pico in base_pink, pressing the case still clicked the buttons a little on lid_v5.
+Same fix, more of it: cap pocket 0.6 mm deep instead of 0.4, so the plate over the buttons is
+1.4 mm. Holes unchanged from v4/v5. `tools/zezlid v6`, drop `20260912-213327-lid_v6`, black PETG, no brim.
+Not official until it is tried.

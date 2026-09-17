@@ -9,7 +9,9 @@ import { join, extname, normalize } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { ROOT, listWorkspace, readWorkspaceFile, writeWorkspaceFile, readShims } from "./core/workspace.mjs";
+import { ROOT, listWorkspace, readWorkspaceFile, writeWorkspaceFile, readShims, entryFor, isRunnable } from "./core/workspace.mjs";
+import { ship, findUsbPort } from "./core/ship.mjs";
+import { listDevices, flash } from "./core/devices.mjs";
 
 const EMU = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -78,7 +80,9 @@ async function control(req, res, url) {
   if (p === "boot" && req.method === "GET") {
     const files = listWorkspace().map((f) => {
       const { data } = readWorkspaceFile(f.name);
-      return f.name.endsWith(".py") ? { ...f, text: data.toString("utf8") } : { ...f, b64: data.toString("base64") };
+      if (!f.name.endsWith(".py")) return { ...f, b64: data.toString("base64") };
+      const text = data.toString("utf8"), mod = f.name.slice(0, -3);
+      return { ...f, text, runnable: isRunnable(mod, text), entry: entryFor(mod) };
     });
     return json(res, 200, { files, shims: readShims(), appUrl: "/app", clients: clients.size });
   }
@@ -122,6 +126,18 @@ async function control(req, res, url) {
       return json(res, 504, { error: String(e.message || e) });
     }
   }
+  if (p === "ship" && req.method === "POST") {
+    const { name, target, port, boot } = JSON.parse((await body(req)).toString("utf8"));
+    const r = await ship(name, { target, port, boot });
+    return json(res, r.ok ? 200 : 500, r);
+  }
+  if (p === "flash" && req.method === "POST") {
+    const { path, port, version, wifi } = JSON.parse((await body(req)).toString("utf8"));
+    let r; try { r = await flash({ path, port }, { version, wifi }); } catch (e) { r = { ok: false, error: String(e.message || e) }; }
+    return json(res, r.ok ? 200 : 500, r);
+  }
+  if (p === "devices" && req.method === "GET") return json(res, 200, { devices: listDevices() });
+  if (p === "usb" && req.method === "GET") return json(res, 200, { port: findUsbPort() });
   if (p === "state" && req.method === "GET") return json(res, 200, { ok: true, clients: clients.size, app: APP, port: PORT });
   if (p === "chip" && req.method === "GET") {
     if (!existsSync(CHIP_FILE)) { res.writeHead(204); return res.end(); }

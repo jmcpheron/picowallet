@@ -12,6 +12,9 @@ ENABLE_NETWORK_CONSOLE = False
 EXPECTED_CHAIN_ID = None
 EXPECTED_VAULT = None
 EXPECTED_TOKEN = None
+# Without an ATECC608 the wallet stops on a NO CHIP screen. True runs it on a throwaway software
+# key instead (the emulator does this); never on a board that should hold value.
+ALLOW_SOFT_KEY = False
 # Provisioning a FRESH chip, from the app's Setup page or the wallet's own KEYS screen (X on the
 # home screen). All of it is permanent; leave both False on a wallet that holds value.
 ALLOW_LOCK = False     # lock the config zone (required before the chip will make a key), the data zone, or one slot

@@ -18,7 +18,7 @@ const img = sctx.createImageData(240, 240);
 
 let worker = null, seq = 0, running = null, main = localStorage.getItem("emu.main") || "mock";
 const files = new Map();          // name -> { src, text?, b64?, dirty }
-let current = null, editor = null, editorFallback = null;
+let current = null, editor = null, editorFallback = null, loading = false;
 const log = [];
 let execCapture = null;
 const waiting = new Map();
@@ -29,17 +29,18 @@ let device3d = null;
 if (window.CodeMirror) {
   editor = CodeMirror.fromTextArea($("#src"), {
     mode: "python", lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, viewportMargin: 50,
-    extraKeys: { "Cmd-Enter": runCurrent, "Ctrl-Enter": runCurrent, "Cmd-S": saveAll, "Ctrl-S": saveAll,
+    extraKeys: { "Cmd-Enter": runFile, "Ctrl-Enter": runFile, "Cmd-S": saveAll, "Ctrl-S": saveAll,
       Tab: (cm) => cm.somethingSelected() ? cm.indentSelection("add") : cm.replaceSelection("    ", "end") },
   });
-  editor.on("change", () => { if (current && files.get(current)) { const f = files.get(current); f.text = editor.getValue(); f.dirty = true; renderTabs(); } });
+  // `loading` guards setValue in openFile; a binary tab (text undefined) shows a placeholder and is never dirty.
+  editor.on("change", () => { if (loading || !current) return; const f = files.get(current); if (f && f.text !== undefined) { f.text = editor.getValue(); f.dirty = true; renderTabs(); } });
 } else {
   editorFallback = $("#src");
-  editorFallback.addEventListener("input", () => { const f = files.get(current); if (f) { f.text = editorFallback.value; f.dirty = true; renderTabs(); } });
-  editorFallback.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runCurrent(); } });
+  editorFallback.addEventListener("input", () => { const f = files.get(current); if (f && f.text !== undefined) { f.text = editorFallback.value; f.dirty = true; renderTabs(); } });
+  editorFallback.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runFile(); } });
 }
 const getSrc = () => (editor ? editor.getValue() : editorFallback.value);
-const setSrc = (t) => { if (editor) { editor.setValue(t); editor.clearHistory(); } else editorFallback.value = t; };
+const setSrc = (t) => { loading = true; try { if (editor) { editor.setValue(t); editor.clearHistory(); } else editorFallback.value = t; } finally { loading = false; } };
 
 function openFile(name) {
   const f = files.get(name);
@@ -63,15 +64,20 @@ function renderTabs() {
     tabs.appendChild(b);
     if (f.name === current) b.scrollIntoView({ inline: "nearest", block: "nearest" });
   }
+  // The run menu lists only modules that show something (start themselves, or have an entry point
+  // the server knows); lcd, keccak and the like are libraries.
   const sel = $("#main");
   sel.innerHTML = "";
-  for (const f of order) if (f.name.endsWith(".py")) { const o = document.createElement("option"); o.value = f.name.slice(0, -3); o.textContent = f.name.slice(0, -3); sel.appendChild(o); }
+  const runnable = order.filter((f) => f.name.endsWith(".py") && (f.runnable || f.name === main + ".py"));
+  for (const f of runnable) { const o = document.createElement("option"); o.value = f.name.slice(0, -3); o.textContent = f.name.slice(0, -3) + (f.src === "sketches" ? "" : "  (fw)"); sel.appendChild(o); }
+  if (!runnable.some((f) => f.name === main + ".py") && runnable.length) main = runnable[0].name.slice(0, -3);
   sel.value = main;
 }
+function setMain(name) { main = name; localStorage.setItem("emu.main", main); renderTabs(); }
 
 async function saveFile(name) {
   const f = files.get(name);
-  if (!f || f.text === undefined) return;
+  if (!f || f.text === undefined || !f.dirty) return;
   await fetch("/ctl/file", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, content: f.text, src: f.src }) });
   f.dirty = false;
   if (worker) await ask({ type: "write", name, data: f.text });
@@ -157,10 +163,13 @@ $("#repl").addEventListener("keydown", async (e) => {
 });
 
 // ---- device ------------------------------------------------------------------------------
-function ask(msg) {
+function ask(msg) { return askWith(msg).promise; }
+function askWith(msg) {
   const id = ++seq;
-  return new Promise((resolve, reject) => { waiting.set(id, { resolve, reject }); worker.postMessage({ ...msg, id }); });
+  const promise = new Promise((resolve, reject) => { waiting.set(id, { resolve, reject }); worker.postMessage({ ...msg, id }); });
+  return { id, promise };
 }
+const started = new Map();   // id -> resolve, fired when the worker enters run() for that request
 
 async function exec(code) {
   if (!worker) return ["device is not running"];
@@ -190,15 +199,24 @@ async function reboot(runName) {
   worker.onmessage = onMsg;
   worker.onerror = (e) => appendLog("worker: " + e.message, "err");
   mark("worker created");
-  appendLog(`── boot, import ${runName} ──`, "sys");
+  const entry = (files.get(runName + ".py") || {}).entry || "";
+  appendLog(`── boot, import ${runName}${entry ? "; " + entry : ""} ──`, "sys");
   frames = 0;
   execCapture = [];
-  try { await ask({ type: "boot", keys: sab || keys.buffer, files: payload, shims: b.shims, appUrl: b.appUrl, run: runName }); } catch (e) { appendLog(String(e), "err"); }
+  // A module with a `while True` (demo) never returns from import. The worker says "started"
+  // when it enters run(); if "done" has not come 2.5 s after that, call it running and move on.
+  const { id, promise } = askWith({ type: "boot", keys: sab || keys.buffer, files: payload, shims: b.shims, appUrl: b.appUrl, run: runName, entry });
+  const startedP = new Promise((r) => started.set(id, r));
+  let how = null;
+  const done = promise.then(() => (how = "done"), (e) => { appendLog(String(e), "err"); how = "error"; });
+  await Promise.race([done, startedP.then(() => sleep(2500))]);
+  started.delete(id);
+  const busy = how === null;
   const out = execCapture; execCapture = null;
   running = runName;
   const failed = out.some((l) => /^Traceback/.test(l));
-  setConn(failed ? "error in " + runName : "running " + runName, failed ? "bad" : "ok");
-  return { ok: !failed, lines: out };
+  setConn(failed ? "error in " + runName : "running " + runName + (busy ? " (busy loop)" : ""), failed ? "bad" : "ok");
+  return { ok: !failed, busy, lines: out };
 }
 
 function onMsg(e) {
@@ -218,20 +236,78 @@ function onMsg(e) {
   else if (m.type === "pwm") { if (m.pin === 13 && device3d) device3d.setBacklight(m.frac); }
   else if (m.type === "pin") { if (m.pin === "LED" && device3d) device3d.setLed(!!m.v); }
   else if (m.type === "reset") { appendLog("machine.reset()", "sys"); reboot(main); }
+  else if (m.type === "started") { const r = started.get(m.id); if (r) r(); }
   else if (m.type === "done") { const w = waiting.get(m.id); if (w) { waiting.delete(m.id); m.error ? w.reject(new Error(m.error)) : w.resolve(); } }
 }
 
 function setConn(text, cls) { const c = $("#conn"); c.textContent = text; c.className = cls; }
 setInterval(() => { fps = fpsCount; fpsCount = 0; $("#fps").textContent = fps + " fps"; $("#frames").textContent = frames + " frames"; }, 1000);
 
-async function runCurrent() {
+// ▶ run and ↻ reset run the module picked in the menu. Cmd/Ctrl+Enter runs the file in the editor
+// and makes it the picked module when it is runnable. Picking in the menu only selects (and opens
+// the file); nothing runs until ▶.
+async function runMain() { await saveAll(); await reboot(main); }
+async function runFile() {
   await saveAll();
   const name = current && current.endsWith(".py") ? current.slice(0, -3) : main;
+  const f = files.get(name + ".py");
+  if (f && f.runnable) setMain(name);
   await reboot(name);
 }
-$("#run").onclick = runCurrent;
+$("#run").onclick = runMain;
 $("#reset").onclick = () => reboot(main);
-$("#main").onchange = (e) => { main = e.target.value; localStorage.setItem("emu.main", main); reboot(main); };
+$("#main").onchange = (e) => { setMain(e.target.value); if (files.has(main + ".py")) openFile(main + ".py"); };
+
+// Boards on USB: the server lists serial ports (MicroPython) and bootloader drives (BOOTSEL held
+// while plugging in) every 3 s. ⇪ sends the picked module to the picked board; for a bootloader
+// board the same button flashes MicroPython instead.
+let devices = [];
+const devSel = $("#device");
+function pickedDevice() { return devices.find((d) => (d.port || d.path) === devSel.value) || null; }
+async function pollDevices() {
+  try { devices = (await (await fetch("/ctl/devices")).json()).devices; } catch { devices = []; }
+  const was = devSel.value;
+  devSel.innerHTML = "";
+  for (const d of devices) { const o = document.createElement("option"); o.value = d.port || d.path; o.textContent = d.label; devSel.appendChild(o); }
+  if (!devices.length) { const o = document.createElement("option"); o.value = ""; o.textContent = "no board on USB"; devSel.appendChild(o); }
+  if (devices.some((d) => (d.port || d.path) === was)) devSel.value = was;
+  const d = pickedDevice(), b = $("#ship");
+  b.classList.toggle("off", !d);
+  const needsMp = d && (d.kind === "bootsel" || d.mp === false);
+  b.textContent = needsMp ? "⚡ install MicroPython" : "⇪ send to Pico";
+  b.disabled = !!(d && d.kind === "serial" && d.mp === null);
+  b.title = !d ? "plug a Pico into this Mac"
+    : d.kind === "bootsel" ? `put MicroPython on the board at ${d.path}`
+    : d.mp === false ? `this board runs something else; reboot it into its bootloader and put MicroPython on it`
+    : d.mp === null ? "asking the board what it is…" : `copy ${main}.py to ${d.port} and import it`;
+}
+pollDevices(); setInterval(pollDevices, 3000);
+try { $("#boot").checked = localStorage.getItem("emu.boot") === "1"; } catch {}
+$("#boot").onchange = () => localStorage.setItem("emu.boot", $("#boot").checked ? "1" : "0");
+devSel.onchange = pollDevices;
+$("#ship").onclick = async () => {
+  const d = pickedDevice();
+  if (!d) { appendLog("no board on USB", "err"); return; }
+  const b = $("#ship"); b.disabled = true;
+  try {
+    if (d.kind === "bootsel" || d.mp === false) {
+      const wifi = confirm("Is this a Pico W / Pico 2 W (has WiFi)?\n\nOK = WiFi build, Cancel = plain build");
+      appendLog(`── install MicroPython (${wifi ? "WiFi" : "plain"} build) on ${d.port || d.path} ──`, "sys");
+      const r = await (await fetch("/ctl/flash", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: d.path, port: d.port, wifi }) })).json();
+      appendLog(r.error ? r.error : `installed ${r.file}; ${r.note}`, r.error ? "err" : "sys");
+    } else {
+      await saveAll();
+      appendLog(`── send ${main} to ${d.port} ──`, "sys");
+      const r = await (await fetch("/ctl/ship", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: main, port: d.port, boot: $("#boot").checked }) })).json();
+      for (const l of r.lines || []) appendLog(l);
+      if (r.error) appendLog(r.error, "err");
+      else appendLog(`${r.ok ? "running" : "failed"} ${main} on ${r.port}${r.blocking ? " (busy loop, left running)" : ""}${r.copiedLcd ? "; lcd.py copied too" : ""}`, r.ok ? "sys" : "err");
+    }
+  } catch (e) { appendLog("ship: " + e.message, "err"); }
+  b.disabled = false;
+  pollDevices();
+};
+
 $("#shot").onclick = () => { const a = document.createElement("a"); a.href = shotDataURL(); a.download = `pico-${Date.now()}.png`; a.click(); };
 function shotDataURL() {
   const c = document.createElement("canvas"); c.width = c.height = 480;
@@ -278,7 +354,7 @@ $("#viewflat").onclick = () => setView("flat");
 
 // ---- control channel for tools/emu -------------------------------------------------------
 const handlers = {
-  async run({ name }) { const r = await reboot(name); if (files.has(name + ".py")) openFile(name + ".py"); return r; },
+  async run({ name }) { const r = await reboot(name); const f = files.get(name + ".py"); if (f) { openFile(name + ".py"); if (f.runnable) setMain(name); } return r; },
   async exec({ code }) { appendLog(">>> " + code, "in"); return { ok: true, lines: await exec(code) }; },
   async key({ name, ms }) { setKey(name, true); await sleep(ms || 80); setKey(name, false); await sleep(60); return { ok: true }; },
   async keys({ names }) { for (const n of names) { const [k, ms] = n.split(":"); setKey(k, true); await sleep(+(ms || 80)); setKey(k, false); await sleep(120); } return { ok: true }; },
@@ -286,7 +362,7 @@ const handlers = {
   async log({ n }) { return { ok: true, lines: log.slice(-(n || 40)) }; },
   async state() { return { ok: true, main, running, frames, fps, sharedKeys: !!sab, view: localStorage.getItem("emu.view") || "3d", files: [...files.keys()] }; },
   async reset() { return reboot(main); },
-  async main({ name }) { main = name; localStorage.setItem("emu.main", main); renderTabs(); return { ok: true }; },
+  async main({ name }) { setMain(name); return { ok: true }; },
 };
 const es = new EventSource("/ctl/events");
 es.onmessage = async (e) => {

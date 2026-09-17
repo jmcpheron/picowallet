@@ -59,9 +59,11 @@ onmessage = async (e) => {
         onReset: () => postMessage({ type: "reset" }),
       });
       postMessage({ type: "ready", files: dev.listFiles() });
-      if (m.run) { dev.run(m.run); mark("ran " + m.run); postMessage({ type: "done", id: m.id }); }
+      // "started" goes out first: a module with a `while True` never returns, so the page treats
+      // a boot that is still inside run() after a moment as "running (busy loop)".
+      if (m.run) { postMessage({ type: "started", id: m.id }); dev.run(m.run, m.entry); mark("ran " + m.run); postMessage({ type: "done", id: m.id }); }
     } else if (m.type === "run") {
-      dev.run(m.name); postMessage({ type: "done", id: m.id });
+      postMessage({ type: "started", id: m.id }); dev.run(m.name, m.entry); postMessage({ type: "done", id: m.id });
     } else if (m.type === "exec") {
       dev.exec(m.code); postMessage({ type: "done", id: m.id });
     } else if (m.type === "write") {

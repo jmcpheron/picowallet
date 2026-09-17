@@ -13,13 +13,20 @@ tools/emu shot            # emu/shots/latest.png
 tools/emu exec 'mock.goto("send")'
 tools/emu log             # console lines
 tools/emu chip ready      # the virtual ATECC608: config locked + key in slot 0 (fresh = blank part, show = state)
+tools/emu devices         # boards on USB (serial ports, bootloader drives)
+tools/emu ship hello      # copy hello.py (+ imports) to the Pico on USB and run it (--port /dev/cu.usbmodemN, --boot: run at power-up too)
+tools/emu flash --port /dev/cu.usbmodemN [--wifi]   # MicroPython onto any board (also works on a BOOTSEL drive without --port)
 tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no browser
 ```
 
-Page: left = files, editor (Cmd/Ctrl+Enter runs the open file), console with a REPL; right = the
-device (orbit with the mouse, click the caps) or the flat view. Keyboard: W A S D and space for
-the joystick, numpad 9 6 3 . for A B X Y (top-row 9 6 3 . work too), after clicking the device.
-The 3D view labels each button with its key. `main` picks what boots on reset.
+Page: the device menu lists every board on USB; for one that is not running MicroPython the
+send button becomes ⚡ install MicroPython. The module menu top left picks what ▶ run, ↻ reset and
+⇪ send to Pico act on (only modules
+that show something are listed: they start themselves at import, or the server knows their entry
+point, `ENTRY` in `core/workspace.mjs`). Left = files, editor (Cmd/Ctrl+Enter runs the open file),
+console with a REPL; right = the device (orbit with the mouse, click the caps) or the flat view.
+Keyboard: W A S D and space for the joystick, numpad 9 6 3 . for A B X Y (top-row 9 6 3 . work
+too), after clicking the device. The 3D view labels each button with its key.
 
 The flash is `firmware/*.py` and `*.bin` (never `secrets.py`; a stub is generated with
 `APP_URL = "/app"`, which the server proxies to the wallet app, `--app http://host:port`,

@@ -13,15 +13,21 @@ import eip712
 import signer as S
 import slots as SL
 import power
-import secrets
+try:
+    import secrets
+except ImportError:
+    secrets = None      # fresh board: the home screen says "no secrets.py" instead of connecting
 
-APP = secrets.APP_URL
+APP = secrets.APP_URL if secrets else None
 NAME = getattr(secrets, "DEVICE_NAME", "picowallet")
+# The account is the chip's key. Without a chip there is no account, so the wallet stops on a
+# NO CHIP screen. The emulator sets ALLOW_SOFT_KEY in its generated secrets.py to test the flow.
+SOFT_OK = bool(getattr(secrets, "ALLOW_SOFT_KEY", False)) if secrets else False
 
 d = None
 keys = None
 sig = None          # the signer backend
-state = "boot"      # boot | home | confirm | working | done | error | keys
+state = "boot"      # boot | home | confirm | working | done | error | keys | nochip
 slots_ui = None     # the KEYS screen (slots.py): X on the home screen
 page = 0            # confirm: 0 = summary, 1 = details
 req = None          # request on screen
@@ -120,9 +126,17 @@ def draw_home():
     # top-right: the KEYS screen hint and the pairing dot
     d.text("X keys", 170, 4, L.GREY)
     d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
+    # top-centre: which key. The chip is the point; a software key must never pass unnoticed.
+    if sig and sig.name != "atecc608":
+        d.center_text("NO CHIP", 4, L.RED)
     # balance, big
     if bal is None:
-        d.center_text("connecting...", 30, L.GREY, 2)
+        if secrets is None:
+            d.center_text("no secrets.py", 30, L.RED, 2)
+        elif not network.WLAN(network.STA_IF).isconnected():
+            d.center_text("no wifi", 30, L.RED, 2)
+        else:
+            d.center_text("connecting...", 30, L.GREY, 2)
     else:
         whole, _, frac = bal.partition(".")
         sbal = "$" + whole + "." + (frac + "00")[:2]
@@ -153,6 +167,12 @@ def draw_home():
         warn = "not paired" if qx else "no key"
     if pw["low"] and not pw["usb"]:
         warn = "battery low %.2fV" % pw["vbat"]
+    if sig and sig.name != "atecc608":
+        warn = "no chip: software key"
+    if not network.WLAN(network.STA_IF).isconnected():
+        warn = "no wifi: check secrets.py"
+    if secrets is None:
+        warn = "copy secrets.py to the board"
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
         d.fill_rect(0, 224, 240, 16, L.DARK)
         d.center_text(msg[:30], 228, L.YELLOW)
@@ -277,8 +297,22 @@ def draw_msg(title, color):
     d.show()
 
 
+def draw_nochip():
+    d.fill(L.BLACK)
+    d.fill_rect(0, 0, 240, 26, L.RED)
+    d.center_text("NO CHIP", 5, L.WHITE, 2)
+    y = 50
+    for line in ("no ATECC608 answered", "on I2C (GP4 SDA, GP5 SCL)", "", "the account is the",
+                 "chip's key, so there", "is no account here", "", "wire the chip, then", "press A to look again"):
+        d.center_text(line, y, L.WHITE if line else L.BLACK)
+        y += 16
+    d.show()
+
+
 def draw():
-    if state in ("boot", "home"):
+    if state == "nochip":
+        draw_nochip()
+    elif state in ("boot", "home"):
         draw_home()
     elif state == "confirm":
         draw_confirm()
@@ -316,7 +350,10 @@ def tick(t):
                 state = "home"; dirty = True
             pressed = ()
         for k in pressed:
-            if state == "confirm":
+            if state == "nochip":
+                if k == "A":
+                    probe_chip(); dirty = True
+            elif state == "confirm":
                 if k == "A":
                     approve(True)
                 elif k == "Y":
@@ -507,7 +544,7 @@ def approve(yes):
 
 def net_work():
     global state, dirty, last_announce, last_fetch
-    if state in ("confirm", "working", "keys"):
+    if state in ("confirm", "working", "keys", "nochip") or secrets is None:
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
@@ -558,16 +595,31 @@ def key_changed():
     last_announce = 0
 
 
+def probe_chip():
+    """Find the signer. No chip and no ALLOW_SOFT_KEY: stop on the NO CHIP screen (A probes again).
+    Otherwise read the active key and build the KEYS screen around whichever backend answered."""
+    global sig, state, slots_ui
+    sig = S.load()
+    if sig.name != "atecc608" and not SOFT_OK:
+        state = "nochip"
+        return
+    if state == "nochip":
+        state = "boot"
+    read_key()
+    slots_ui = SL.SlotsUI(d, sig, key_changed)
+
+
 def start():
     global d, keys, sig, dirty, slots_ui
     d = L.LCD()
     keys = L.Keys()
     load_qr()
     draw()
-    sig = S.load()
-    read_key()
-    slots_ui = SL.SlotsUI(d, sig, key_changed)
+    probe_chip()
     dirty = True
+    draw()
+    if secrets and not network.WLAN(network.STA_IF).isconnected():
+        net.connect()   # boot.py did this on the wallet Pico; a board that got wallet.py by hand did not
     start_timer()
 
 

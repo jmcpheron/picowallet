@@ -16,7 +16,10 @@ Pico unchanged.
    firmware name like `lcd`, `mock`, `wallet`, `demo`, `keytest`, `net`). Start from
    `emu/sketches/hello.py`.
 2. Run it: `tools/emu run NAME` (starts the server and opens the page if needed, reboots the
-   device, imports the module, prints its output; exit 1 on a traceback).
+   device, imports the module, prints its output; exit 1 on a traceback). Running a module is
+   `import NAME` on a fresh device, so a sketch must start itself at import: end the file with
+   `start()` (that is also what puts it in the page's module menu). A module whose import never
+   returns (a `while True`) is reported as "busy loop" after 2.5 s and keeps running.
 3. Press keys: `tools/emu key A`, `tools/emu key right:300` (hold 300 ms),
    `tools/emu keys right,right,A`. Names: `A B X Y up down left right press`.
 4. Look: `tools/emu shot [out.png]` saves the screen (480x480 PNG, default `emu/shots/latest.png`).
@@ -28,17 +31,31 @@ Pico unchanged.
 No browser: `tools/emu headless NAME --wait 300 --key A --wait 100 --shot emu/shots/x.png --exec 'print(1)'`
 runs a scripted session and exits (steps run in order). Good for quick checks and CI.
 
-Austin sees the browser page (http://localhost:4242): editor, console, the 3D device. Keys on
-the page: W A S D = joystick, space = joystick press, numpad 9 6 3 . = A B X Y (click the device
+Austin sees the browser page (http://localhost:4242): a module menu top left (▶ run, ↻ reset and
+⇪ send to Pico all act on the picked module; Cmd/Ctrl+Enter runs the file in the editor), editor,
+console, the 3D device. Keys on the page: W A S D = joystick, space = joystick press, numpad 9 6 3 . = A B X Y (click the device
 first so the editor does not eat them; the 3D view shows the key next to each button).
 
 ## Ship it to the real Pico
 
-The wallet Pico (WiFi console, when enabled): `./tools/pico cp emu/sketches/NAME.py :NAME.py` then
-`./tools/pico exec 'import NAME'`. The spare Pico on USB: `~/.local/bin/mpremote connect
-/dev/cu.usbmodem* resume cp emu/sketches/NAME.py :NAME.py + exec 'import NAME'` (one mpremote
-process for the whole chain). Never change `main.py` on the wallet Pico unless asked. Firmware
-that should ship for good goes in `firmware/` and through `tools/push`.
+`tools/emu devices` lists every board on this Mac's USB: MicroPython boards (with the board name),
+boards running something else (Arduino etc., "not MicroPython", with what they print), and
+bootloader drives (plugged in with BOOTSEL held). `tools/emu flash --port P [--wifi]` puts
+MicroPython on any of them: a running board is told to enter its bootloader over USB first
+(`machine.bootloader()`, or the 1200-baud touch for Arduino firmware), then the .uf2 is copied
+(default 1.26.1 to match the wallet and the emulator, `--version latest`), and the board comes
+back as a serial port. `--wifi` picks the Pico W / Pico 2 W build; the bootloader cannot tell.
+
+`tools/emu ship NAME [--port /dev/cu.usbmodemN] [--boot]` copies `NAME.py` and every file it
+imports to the board (first serial port if no `--port`), soft-resets so the old module's timers
+stop, imports the module fresh and prints its output for a few seconds (a `while True` module is
+left running and reported as "blocking loop"). That is a one-time run: at power-up MicroPython
+only runs `main.py`, so a board without one boots to a dark screen. `--boot` (the "run at boot"
+box on the page) also writes a `main.py` that imports the module; refused on the wallet Pico. Exit 1 on a traceback or no board. `--wifi` targets the
+wallet Pico's WiFi console instead (no reset there; the old copy's `stop()` is called). The page
+has the same: a device picker in the top bar and the ⇪ send to Pico button (⚡ flash MicroPython
+when a bootloader board is picked). Never change `main.py` on the wallet Pico unless asked.
+Firmware that should ship for good goes in `firmware/` and through `tools/push`.
 
 ## The hardware, as seen from Python
 

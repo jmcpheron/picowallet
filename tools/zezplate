@@ -1,0 +1,25 @@
+#!/bin/sh
+# Build the one-file case: every official Zez0000 part laid out on one plate in print orientation
+# (base floor down, lid outer face down, caps flange down). Output case/zez0000/picowallet_case.stl.
+# Parts list is the "Official set" table in case/README.md. Black PETG, 0.20 mm, no brim.
+cd "$(dirname "$0")/.." || exit 1
+exec "$HOME/.local/bin/uv" run --python 3.11 --with trimesh --with numpy python - <<'PY'
+import trimesh, numpy as np
+PARTS = [  # (file, x, y) placement of the part's bounding-box centre on the plate, mm
+    ("base_v6.stl", 0, 0),
+    ("lid_v5.stl", 0, 42),
+    ("button_cap_1.stl", -24, 84), ("button_cap_2.stl", -8, 84), ("button_cap_3.stl", 8, 84), ("button_cap_4.stl", 24, 84),
+    ("joystick_cap_v3_2.00.stl", 0, 104),
+]
+out = []
+for f, x, y in PARTS:
+    m = trimesh.load("case/zez0000/" + f)
+    assert m.is_watertight, f
+    c = (m.bounds[0] + m.bounds[1]) / 2
+    m.apply_translation((x - c[0], y - c[1], -m.bounds[0][2]))   # centre in x,y, sit on z 0
+    print("%-26s %5.1f x %5.1f x %5.1f  at (%d, %d)" % ((f,) + tuple(m.extents.round(1)) + (x, y)))
+    out.append(m)
+plate = trimesh.util.concatenate(out)
+plate.export("case/zez0000/picowallet_case.stl")
+print("picowallet_case.stl: %d bodies, %.0f x %.0f x %.1f mm" % ((len(out),) + tuple(plate.extents)))
+PY

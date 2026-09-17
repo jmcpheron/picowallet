@@ -11,13 +11,14 @@
 //   --chip PATH.json     keep the virtual ATECC608's state in this file (default: blank chip, forgotten at exit)
 //   --heap BYTES         MicroPython heap (default 448 KB)
 //   --quiet              no Python stdout
-// Exit code 1 if the module raised during import.
+// Exit code 1 if the module raised during import. Modules with a blocking loop (demo) never
+// return from import here, so the steps after it never run; use the page for those.
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { loadMicroPython } from "@micropython/micropython-webassembly-pyscript";
 import { createDevice, KEY_ORDER, frameToRGBA, W, H } from "./core/runtime.mjs";
-import { readWorkspace, readShims } from "./core/workspace.mjs";
+import { readWorkspace, readShims, entryFor } from "./core/workspace.mjs";
 import { encodePNG, scaleRGBA } from "./core/png.mjs";
 
 const argv = process.argv.slice(2);
@@ -43,7 +44,7 @@ const dev = await createDevice({
   onStdout: (l) => { if (!quiet) console.log(l); if (/^Traceback/.test(l)) failed = true; },
   onReset: () => { console.log("[machine.reset() called]"); },
 });
-dev.run(mod);
+dev.run(mod, entryFor(mod));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const idx = (k) => { const i = KEY_ORDER.indexOf(k); if (i < 0) throw new Error("no key " + k); return i; };
