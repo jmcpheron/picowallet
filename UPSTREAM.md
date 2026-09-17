@@ -138,6 +138,30 @@ Read off it (2026-09-16, Adafruit 4314 breakout, run twice, output byte-identica
   allows it, so the wallet says `no key` until the lock, as designed.
 - Wake 3 ms.
 
+## 3b. What a fresh 608A answers before the config lock
+
+Asked from the driver on 2026-09-16 (the LAB's questions, `atecc.py` on the same chip as section
+3, config zone still open), round trip in ms:
+
+| command | answer |
+|---|---|
+| Info revision | `00006002` (9 ms) |
+| Info KeyValid slot 0 | `00000000`: no usable key (10 ms) |
+| Info State | `00000000` (9 ms) |
+| Info GPIO (mode 3) | refused, status `0x03` parse error: no GPIO on this part (9 ms) |
+| SelfTest mask 0x3F | `0x00`, every test passed (256 ms). **Works before the lock.** |
+| SelfTest RNG only | `0x00` (256 ms) |
+| SHA-256 of `picowallet` | `89dd4b2d…9c46`, identical to the Pico's hashlib (37 ms). **Works before the lock.** |
+| Counter 0 / 1 read | `0` / `0` (26 ms). **Works before the lock.** |
+| Read OTP block 0 | refused, status `0x0F` (12 ms): hidden until the config lock |
+| Read data slot 8 / slot 3 | refused, status `0x0F` (11 ms): hidden until the config lock |
+| Read config word 4 | `c0000000`: I2C address byte 0xC0 = 0x60 on the bus (9 ms) |
+| Random | `ffff0000` ×8, the fixed pattern (39 ms) |
+
+So an unlocked 608A will identify itself, self-test, hash, and report its counters; it hides both
+data zones and returns the test pattern for Random. The wallet's CHIP MAP and LAB (this branch)
+show each of these on the device, refusals included.
+
 ## 4. Flashing this branch's firmware
 
 What changed for someone flashing from upstream `main`:
