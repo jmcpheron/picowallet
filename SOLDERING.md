@@ -33,13 +33,28 @@ from the top with USB up.
 | blue (SDA) | GP4 | 6 |
 | yellow (SCL) | GP5 | 7 |
 
+Those colors are the Adafruit STEMMA QT convention. **A cable from a generic kit may not follow
+it**, and a red wire on the GND position would put 3.3 V on the chip's ground. So map the wires by
+the breakout's pads, not by color, before anything is powered: plug the cable into either port
+(the two ports are wired in parallel, use whichever), meter in continuity mode, one probe on a
+bare wire, the other on the labeled through-hole pads along the breakout's edge. Each wire beeps
+on exactly one pad. Fill this in and solder by pad name:
+
+| breakout pad | your wire color | Pico pin |
+|---|---|---|
+| VIN | | 36 (3V3 OUT) |
+| GND | | 8 |
+| SDA | | 6 (GP4) |
+| SCL | | 7 (GP5) |
+
 The breakout carries its own I2C pull-ups and runs on 3.3 V, so nothing else is needed. GP4/GP5
 are I2C0, the pins `firmware/atecc.py` uses. Three of the four wires land on the left column
-(6, 7, 8); only red crosses to the right column (36). Keep the I2C pair short and away from the
+(6, 7, 8); only VIN crosses to the right column (36). Keep the I2C pair short and away from the
 battery leads.
 
-Check before power: with a meter in continuity mode, red to pin 36, black to pin 8, blue to pin 6,
-yellow to pin 7, and no continuity between red and black.
+Check before power: continuity from the VIN wire to pin 36, GND wire to pin 8, SDA wire to pin 6,
+SCL wire to pin 7, and no continuity between pins 36 and 8. A swapped SDA/SCL is harmless (the I2C
+scan just finds nothing); a swapped VIN/GND is not.
 
 ## 2. Battery, switch, diode
 

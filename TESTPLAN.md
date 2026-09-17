@@ -24,8 +24,10 @@ Record: mpremote version `________`, MicroPython build on the Pico (step 2) `___
 
 From `SOLDERING.md` sections 1 and 2, with the cell OUT and USB unplugged:
 
-- [ ] Continuity: chip red to pin 36, black to pin 8, blue to pin 6, yellow to pin 7.
-- [ ] No continuity red to black (3V3 to GND).
+- [ ] Cable mapped by pad, not color: each bare wire beeps on exactly one of the breakout's VIN /
+      GND / SDA / SCL pads. Record the color for each pad (table in SOLDERING.md section 1).
+- [ ] Continuity: VIN wire to pin 36, GND wire to pin 8, SDA wire to pin 6, SCL wire to pin 7.
+- [ ] No continuity pin 36 to pin 8 (3V3 to GND).
 - [ ] Diode mode across the Schottky: ~0.2 to 0.35 V one way, open the other. Band toward pin 39.
 - [ ] Switch OFF: the holder's + lead is open to everything.
 - [ ] Switch ON: holder + to the diode anode, and to the top 100k.
