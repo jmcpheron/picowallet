@@ -120,3 +120,106 @@ Then 69 USDS to atg.eth, same way: [`0x87638ae1…`](https://etherscan.io/tx/0x8
 
 ![the details page, joystick down on the sign screen](images/2026-09-05-23-details-screen.jpg)
 ![v0 case on the printer](images/2026-09-05-24-case-on-the-printer.jpg)
+
+## 2026-09-17 — the KEYS screen, a virtual chip, and a bug in the config table
+
+No hardware in this session, all of it on the emulator, on branch
+`claude/pico-wallet-signing-keys-uyr7mc` of the jmcpheron fork.
+
+The wallet now knows the ATECC608 has 16 slots, not just slot 0. X on the home screen opens a
+KEYS screen: the slot table as the config zone types it (P256 / PUB / AES / DATA), which slot
+signs, NEW KEY in a slot, SHOW PUBLIC KEY, and the three permanent locks (config zone, data zone,
+one slot) each behind a red hold-A screen and the `ALLOW_*` flags. `signer.py` has one shape for
+the chip and the software key, active slot in `slot.txt`.
+
+To test it without a chip, the emulator grew a virtual ATECC608 on I2C at 0x60 that speaks the
+real packet protocol (wake token, `0x03` command packets, CRC-16), so `atecc.py` runs against it
+unchanged. It starts as a blank part. `tools/emu chip fresh|ready|show`. Config lock, GenKey in
+slots 0/2/7, a signature that verifies, slot lock and data-zone lock all walked through with
+screenshots.
+
+Bug of the day, and a bad one: `atecc.py`'s `CONFIG` was not the table the Pi wrote to chip #1.
+It was the ATECC508 test table with an extra row of `0xFF` at bytes 96-111 and the last row
+dropped. Those bytes are KeyConfig for slots 0-7, so every one of them decoded to "not an ECC
+key". Locking a fresh chip with it (README step 5, the Setup page button) would have made slot 0
+unable to ever hold a P-256 key, permanently. It never bit anyone because the lock path has never
+run on a fresh chip. Fixed by copying the Pi's bytes; with the real table only slots 0, 2 and 7
+are P-256 private keys, not 0-7 as the old handoff said. Notes for upstream in `UPSTREAM.md`.
+
+Also on the branch: `SOLDERING.md` with the perfboard wiring (chip on GP4/GP5/GND 8/3V3 36, an
+18650 behind a switch and a Schottky into VSYS, 100k/100k divider to GP28 for a gauge),
+`power.py` for the gauge, a read-only `chipcheck.py` report, `tools/usb` for deploying over USB
+serial, and `TESTPLAN.md` for the next session.
+
+Lesson from the emulator: a top-level `raise SystemExit` in a module you `import` at the
+MicroPython REPL soft-reboots the board. `chipcheck.py` runs inside a function now.
+
+## 2026-09-__ — a fresh chip, read only
+
+*(Template for the hardware session. Replace the bracketed prompts with what happened; delete
+the ones that did not apply. Photos go in `images/` named by content, `2026-09-__-NN-what.jpg`,
+no feet. Keep the numbers, they are the point of this entry: nobody in this repo has recorded
+what a blank ATECC608 looks like before anyone touches it.)*
+
+The chip: Adafruit ATECC608 breakout (4314), bought from [Amazon / Adafruit, order date],
+sealed [yes/no], marking on the chip package `[what is printed on it]`. Wired to the Pico's
+pin tails on the perfboard per `SOLDERING.md`: red 3V3 (36), black GND (8), blue SDA (6), yellow
+SCL (7). Battery [not yet / wired, cell out]. Firmware: this branch at `[git rev]`, MicroPython
+`[version from the REPL banner]`, deployed with `tools/usb push` from `[machine]`.
+
+Rule for today: `ALLOW_LOCK = False`, `ALLOW_GENKEY = False`. Nothing written to the chip.
+
+![the perfboard with the chip wired](images/2026-09-__-01-perfboard-chip-wired.jpg)
+
+**Bench, nothing powered.** Continuity on all four wires [ok / what was wrong]. 3V3 to GND open
+[yes]. [Anything that surprised you.]
+
+**First power, USB only.** Screen came up [first try / after ...]. Home screen: `usb` top row,
+`X keys`, red dot, `no key`. [Time from plug-in to home screen, roughly.]
+
+**What an untouched chip reports.** `tools/usb exec 'import wallet; wallet.stop()'` then
+`tools/usb run firmware/chipcheck.py`. The whole output, verbatim:
+
+```
+[paste chipcheck output]
+```
+
+Read off it:
+- I2C scan found `[0x60]`. [If anything else answered, what and why.]
+- Serial `[...]`, revision `[00006002 = 608A / 00006003 = 608B]`, address byte 16 `[0xC0]`.
+- Config zone `[unlocked, byte 87 = 0x55]`, data zone `[unlocked, byte 86 = 0x55]`.
+- The factory slot table: `[what the SlotConfig rows 16-51 and KeyConfig rows 96-127 held; all
+  zero? Microchip defaults? which slots, if any, decode as P256 before anyone writes a table]`.
+- Random block changed between two runs `[yes]`.
+- Second run: serial and config identical `[yes]`.
+
+This is the "as shipped" state. Compare against the reference table in `atecc.py`: `[matches:
+no, as expected]`.
+
+**The KEYS screen on the real chip.** X: `[what the list showed; the header said cfg OPEN]`.
+X again: chip page `[i2c 0x60, serial, rev, permanent actions off]`. RAW CONFIG ZONE `[agreed
+with the chipcheck dump; row 80 ended 55 55]`. RANDOM twice `[different both times]`. Cursor on
+`WRITE + LOCK CONFIG (off)`, A: `[the red ERROR screen naming ALLOW_LOCK; nothing changed]`.
+Re-ran chipcheck after: byte 87 still `[0x55]`.
+
+![KEYS list on the fresh chip](images/2026-09-__-02-keys-list-fresh.jpg)
+![chip page, permanent actions off](images/2026-09-__-03-chip-page-off.jpg)
+![raw config zone](images/2026-09-__-04-raw-config.jpg)
+
+**Timings.** Wake `[n ms]`, config read `[n ms]`, random `[n ms]` (from chipcheck / the REPL).
+[Anything slower or flakier than the old wedged-wire build.]
+
+**Battery** (if wired today): meter on the cell `[V]`, screen `[V]`, `usb` shown with USB in
+`[yes/no, and which pin power.py ended up using: WL_GPIO2 or GP24]`, VSYS with USB `[V]`, VSYS on
+cell `[V]`, ran on cell for `[minutes]`, switch off read `[0 V]` at GP28.
+
+Decisions today:
+- [Locking waits until ... / the app side needs ... before the key is made.]
+- [Keep the perfboard layout / move the chip / shorten the I2C wires.]
+- [Anything to change in the firmware after seeing the real chip.]
+
+Gotchas:
+- [Whatever cost time. Port name, mpremote retry, a swapped wire, the screen hint.]
+
+Not done today, on purpose: config lock, GenKey, data-zone lock, slot lock. The chip leaves this
+session exactly as it arrived. Next: `TESTPLAN.md` phase 6, when the vault deployment is planned.
