@@ -3,7 +3,12 @@
 #   tools/usb                      find the port and open the REPL (Ctrl-] to leave)
 #   tools/usb push                 copy every firmware/*.py (never secrets.example.py) and reset
 #   tools/usb ls | exec 'print(1)' | cp firmware/x.py :x.py | run firmware/chipcheck.py
-# Port: $PICO_PORT, else the first /dev/ttyACM* (Linux) or /dev/tty.usbmodem* (macOS).
+# Port: $PICO_PORT, else the first /dev/ttyACM* (Linux) or /dev/cu.usbmodem* (macOS).
+# push is one mpremote session: no `resume`, so mpremote soft-resets first (the running module's
+# timers die, main.py is skipped, the copies land on a quiet board), every cp chained with +, then
+# os.sync(), and only then a hard reset. A reset straight after a cp lost writes on LittleFS
+# (atecc.py landed at 3584 of 7021 bytes; upstream commit 261b373 fixed the same thing in ship).
+# The copy runs under a 180 s alarm: the USB link can wedge, and `tools/usb reset` is the way out.
 cd "$(dirname "$0")/.." || exit 1
 port="${PICO_PORT:-$(ls /dev/ttyACM* /dev/tty.usbmodem* /dev/cu.usbmodem* 2>/dev/null | head -1)}"
 if [ -z "$port" ]; then
@@ -13,12 +18,16 @@ fi
 mp="$(command -v mpremote || echo "$HOME/.local/bin/mpremote")"
 case "$1" in
   push)
-    set -- ; for f in firmware/*.py; do
+    set -- connect "$port"
+    for f in firmware/*.py; do
       case "$f" in *secrets.example.py) continue;; esac
-      "$mp" connect "$port" resume cp "$f" ":$(basename "$f")" || exit 1
-      echo "  $f"
+      set -- "$@" cp "$f" ":$(basename "$f")" +
     done
-    if [ -f firmware/qr.bin ]; then "$mp" connect "$port" resume cp firmware/qr.bin :qr.bin && echo "  firmware/qr.bin"; fi
+    [ -f firmware/qr.bin ] && set -- "$@" cp firmware/qr.bin :qr.bin +
+    set -- "$@" exec "import os
+if hasattr(os, 'sync'): os.sync()
+print('synced')"
+    perl -e 'alarm shift; exec @ARGV' 180 "$mp" "$@" || { echo "copy failed; if the link is wedged: tools/usb reset, then push again" >&2; exit 1; }
     "$mp" connect "$port" resume reset
     echo "pushed to $port, rebooting" ;;
   "") exec "$mp" connect "$port" resume repl ;;

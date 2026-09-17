@@ -95,8 +95,10 @@ What changed for someone flashing from upstream `main`:
 - The active slot is stored in `slot.txt` on the Pico's flash (absent = slot 0). Deleting it is
   safe.
 - `tools/usb` (new) does the USB flow: `tools/usb push` copies every firmware file and resets,
-  `tools/usb` alone opens the REPL, anything else is passed to mpremote. `tools/push` and
-  `tools/pico` are unchanged and still need the WiFi console.
+  `tools/usb` alone opens the REPL, anything else is passed to mpremote. `push` is one mpremote
+  session: soft-reset first, every `cp` chained, `os.sync()`, and only then a hard reset, the same
+  order as upstream `261b373` gave `ship` after a reset right after a copy lost writes on
+  LittleFS. `tools/push` and `tools/pico` are unchanged and still need the WiFi console.
 - The emulator now has a virtual chip and starts blank; `tools/emu chip ready` gives a provisioned
   one. The generated emulator `secrets.py` sets both ALLOW flags True (virtual chip, no harm).
 

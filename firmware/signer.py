@@ -34,7 +34,10 @@ def _write_slot(n):
 
 
 def _allowed(flag):
-    import secrets
+    try:
+        import secrets
+    except ImportError:
+        return False        # no secrets.py on the board: every permanent action is off
     return getattr(secrets, flag, False)
 
 
