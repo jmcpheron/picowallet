@@ -53,7 +53,8 @@ def main():
     except Exception as e:
         print("random failed:", e)
     if cfg[87] != 0:
-        print("NOTE: config zone is unlocked. GenKey and Sign will refuse (status 0x0f) until it is locked; that is normal.")
+        print("NOTE: config zone is unlocked. GenKey and Sign will refuse (status 0x0f) until it is locked, and Random")
+        print("      returns the fixed test pattern ffff0000... (datasheet) instead of random bytes; both are normal.")
     print("== end ==")
 
 
