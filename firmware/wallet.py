@@ -444,8 +444,9 @@ def tick(t):
                     dirty = True    # the boot screen's legs walk
             else:
                 splash_until = 0; dirty = True
-        if state in ("home", "boot") and (time.ticks_diff(msg_until, time.ticks_ms()) > 0 or _n % 100 == 0):
-            dirty = True  # keep the status line, wifi and app rows fresh
+        if state in ("home", "boot") and _n % 20 == 0:
+            dirty = True  # status line, wifi and app rows: once a second. Never per tick: a full
+                          # redraw is ~45 ms of a 50 ms tick and starves the REPL (seen on USB)
         if dirty:
             draw()
             dirty = False
@@ -638,6 +639,7 @@ def net_work():
         now = time.ticks_ms()
         every = 30000 if paired else 5000
         if last_announce == 0 or time.ticks_diff(now, last_announce) > every:
+            last_announce = now     # also when it fails: an unreachable app is retried on the cadence, not every second
             announce()
             _log("announced, paired=%s" % paired)
         if last_fetch == 0 or time.ticks_diff(now, last_fetch) > STATE_EVERY_MS:
