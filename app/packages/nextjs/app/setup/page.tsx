@@ -140,6 +140,20 @@ const Setup: NextPage = () => {
                     {chip.dataLocked ? "locked" : "unlocked"}
                     {chip.slot !== undefined && ` · slot ${chip.slot}`}
                   </div>
+                  {chip.slots && chip.slots.length > 0 && (
+                    <div>
+                      key slots:{" "}
+                      {chip.slots.map(s => (
+                        <span key={s.slot} className={s.slot === chip.activeSlot ? "text-success" : ""}>
+                          {s.slot} {s.hasKey ? s.fingerprint : "empty"}
+                          {s.locked ? " locked" : ""}
+                          {s.slot === chip.activeSlot ? " active" : ""}
+                          {"  "}
+                        </span>
+                      ))}
+                      <span className="opacity-60">(X on the wallet opens the KEYS screen)</span>
+                    </div>
+                  )}
                   {chip.note && <div>{chip.note}</div>}
                 </div>
               )}

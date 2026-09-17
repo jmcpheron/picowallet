@@ -11,6 +11,7 @@ import lcd as L
 import net
 import eip712
 import signer as S
+import slots as SL
 import secrets
 
 APP = secrets.APP_URL
@@ -19,7 +20,8 @@ NAME = getattr(secrets, "DEVICE_NAME", "picowallet")
 d = None
 keys = None
 sig = None          # the signer backend
-state = "boot"      # boot | home | confirm | working | done | error
+state = "boot"      # boot | home | confirm | working | done | error | keys
+slots_ui = None     # the KEYS screen (slots.py): X on the home screen
 page = 0            # confirm: 0 = summary, 1 = details
 req = None          # request on screen
 info = {}           # last /api/state
@@ -105,7 +107,8 @@ def draw_home():
     # top-left: which chain. Test money and real money must never look alike.
     if chain:
         d.text("mainnet" if chain.get("id") == 1 else (chain.get("name", "?").lower()[:8]), 4, 4, L.GREEN if chain.get("id") == 1 else L.YELLOW)
-    # top-right: pairing dot
+    # top-right: the KEYS screen hint and the pairing dot
+    d.text("X keys", 170, 4, L.GREY)
     d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
     # balance, big
     if bal is None:
@@ -267,6 +270,8 @@ def draw():
         draw_home()
     elif state == "confirm":
         draw_confirm()
+    elif state == "keys":
+        slots_ui.draw()
     elif state == "working":
         draw_msg("SIGNING", L.BLUE)
     elif state == "done":
@@ -293,7 +298,12 @@ def tick(t):
                 net_work()
             finally:
                 start_timer()
-        for k in keys.pressed():
+        pressed = keys.pressed()
+        if state == "keys":
+            if slots_ui.tick(pressed, keys) == "home":
+                state = "home"; dirty = True
+            pressed = ()
+        for k in pressed:
             if state == "confirm":
                 if k == "A":
                     approve(True)
@@ -305,6 +315,9 @@ def tick(t):
                     page = 0; dirty = True
             elif state in ("done", "error") and k == "A":
                 state = "home"; dirty = True
+            elif state in ("home", "boot") and k in ("X", "press"):   # boot: no app yet, provisioning still works
+                slots_ui.open()
+                state = "keys"; dirty = True
         if state == "home" and (time.ticks_diff(msg_until, time.ticks_ms()) > 0 or _n % 100 == 0):
             dirty = True  # keep the status line fresh
         if dirty:
@@ -324,9 +337,10 @@ def hex32(n):
 def announce():
     global paired, qx, qy, last_announce
     if not qx:
-        x, y = sig.pubkey()
-        qx, qy = hex32(x), hex32(y)
-    body = {"name": NAME, "backend": sig.name, "chip": sig.status(), "qx": qx, "qy": qy}
+        read_key()   # a fresh chip announces its status without a key
+    body = {"name": NAME, "backend": sig.name, "chip": sig.status()}
+    if qx:
+        body["qx"], body["qy"] = qx, qy
     r = requests.post(APP + "/api/device", json=body, timeout=5)
     try:
         paired = bool(r.json().get("paired"))
@@ -481,7 +495,7 @@ def approve(yes):
 
 def net_work():
     global state, dirty, last_announce, last_fetch
-    if state in ("confirm", "working"):
+    if state in ("confirm", "working", "keys"):
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
@@ -513,13 +527,34 @@ def start_timer():
     timer = machine.Timer(period=50, mode=machine.Timer.PERIODIC, callback=tick)
 
 
+def read_key():
+    """qx/qy of the active slot, or empty on a fresh chip. The home screen says "no key" until then."""
+    global qx, qy
+    try:
+        x, y = sig.pubkey()
+        qx, qy = hex32(x), hex32(y)
+    except Exception as e:
+        qx = qy = ""
+        _log("no key in slot %s: %r" % (getattr(sig, "slot", 0), e))
+
+
+def key_changed():
+    """The KEYS screen switched or replaced the signing key: announce it again, from scratch."""
+    global paired, last_announce
+    read_key()
+    paired = False
+    last_announce = 0
+
+
 def start():
-    global d, keys, sig, dirty
+    global d, keys, sig, dirty, slots_ui
     d = L.LCD()
     keys = L.Keys()
     load_qr()
     draw()
     sig = S.load()
+    read_key()
+    slots_ui = SL.SlotsUI(d, sig, key_changed)
     dirty = True
     start_timer()
 

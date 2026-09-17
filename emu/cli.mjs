@@ -10,6 +10,7 @@
 //   tools/emu state              what is running, fps, frames, files
 //   tools/emu reset              reboot the device and re-run the main module
 //   tools/emu main MODULE        set which module boots by default
+//   tools/emu chip [fresh|ready|show]   the virtual ATECC608: blank part / config locked + key in slot 0 / state
 //   tools/emu headless ...       no browser: see emu/headless.mjs
 //   tools/emu serve              run the server in the foreground
 import { spawn } from "node:child_process";
@@ -100,6 +101,25 @@ try {
     }
     case "state": console.log(JSON.stringify(await send({ cmd: "state" }), null, 2)); break;
     case "reset": { const r = await send({ cmd: "reset" }); for (const l of r.lines || []) console.log(l); break; }
+    case "chip": {
+      const what = rest[0] || "show";
+      if (what === "fresh") {
+        await ensureServer();
+        await fetch(URL_ + "/ctl/chip", { method: "DELETE" });
+        const r = await send({ cmd: "reset" });
+        for (const l of r.lines || []) console.log(l);
+        console.log("chip: blank part, config zone unlocked");
+      } else if (what === "ready") {
+        const r = await send({ cmd: "exec", code: "import atecc_sim; print(atecc_sim.provision())" });
+        for (const l of r.lines || []) console.log(l);
+        const r2 = await send({ cmd: "reset" });
+        for (const l of r2.lines || []) console.log(l);
+      } else if (what === "show") {
+        const r = await send({ cmd: "exec", code: "import atecc_sim; print(atecc_sim.state())" });
+        for (const l of r.lines || []) console.log(l);
+      } else throw new Error("usage: tools/emu chip fresh|ready|show");
+      break;
+    }
     case "main": { await send({ cmd: "main", name: modName(rest[0] || "mock") }); console.log("main = " + modName(rest[0] || "mock")); break; }
     default:
       console.error("unknown command: " + cmd);

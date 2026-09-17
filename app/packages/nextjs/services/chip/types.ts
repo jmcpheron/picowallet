@@ -44,13 +44,27 @@ export type ExecuteRequest = RequestBase & {
 export type CancelRecoveryRequest = RequestBase & { kind: "cancelRecovery" };
 export type WalletRequest = TransferRequest | SetNameRequest | ExecuteRequest | CancelRecoveryRequest;
 
+/** One P-256 slot of the chip's slot table, as the wallet reports it on announce. */
+export type ChipSlot = {
+  slot: number;
+  kind: string;
+  hasKey: boolean;
+  locked: boolean;
+  genKey?: boolean;
+  lockable?: boolean;
+  fingerprint?: string;
+};
+
 export type ChipStatus = {
   serial?: string;
   revision?: string;
   configLocked?: boolean;
   dataLocked?: boolean;
   slot?: number;
+  activeSlot?: number;
+  fingerprint?: string;
   hasKey?: boolean;
+  slots?: ChipSlot[];
   note?: string;
 };
 

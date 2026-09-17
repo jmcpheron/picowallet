@@ -71,15 +71,23 @@ that should ship for good goes in `firmware/` and through `tools/push`.
   `random.getrandbits(n)`. `@micropython.viper` speeds up per-pixel loops on the board (runs as
   plain bytecode in the emulator, slower). Files: `open("x.bin","rb")`, `os.listdir()`.
 - Other firmware you can import: `mock` (fake wallet screens, `mock.goto("send")`),
-  `wallet` (the real wallet: talks to the app through `/app`, software signer here),
-  `eip712`, `keccak`, `p256`, `signer`. Do not import `atecc` (no chip in the emulator).
+  `wallet` (the real wallet: talks to the app through `/app`; `main` boots it), `slots` (the KEYS
+  screen), `eip712`, `keccak`, `p256`, `signer`, `atecc`.
+- The chip: a virtual ATECC608 answers at 0x60 on `machine.I2C`, speaking the real packet
+  protocol, so `atecc.py` and `signer.ChipSigner` run unchanged. It starts as a BLANK part (config
+  zone open, nothing can sign) and keeps its state across reboots (server: `emu/chip.json`;
+  headless: `--chip state.json`). `tools/emu chip ready` = config locked + key in slot 0,
+  `tools/emu chip fresh` = blank again, `tools/emu chip show` = lock state and which slots hold
+  keys. From Python: `import atecc_sim; atecc_sim.provision(); atecc_sim.wipe(); atecc_sim.state()`.
+  In the wallet, X on the home screen opens the KEYS screen (slot table, new key, locks).
 
 ## Emulator vs board
 
 Same: MicroPython version, framebuf, key names and pins, timers, SPI frame time, screen output
 (pixel exact). Different: CPU is much faster here (a loop that is smooth here may crawl on the
-Pico: keep per-frame Python work small), viper is not native, no I2C chip (`signer.load()` gives
-the software key), `network` is always connected, `requests` goes through the page to the app,
+Pico: keep per-frame Python work small), viper is not native, the ATECC608 is a model (GenKey,
+Sign, the config zone and locks; no OTP, MAC or encrypted transfers), the generated `secrets.py`
+sets `ALLOW_LOCK`/`ALLOW_GENKEY` True, `network` is always connected, `requests` goes through the page to the app,
 `machine.reset()` reboots the device, the flash is rebuilt from `firmware/` + `emu/sketches/` on
 every run (files a sketch writes vanish at the next run).
 
@@ -87,5 +95,5 @@ every run (files a sketch writes vanish at the next run).
 
 `emu/server.mjs` (page + control API + app proxy, port 4242), `emu/web/` (page, worker, 3D),
 `emu/core/runtime.mjs` (the device: pins, SPI display capture, timers), `emu/core/shims/*.py`
-(`machine`, `network`, `requests`, `socket`, `rp2`), `emu/headless.mjs`, `emu/cli.mjs`
+(`machine`, `network`, `requests`, `socket`, `rp2`, `atecc_sim` the virtual chip), `emu/headless.mjs`, `emu/cli.mjs`
 (`tools/emu`), `emu/sketches/` (yours), `emu/shots/` (screenshots, ignored by git).

@@ -13,6 +13,8 @@
 //   opts.onPwm(pin, frac) backlight and any other PWM
 //   opts.onPin(pin, v)    output pin writes (LED)
 //   opts.onReset()        machine.reset() was called: the host should rebuild the device
+//   opts.chip             { load() -> string|null, save(string) }: where the virtual ATECC608 keeps
+//                         its state between reboots (default: this device only)
 //   opts.heapsize         MicroPython heap in bytes (default ~ a Pico 2 W)
 
 export const KEY_ORDER = ["A", "B", "X", "Y", "up", "down", "left", "right", "press"];
@@ -21,7 +23,7 @@ export const KEY_PINS = { 15: "A", 17: "B", 19: "X", 21: "Y", 2: "up", 18: "down
 export const W = 240, H = 240, FRAME_BYTES = W * H * 2;
 export const DEFAULT_HEAP = 448 * 1024;
 
-const SHIMS = ["machine", "network", "requests", "socket", "rp2"];
+const SHIMS = ["machine", "network", "requests", "socket", "rp2", "atecc_sim"];
 
 export async function createDevice(opts) {
   const keys = opts.keys;
@@ -99,6 +101,8 @@ export async function createDevice(opts) {
   }
 
   // ---- the _emu bridge module ------------------------------------------------------------
+  let chipMem = null;
+  const chipStore = opts.chip || { load: () => chipMem, save: (s) => { chipMem = s; } };
   const irqs = new Map();
   let irqPoll = null;
   const bridge = {
@@ -155,6 +159,8 @@ export async function createDevice(opts) {
       return Array.from(b);
     },
     reset() { if (opts.onReset) setTimeout(() => opts.onReset(), 0); },
+    chip_load() { try { return chipStore.load() || null; } catch (e) { return null; } },
+    chip_save(s) { try { chipStore.save(s); } catch (e) { stdout("chip state not saved: " + (e.message || e)); } },
     frames() { return frames; },
   };
 
@@ -246,8 +252,9 @@ ENABLE_NETWORK_CONSOLE = False
 EXPECTED_CHAIN_ID = None
 EXPECTED_VAULT = None
 EXPECTED_TOKEN = None
-ALLOW_LOCK = False
-ALLOW_GENKEY = False
+# the chip on the emulator's bus is virtual, so the permanent actions are allowed here
+ALLOW_LOCK = True
+ALLOW_GENKEY = True
 `;
 }
 

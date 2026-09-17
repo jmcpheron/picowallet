@@ -12,6 +12,7 @@ ENABLE_NETWORK_CONSOLE = False
 EXPECTED_CHAIN_ID = None
 EXPECTED_VAULT = None
 EXPECTED_TOKEN = None
-# Provisioning a FRESH chip from the app's Setup page. Both are permanent; leave False otherwise.
-ALLOW_LOCK = False     # lock the config zone once (required before the chip will make a key)
-ALLOW_GENKEY = False   # make a new key in slot 0, replacing the old one
+# Provisioning a FRESH chip, from the app's Setup page or the wallet's own KEYS screen (X on the
+# home screen). All of it is permanent; leave both False on a wallet that holds value.
+ALLOW_LOCK = False     # lock the config zone (required before the chip will make a key), the data zone, or one slot
+ALLOW_GENKEY = False   # make a new key in a slot, replacing the one there

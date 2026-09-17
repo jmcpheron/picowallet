@@ -127,6 +127,41 @@ is normal; every chip in use is locked. Generate the final key before deploying 
 
 `reference/pi/README.md` shows the equivalent provisioning flow from a Raspberry Pi with real output.
 
+### Keys and slots, on the wallet itself
+
+Press **X** on the home screen to open the **KEYS** screen: the chip's slot table as the chip
+reports it, which slot signs, and the provisioning steps without a laptop. The joystick moves,
+A opens a slot, X opens the chip page, Y goes back. Every permanent action is a red screen that
+needs A held for 1.5 s, and still needs `ALLOW_LOCK` / `ALLOW_GENKEY` in `secrets.py`.
+
+How the slots work. The ATECC608 has 16 data slots. What each slot *is* (a P-256 private key, a
+public key, an AES key, plain data) and what it *may do* (sign digests handed in from outside, be
+regenerated with GenKey, be locked on its own) is a table in the 128-byte config zone. That zone is
+written once and locked forever, and the chip refuses GenKey and Sign until it is. With the
+reference table the firmware writes (`atecc.CONFIG`, Microchip's own):
+
+| slot | is | GenKey | external sign | lockable | note |
+|---|---|---|---|---|---|
+| 0 | P-256 private key | yes | yes | yes | the wallet key; every use counts on counter 0 |
+| 2 | P-256 private key | yes | yes | no | a second independent account |
+| 7 | P-256 private key | yes | yes | yes | also accepts an encrypted PrivWrite import |
+| 11, 14, 15 | P-256 public key | | | yes | |
+| 5, 10 | AES key | | | yes | |
+| rest | plain data | | | some | |
+
+So one chip is up to three independent signing keys with no seed phrase. The wallet remembers the
+active slot in `slot.txt`; switching slots re-announces the new key, and the app shows *paired*
+only for the key the vault was deployed with. The three locks, all permanent:
+
+- **config zone**: freezes the table above. Required. Every chip in use is config-locked.
+- **data zone**: no more clear-text writes to any slot. GenKey still works where the table allows.
+- **one slot**: the key in it can never be replaced. `KeyConfig.Lockable` decides which slots can.
+
+Try it without hardware: the emulator (`tools/emu`, below) has a virtual ATECC608 on its I2C bus
+that starts as a blank part. `tools/emu run main`, press X, X again for the chip page, WRITE + LOCK
+CONFIG, then NEW KEY in slot 0. `tools/emu chip ready` skips to a provisioned chip,
+`tools/emu chip fresh` goes back to a blank one.
+
 ## 6. Run the app
 
 `app/` is a Scaffold-ETH 2 project: the vault contract, a Next.js site, and the queue and relay as

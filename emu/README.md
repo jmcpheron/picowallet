@@ -12,6 +12,7 @@ tools/emu key A           # press a button (A B X Y up down left right press), k
 tools/emu shot            # emu/shots/latest.png
 tools/emu exec 'mock.goto("send")'
 tools/emu log             # console lines
+tools/emu chip ready      # the virtual ATECC608: config locked + key in slot 0 (fresh = blank part, show = state)
 tools/emu headless mock --wait 300 --key right --shot emu/shots/x.png    # no browser
 ```
 
@@ -36,8 +37,10 @@ http://localhost:4242/skill).
 What is modeled: pins (keys pull low when pressed), SPI display window commands, the SPI transfer
 time (24 MHz cap until `machine.freq(cpu, peri)` raises the peripheral clock, like rp2), PWM
 backlight, `Pin("LED")` (the base glows), `Timer` periodic/one-shot, `Pin.irq`, `machine.reset()`,
-a 448 KB heap. Not modeled: I2C (the ATECC608 is absent, the software signer is used), sockets,
-PIO, native/viper code generation (runs as bytecode), real timing of Python itself (wasm is much
-faster than the RP2350).
+a 448 KB heap, and a virtual ATECC608 on I2C at 0x60 (`core/shims/atecc_sim.py`: the packet
+protocol, config zone and its locks, the slot table, GenKey, Nonce + Sign, Random, Info; state in
+`emu/chip.json`, blank part until provisioned). Not modeled: the chip's OTP/data reads, MAC and
+encrypted transfers, sockets, PIO, native/viper code generation (runs as bytecode), real timing of
+Python itself (wasm is much faster than the RP2350).
 
 Needs node 18+ and `npm install` in `emu/` (done by `tools/emu` on first run). No build step.

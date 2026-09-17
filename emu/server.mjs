@@ -4,7 +4,7 @@
 // emulated firmware are same-origin.
 //   node emu/server.mjs [--port 4242] [--app http://localhost:3001] [--open]
 import http from "node:http";
-import { readFileSync, existsSync, statSync } from "node:fs";
+import { readFileSync, existsSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, extname, normalize } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,7 @@ const STATIC = [
   ["/stl/", join(ROOT, "case/zez0000")],
 ];
 
+const CHIP_FILE = join(EMU, "chip.json");   // the virtual ATECC608's state (gitignored)
 const clients = new Set();          // SSE responses (emulator pages)
 const pending = new Map();          // reply id -> { resolve, timer }
 let seq = 0;
@@ -122,6 +123,12 @@ async function control(req, res, url) {
     }
   }
   if (p === "state" && req.method === "GET") return json(res, 200, { ok: true, clients: clients.size, app: APP, port: PORT });
+  if (p === "chip" && req.method === "GET") {
+    if (!existsSync(CHIP_FILE)) { res.writeHead(204); return res.end(); }
+    res.writeHead(200, { "content-type": "application/json" }); return res.end(readFileSync(CHIP_FILE));
+  }
+  if (p === "chip" && req.method === "POST") { writeFileSync(CHIP_FILE, await body(req)); return json(res, 200, { ok: true }); }
+  if (p === "chip" && req.method === "DELETE") { if (existsSync(CHIP_FILE)) unlinkSync(CHIP_FILE); return json(res, 200, { ok: true }); }
   json(res, 404, { error: "unknown control route" });
 }
 

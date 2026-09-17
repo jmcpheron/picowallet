@@ -35,6 +35,12 @@ function xhr(method, url, body, headers, timeoutMs) {
   return { status: x.status, text: x.responseText, headers: hdrs };
 }
 
+// the virtual ATECC608's state lives on the server (emu/chip.json) so it survives reboots
+const chipStore = {
+  load() { const x = new XMLHttpRequest(); x.open("GET", "/ctl/chip", false); x.send(); return x.status === 200 ? x.responseText : null; },
+  save(s) { const x = new XMLHttpRequest(); x.open("POST", "/ctl/chip", false); x.setRequestHeader("content-type", "application/json"); x.send(s); },
+};
+
 onmessage = async (e) => {
   const m = e.data;
   try {
@@ -45,6 +51,7 @@ onmessage = async (e) => {
       dev = await createDevice({
         loadMicroPython, keys, files, shims: m.shims, appUrl: m.appUrl, heapsize: m.heapsize, mark,
         http: xhr,
+        chip: chipStore,
         onFrame,
         onStdout: (line) => postMessage({ type: "out", line }),
         onPwm: (pin, frac) => postMessage({ type: "pwm", pin, frac }),

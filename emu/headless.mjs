@@ -8,10 +8,11 @@
 //   --exec CODE          one REPL line
 //   --shot PATH.png      save the screen (2x) as PNG
 //   --app URL            wallet app for requests (default http://localhost:3001)
+//   --chip PATH.json     keep the virtual ATECC608's state in this file (default: blank chip, forgotten at exit)
 //   --heap BYTES         MicroPython heap (default 448 KB)
 //   --quiet              no Python stdout
 // Exit code 1 if the module raised during import.
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { loadMicroPython } from "@micropython/micropython-webassembly-pyscript";
@@ -20,14 +21,14 @@ import { readWorkspace, readShims } from "./core/workspace.mjs";
 import { encodePNG, scaleRGBA } from "./core/png.mjs";
 
 const argv = process.argv.slice(2);
-let mod = null; const steps = []; let app = "http://localhost:3001"; let heap; let quiet = false;
+let mod = null; const steps = []; let app = "http://localhost:3001"; let heap; let quiet = false; let chipFile = null;
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a.startsWith("--")) {
     const k = a.slice(2);
     if (k === "quiet") { quiet = true; continue; }
     const v = argv[++i];
-    if (k === "app") app = v; else if (k === "heap") heap = +v; else steps.push([k, v]);
+    if (k === "app") app = v; else if (k === "heap") heap = +v; else if (k === "chip") chipFile = v; else steps.push([k, v]);
   } else mod = a;
 }
 if (!mod) { console.error("usage: headless.mjs MODULE [--wait MS] [--key K[:MS]] [--exec CODE] [--shot out.png]"); process.exit(2); }
@@ -38,6 +39,7 @@ const dev = await createDevice({
   loadMicroPython, keys, heapsize: heap,
   files: readWorkspace(), shims: readShims(), appUrl: app,
   http: curl,
+  chip: chipFile ? { load: () => (existsSync(chipFile) ? readFileSync(chipFile, "utf8") : null), save: (s) => writeFileSync(chipFile, s) } : undefined,
   onStdout: (l) => { if (!quiet) console.log(l); if (/^Traceback/.test(l)) failed = true; },
   onReset: () => { console.log("[machine.reset() called]"); },
 });

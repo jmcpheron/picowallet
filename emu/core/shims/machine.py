@@ -90,19 +90,44 @@ class SPI:
 
 
 class I2C:
-    """No chip on the bus in the emulator: every transfer fails with ENODEV, so
-    signer.load() falls back to the software key, same as a bare Pico."""
+    """One device on the bus: a virtual ATECC608 at 0x60 (atecc_sim.py), so firmware/atecc.py and
+    signer.ChipSigner run here unchanged. A write to address 0 is the wake token. Every other
+    address fails with ENODEV, like an empty bus."""
 
     def __init__(self, id=0, **kw):
         self.id = id
 
+    def _chip(self):
+        import atecc_sim
+        return atecc_sim.chip()
+
     def scan(self):
-        return []
+        return [0x60]
+
+    def writeto(self, addr, buf, stop=True):
+        if addr == 0:
+            self._chip().wake_token()
+            return len(buf)
+        if addr != 0x60:
+            raise OSError(19, "ENODEV: no I2C device at 0x%02x" % addr)
+        self._chip().write(bytes(buf))
+        return len(buf)
+
+    def readfrom(self, addr, n, stop=True):
+        if addr != 0x60:
+            raise OSError(19, "ENODEV: no I2C device at 0x%02x" % addr)
+        return self._chip().read(n)
+
+    def readfrom_into(self, addr, buf, stop=True):
+        buf[:] = self.readfrom(addr, len(buf))
+
+    def writevto(self, addr, vec, stop=True):
+        return self.writeto(addr, b"".join(bytes(v) for v in vec))
 
     def _fail(self, *a, **k):
-        raise OSError(19, "ENODEV: no I2C device in the emulator")
+        raise OSError(19, "ENODEV: memory-addressed transfers are not modeled")
 
-    writeto = readfrom = readfrom_into = writevto = readfrom_mem = writeto_mem = _fail
+    readfrom_mem = writeto_mem = readfrom_mem_into = _fail
 
 
 SoftI2C = I2C
