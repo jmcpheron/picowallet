@@ -130,7 +130,7 @@ def draw_home():
         d.fill_rect(94, 6, max(1, 10 * pw["percent"] // 100), 4, L.RED if pw["low"] else L.GREEN)
         d.text("%.1fV" % pw["vbat"], 112, 4, L.RED if pw["low"] else L.GREY)
     # top-right: the KEYS screen hint and the pairing dot
-    d.text("X keys", 170, 4, L.GREY)
+    d.text("X map", 178, 4, L.GREY)
     d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
     # top-centre: which key. The chip is the point; a software key must never pass unnoticed.
     if sig and sig.name != "atecc608":
@@ -247,7 +247,8 @@ def draw_status():
     else:
         hint = ()
     for i, line in enumerate(hint):
-        d.center_text(line, 192 + 12 * i, L.GREY)
+        d.center_text(line, 180 + 12 * i, L.GREY)
+    d.center_text("X chip map    B learn", 208, L.GREY)
 
 
 def tri_right(x, y, h, c):
@@ -435,8 +436,11 @@ def tick(t):
                     page = 0; dirty = True
             elif state in ("done", "error") and k == "A":
                 state = "home"; dirty = True
-            elif state in ("home", "boot") and k in ("X", "press"):   # boot: no app yet, provisioning still works
-                slots_ui.open()
+            elif state in ("home", "boot") and k in ("X", "press"):   # boot: no app yet, the chip is explorable anyway
+                slots_ui.open("zones")
+                state = "keys"; dirty = True
+            elif state in ("home", "boot") and k == "B":
+                slots_ui.open("learn")
                 state = "keys"; dirty = True
         if splash_until:
             if time.ticks_diff(splash_until, time.ticks_ms()) > 0:
@@ -515,7 +519,7 @@ def run_commands():
                 global qx, qy
                 qx, qy = res["qx"], res["qy"]
             elif ctype == "lock-config":
-                res = sig.lock_config()
+                res = sig.provision()
             else:
                 raise Exception("unknown command " + ctype)
             requests.post(APP + "/api/commands/%s/result" % cid, json={"ok": True, "result": res}, timeout=5).close()

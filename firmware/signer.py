@@ -7,13 +7,17 @@
 #   use(slot)                        make a slot the active signer (persisted in slot.txt)
 #   lock_config() / lock_data() / lock_slot(slot)      permanent, gated by secrets.ALLOW_LOCK
 #   status() -> dict                 what the app sees on announce
-#   allowed(what) -> bool            "genkey" or "lock": may this backend do it right now (secrets.py flags)
+#   allowed(what) -> bool            "genkey" or "lock": may it happen right now (secrets.py flag AND the wallet is armed)
+#   gate(what) -> str                "" when allowed, else why not ("not armed", "ALLOW_LOCK is False")
+#   write_config() / restore_snapshot()   REVERSIBLE while the config zone is open; snapshot() the original bytes
+#   provision()                      write the wallet config and lock it (the app's lock-config command)
 #   config() -> bytes                the 128 config bytes (the software signer fakes them)
 #   random() -> bytes                32 bytes from the chip's RNG, a harmless "is it alive" test
 #   name
 # SoftSigner: P-256 keys in files on the Pico's flash, one per slot. Only until the ATECC608 is wired.
 # ChipSigner: the ATECC608 over I2C. The keys never leave the chip.
 import os
+import time
 import p256
 
 KEY_FILE = "key.bin"        # slot 0 of the software signer, the file older firmware used
@@ -33,12 +37,57 @@ def _write_slot(n):
         f.write(str(n))
 
 
-def _allowed(flag):
+# ARM: permanent actions also need someone at the device. Hold B and Y together for 3 s on the
+# wallet (chipmap.py) and it is armed for a minute; every red action, including the ones the app
+# can request over WiFi, is refused until then. This lives here, not on the chip: it is the wallet's
+# own safety catch, the chip knows nothing about it.
+ARM_SECONDS = 60
+_armed_until = None
+
+
+def arm(seconds=ARM_SECONDS):
+    global _armed_until
+    _armed_until = time.ticks_add(time.ticks_ms(), seconds * 1000)
+
+
+def disarm():
+    global _armed_until
+    _armed_until = None
+
+
+def armed():
+    """Seconds left on the arm, 0 when not armed."""
+    if _armed_until is None:
+        return 0
+    left = time.ticks_diff(_armed_until, time.ticks_ms())
+    return (left + 999) // 1000 if left > 0 else 0
+
+
+def flag(name):
+    """A secrets.py flag; False when secrets.py is missing."""
     try:
         import secrets
     except ImportError:
         return False        # no secrets.py on the board: every permanent action is off
-    return getattr(secrets, flag, False)
+    return bool(getattr(secrets, name, False))
+
+
+def gate(what):
+    """Why a permanent action may not run now: "" when it may."""
+    name = "ALLOW_GENKEY" if what == "genkey" else "ALLOW_LOCK"
+    if not flag(name):
+        return "%s is False on the board" % name
+    if not armed():
+        return "not armed: hold B+Y 3 s"
+    return ""
+
+
+def _allowed(name):
+    return flag(name) and armed() > 0
+
+
+def _refused(what):
+    return "%s refused: %s" % (what, gate(what))
 
 
 def _fp(x):
@@ -124,9 +173,24 @@ class SoftSigner:
     def allowed(self, what):
         return True
 
+    def gate(self, what):
+        return ""
+
     def config(self):
         from atecc import CONFIG
         return CONFIG
+
+    def snapshot(self):
+        return None
+
+    def write_config(self):
+        return 0
+
+    def restore_snapshot(self):
+        return 0
+
+    def provision(self):
+        return "software key: nothing to lock"
 
     def random(self):
         return os.urandom(32)
@@ -153,6 +217,12 @@ class ChipSigner:
         self.slot = _read_slot()
         self._pub = {}
         self._slots = None      # cached table; every key op invalidates it
+        self._serial = None
+
+    def serial(self):
+        if self._serial is None:
+            self._serial = "".join("%02x" % b for b in self.chip.serial())
+        return self._serial
 
     def pubkey(self, slot=None):
         slot = self.slot if slot is None else slot
@@ -172,7 +242,7 @@ class ChipSigner:
         to the old key can never be spent again."""
         slot = self.slot if slot is None else slot
         if not _allowed("ALLOW_GENKEY"):
-            raise Exception("genkey refused: set ALLOW_GENKEY = True in secrets.py on the Pico first")
+            raise Exception(_refused("genkey"))
         self._slots = None
         self._pub.pop(slot, None)
         self._pub[slot] = self.chip.genkey_new(slot)
@@ -188,31 +258,75 @@ class ChipSigner:
             self._slots = self.chip.slots()
         return self._slots
 
-    def lock_config(self):
-        """Only when secrets.ALLOW_LOCK is True. Writes the reference config, then locks it. Permanent."""
-        if not _allowed("ALLOW_LOCK"):
-            raise Exception("lock refused: set ALLOW_LOCK = True in secrets.py on the Pico first")
+    # --- the config zone: reversible while open, then sealed ---------------
+    def snapshot_path(self):
+        return "snapshot-%s.bin" % self.serial()
+
+    def snapshot(self):
+        """This chip's config bytes as this wallet first saw them, or None before the first write."""
+        p = self.snapshot_path()
+        return open(p, "rb").read() if p in os.listdir() else None
+
+    def save_snapshot(self):
+        """Keep the original 128 bytes once, before anything is written. Never overwritten."""
+        p = self.snapshot_path()
+        if p in os.listdir():
+            return False
+        with open(p, "wb") as f:
+            f.write(self.chip.read_config_all())
+        return True
+
+    def write_config(self):
+        """REVERSIBLE while the config zone is open: write the wallet's slot table (atecc.CONFIG) and
+        read it back, without locking. The chip's original bytes are snapshotted first."""
+        self.save_snapshot()
         self._slots = None
-        self.chip.write_config()
+        return self.chip.write_config()
+
+    def restore_snapshot(self):
+        """REVERSIBLE: put the snapshot's bytes back on the chip (the config zone must still be open)."""
+        snap = self.snapshot()
+        if snap is None:
+            raise Exception("no snapshot saved for this chip yet")
+        self._slots = None
+        return self.chip.write_config(snap)
+
+    def lock_config(self):
+        """PERMANENT. Locks whatever table is on the chip now. Needs ALLOW_LOCK and the wallet armed."""
+        if not _allowed("ALLOW_LOCK"):
+            raise Exception(_refused("lock"))
+        self._slots = None
         self.chip.lock_config()
         return "config zone locked"
 
+    def provision(self):
+        """The app's lock-config command: write the wallet config, then lock it. PERMANENT."""
+        if not _allowed("ALLOW_LOCK"):
+            raise Exception(_refused("lock"))
+        self.write_config()
+        self.chip.lock_config()
+        self._slots = None
+        return "config zone written and locked"
+
     def lock_data(self):
         if not _allowed("ALLOW_LOCK"):
-            raise Exception("lock refused: set ALLOW_LOCK = True in secrets.py on the Pico first")
+            raise Exception(_refused("lock"))
         self._slots = None
         self.chip.lock_data()
         return "data zone locked"
 
     def lock_slot(self, slot):
         if not _allowed("ALLOW_LOCK"):
-            raise Exception("lock refused: set ALLOW_LOCK = True in secrets.py on the Pico first")
+            raise Exception(_refused("lock"))
         self._slots = None
         self.chip.lock_slot(slot)
         return "slot %d locked" % slot
 
     def allowed(self, what):
         return _allowed("ALLOW_GENKEY" if what == "genkey" else "ALLOW_LOCK")
+
+    def gate(self, what):
+        return gate(what)
 
     def config(self):
         return self.chip.read_config_all()
@@ -222,7 +336,8 @@ class ChipSigner:
 
     def status(self):
         st = self.chip.status(self.slot)
-        st["allowLock"], st["allowGenkey"] = self.allowed("lock"), self.allowed("genkey")
+        st["allowLock"], st["allowGenkey"] = flag("ALLOW_LOCK"), flag("ALLOW_GENKEY")
+        st["armed"] = armed()
         st["activeSlot"] = self.slot
         if st.get("hasKey"):
             st["fingerprint"] = _fp(self.pubkey()[0])

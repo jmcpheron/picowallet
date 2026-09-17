@@ -130,10 +130,21 @@ is normal; every chip in use is locked. Generate the final key before deploying 
 
 ### Keys and slots, on the wallet itself
 
-Press **X** on the home screen to open the **KEYS** screen: the chip's slot table as the chip
-reports it, which slot signs, and the provisioning steps without a laptop. The joystick moves,
-A opens a slot, X opens the chip page, Y goes back. Every permanent action is a red screen that
-needs A held for 1.5 s, and still needs `ALLOW_LOCK` / `ALLOW_GENKEY` in `secrets.py`.
+Press **X** on the home screen for the **CHIP MAP**: the chip as a place you can walk through.
+CONFIG (128 bytes of rules), DATA (16 slots of 36, 416 or 72 bytes), OTP (64 write-once bytes),
+COUNTERS (two numbers that only go up) and the LAB, where each question is one real command
+("WHO ARE YOU?", "ARE YOU HEALTHY?", "MAKE RANDOMNESS") with the answer in words, the bytes, a
+"why that's weird" layer and the raw command underneath. The header always says where you are
+(`CHIP > DATA > SLOT 3`) and whether the wallet is `SAFE` or `ARMED`. **B** opens **LEARN**, five
+short chapters that lead into those screens. A refusal from the chip is shown as a lesson: the
+reason first ("the CONFIG zone is still open, so the DATA zone is hidden"), the status byte second.
+
+Every action is one of three classes, said by colour, a glyph and words: `o SAFE TO EXPLORE`
+(changes nothing), `~ REVERSIBLE` (can be restored: writing the config table while the zone is
+still open, after the chip's original bytes are saved as a snapshot, with a diff of what changes
+shown first), `! PERMANENT` (cannot be undone). A permanent action needs three things: the
+`ALLOW_LOCK` / `ALLOW_GENKEY` flag in `secrets.py` on the board, the wallet **armed** (hold B and Y
+together for 3 s; good for 60 s, shown in the header), and A held for 3 s on the red screen.
 
 How the slots work. The ATECC608 has 16 data slots. What each slot *is* (a P-256 private key, a
 public key, an AES key, plain data) and what it *may do* (sign digests handed in from outside, be
@@ -159,9 +170,10 @@ only for the key the vault was deployed with. The three locks, all permanent:
 - **one slot**: the key in it can never be replaced. `KeyConfig.Lockable` decides which slots can.
 
 Try it without hardware: the emulator (`tools/emu`, below) has a virtual ATECC608 on its I2C bus
-that starts as a blank part. `tools/emu run main`, press X, X again for the chip page, WRITE + LOCK
-CONFIG, then NEW KEY in slot 0. `tools/emu chip ready` skips to a provisioned chip,
-`tools/emu chip fresh` goes back to a blank one.
+that starts as a fresh part with the factory table a real Adafruit breakout ships with.
+`tools/emu run main`, press X for the map, CONFIG, WRITE WALLET CONFIG (a reversible change),
+then arm the wallet (hold B and Y) and LOCK CONFIG FOREVER, then DATA, slot 0, NEW KEY.
+`tools/emu chip ready` skips to a provisioned chip, `tools/emu chip fresh` goes back to a fresh one.
 
 ## 6. Run the app
 
@@ -214,6 +226,10 @@ also has **Cancel on Pico**. Monitor `RecoveryStarted` events. See `SECURITY.md`
 **Boot:** a chip icon whose legs light up while the board comes up, and a checklist that fills in:
 screen, wifi (joining, then the IP), chip (part, address, and whether it is new, empty or holds a
 key), app.
+
+**Chip map and LEARN:** X and B from the home screen, described under "Keys and slots" above. The
+chip's own refusals, the fixed Random pattern before the lock, and the reversible config write are
+all part of the tour; nothing permanent happens without the three gates.
 
 **Home:** balance in dollars, a QR of the vault to deposit into, chain label top-left so test money
 and real money never look alike, pairing dot top-right, a warning line along the bottom (relay

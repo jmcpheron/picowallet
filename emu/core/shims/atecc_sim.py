@@ -2,11 +2,14 @@
 # (wake token, 0x03 command packets with CRC-16, count+payload+CRC responses) so firmware/atecc.py
 # runs here unchanged. Models what a wallet touches: the config zone and its locks, the slot table
 # (SlotConfig / KeyConfig), GenKey, Nonce pass-through + Sign, Random, Info, per-slot locks.
-# Not modeled: OTP, data-zone reads/writes, MAC/encrypted anything, counters, the watchdog.
+# Also answered, read-only: Info KeyValid/State, SelfTest (all pass), SHA-256, Counter reads, and
+# Read of the OTP and data zones once the config zone is locked (zeros; writes there are not
+# modeled). Not modeled: MAC/encrypted anything, the watchdog, counter increments.
 #
-# A fresh emulator has a BLANK chip: config zone unlocked, no slot typed as a key, so nothing can
-# sign until the config is written and locked, like a chip out of the tube. The state persists
-# across reboots through the host (server: emu/chip.json). wipe() / provision() reset it.
+# A fresh emulator answers like a real fresh part: the factory config of an Adafruit 4314 breakout
+# (UPSTREAM.md section 3: slots 0-2 already typed P-256, GenKey allowed), config zone unlocked, and
+# Random returning the datasheet's fixed pattern until the lock. The state persists across reboots
+# through the host (server: emu/chip.json). wipe() / provision() reset it.
 import json
 import _emu
 
@@ -14,14 +17,24 @@ ADDR = 0x60
 WAKE = b"\x04\x11\x33\x43"
 STATUS_OK, STATUS_PARSE, STATUS_EXEC, STATUS_CRC = 0x00, 0x03, 0x0F, 0xFF
 OP_READ, OP_NONCE, OP_GENKEY, OP_SIGN, OP_RANDOM, OP_INFO, OP_WRITE, OP_LOCK = 0x02, 0x16, 0x40, 0x41, 0x1B, 0x30, 0x12, 0x17
+OP_COUNTER, OP_SHA, OP_SELFTEST = 0x24, 0x47, 0x77
+SLOT_BYTES = (36,) * 8 + (416,) + (72,) * 7
 
-# what a blank part answers: serial (bytes 0-3, 8-12), revision 00006002 (608A), I2C address 0xC0
-# at byte 16, lock bytes 86/87 = 0x55 (unlocked), SlotLocked = 0xFFFF (none). Slot table all zero.
-FRESH = bytearray(128)
-FRESH[0:16] = bytes([0x01, 0x23, 0xE1, 0x00, 0x00, 0x00, 0x60, 0x02, 0xE1, 0xE1, 0xE1, 0xE1, 0xEE, 0x01, 0x01, 0x00])
-FRESH[16] = 0xC0
-FRESH[86] = FRESH[87] = 0x55
-FRESH[88] = FRESH[89] = 0xFF
+# what a fresh part answers: the serial (bytes 0-3, 8-12) and revision 00006002 (608A) of the
+# virtual chip, then byte for byte the factory table read off a real Adafruit breakout on
+# 2026-09-16: I2C address 0xC0, SlotConfig 2083 2087 208f for slots 0-2, lock bytes 86/87 = 0x55,
+# SlotLocked = 0xFFFF, KeyConfig 0033 for slots 0-2 (P-256 private, GenKey allowed).
+FRESH = bytearray(bytes([
+    0x01, 0x23, 0xE1, 0x00, 0x00, 0x00, 0x60, 0x02, 0xE1, 0xE1, 0xE1, 0xE1, 0xEE, 0xC1, 0x55, 0x00,
+    0xC0, 0x00, 0x00, 0x00, 0x83, 0x20, 0x87, 0x20, 0x8F, 0x20, 0xC4, 0x8F, 0x8F, 0x8F, 0x8F, 0x8F,
+    0x9F, 0x8F, 0xAF, 0x8F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xAF, 0x8F, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x55, 0x55, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x33, 0x00, 0x33, 0x00, 0x33, 0x00, 0x1C, 0x00, 0x1C, 0x00, 0x1C, 0x00, 0x1C, 0x00, 0x1C, 0x00,
+    0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x1C, 0x00,
+]))
+FIXED_RANDOM = bytes([0xFF, 0xFF, 0x00, 0x00]) * 8     # what an unlocked chip answers to Random
 
 
 def crc16(data):
@@ -40,6 +53,10 @@ class Chip:
     def __init__(self):
         self.cfg = bytearray(FRESH)
         self.keys = {}          # slot -> private scalar
+        self.counters = [0, 0]
+        self.otp = bytearray(64)
+        self.data = {}          # slot -> bytearray, on first read
+        self.sha = None
         self.awake = False
         self.tempkey = None
         self.resp = b""
@@ -57,11 +74,13 @@ class Chip:
             st = json.loads(raw)
             self.cfg = bytearray(bytes.fromhex(st["config"]))
             self.keys = {int(k): int(v, 16) for k, v in st.get("keys", {}).items()}
+            self.counters = list(st.get("counters", [0, 0]))
         except Exception as e:
             print("atecc_sim: bad saved state (%s), starting blank" % e)
 
     def save(self):
-        st = {"config": "".join("%02x" % b for b in self.cfg), "keys": {str(k): "%064x" % v for k, v in self.keys.items()}}
+        st = {"config": "".join("%02x" % b for b in self.cfg), "keys": {str(k): "%064x" % v for k, v in self.keys.items()},
+              "counters": self.counters}
         try:
             _emu.chip_save(json.dumps(st))
         except Exception as e:
@@ -136,12 +155,50 @@ class Chip:
     # --- commands ----------------------------------------------------------------------------
     def execute(self, opcode, p1, p2, data):
         if opcode == OP_INFO:
-            return self._data(bytes(self.cfg[4:8]))
+            mode = p1 & 0x0F
+            if mode == 0:
+                return self._data(bytes(self.cfg[4:8]))
+            if mode == 1:       # KeyValid: byte 0 is 1 when the slot holds a usable key
+                return self._data(bytes([1 if (p2 & 0xF) in self.keys and self.config_locked() else 0, 0, 0, 0]))
+            if mode == 2:       # State: bit 7 of byte 0 = TempKey valid (the rest is not modeled)
+                return self._data(bytes([0x80 if self.tempkey else 0x00, 0, 0, 0]))
+            if mode == 3:       # GPIO
+                return self._data(bytes(4))
+            raise _Fail(STATUS_PARSE)
         if opcode == OP_RANDOM:
+            if not self.config_locked():
+                return self._data(FIXED_RANDOM)    # datasheet: a fixed pattern until the config lock
             return self._data(bytes(_emu.random(32)))
+        if opcode == OP_SELFTEST:
+            return self._data(b"\x00")             # every test passes
+        if opcode == OP_SHA:
+            return self.sha_cmd(p1 & 0x07, p2, data)
+        if opcode == OP_COUNTER:
+            if p2 > 1:
+                raise _Fail(STATUS_PARSE)
+            if p1 & 1:
+                self.counters[p2] += 1
+                self.save()
+            return self._data(self.counters[p2].to_bytes(4, "little"))
         if opcode == OP_READ:
-            if p1 & 3 != 0:
-                raise _Fail(STATUS_EXEC)      # only the config zone is modeled
+            zone = p1 & 3
+            if zone == 3:
+                raise _Fail(STATUS_PARSE)
+            if zone != 0 and not self.config_locked():
+                raise _Fail(STATUS_EXEC)      # data and OTP are hidden until the config zone is locked
+            if zone == 1:
+                block = p2 >> 3
+                if block > 1 or not p1 & 0x80:
+                    raise _Fail(STATUS_PARSE)
+                return self._data(bytes(self.otp[block * 32:block * 32 + 32]))
+            if zone == 2:
+                slot, block = (p2 >> 3) & 0xF, p2 >> 8
+                if block * 32 + 32 > SLOT_BYTES[slot] or not p1 & 0x80:
+                    raise _Fail(STATUS_PARSE)
+                if self.slot_cfg(slot) & 0x80:
+                    raise _Fail(STATUS_EXEC)  # IsSecret: never readable in clear
+                buf = self.data.setdefault(slot, bytearray(SLOT_BYTES[slot]))
+                return self._data(bytes(buf[block * 32:block * 32 + 32]))
             if p1 & 0x80:
                 block = p2 >> 3
                 if block > 3:
@@ -169,6 +226,29 @@ class Chip:
             return self._status(STATUS_OK)
         if opcode == OP_SIGN:
             return self.sign(p1, p2)
+        raise _Fail(STATUS_PARSE)
+
+    def sha_cmd(self, mode, length, data):
+        try:
+            import hashlib
+        except ImportError:
+            raise _Fail(STATUS_PARSE)
+        if mode == 0:
+            self.sha = hashlib.sha256()
+            return self._status(STATUS_OK)
+        if self.sha is None:
+            raise _Fail(STATUS_EXEC)
+        if mode == 1:
+            if len(data) != 64:
+                raise _Fail(STATUS_PARSE)
+            self.sha.update(data)
+            return self._status(STATUS_OK)
+        if mode == 2:
+            if len(data) != length or length > 63:
+                raise _Fail(STATUS_PARSE)
+            self.sha.update(data)
+            out, self.sha = self.sha.digest(), None
+            return self._data(out)
         raise _Fail(STATUS_PARSE)
 
     def lock(self, mode):
@@ -244,12 +324,13 @@ def chip():
 
 # --- knobs for tools/emu chip ... and sketches -------------------------------------------
 def wipe():
-    """Back to a blank part: config unlocked and empty, no keys. Reboot after."""
+    """Back to a fresh part: the factory table, config unlocked, no keys. Reboot after."""
     c = chip()
     c.cfg = bytearray(FRESH)
     c.keys = {}
+    c.counters = [0, 0]
     c.save()
-    return "chip wiped: blank, config zone unlocked"
+    return "chip wiped: fresh, config zone unlocked"
 
 
 def provision(slot=0):

@@ -1,21 +1,27 @@
-# The KEYS screen: the chip's slot table on the wallet itself. Pick which slot signs, make a new
-# key in a slot, read a slot's public key, lock the config zone / data zone / one slot. Every
-# permanent action needs A held for a while on a red screen, and the ALLOW_* flags in secrets.py.
+# The chip UI's state machine, and the DATA screens: the slot list, one slot, its public key, the
+# red PERMANENT confirm, WORKING and result screens. The map, config page, lab and tutorial live in
+# chipmap.py and learn.py and draw through this object. X on the home screen opens the map, B the
+# tutorial; Y walks back up the trail (ui.stack) and out to home.
 #
-# Used by wallet.py: ui = SlotsUI(d, sig, on_change); ui.open(); each tick ui.tick(pressed, keys)
-# returns "home" when the user leaves. Runs on the wallet's 50 ms timer, so nothing here may take
-# long except the chip operations themselves (GenKey ~120 ms on the ATECC, ~1 s in software).
+# Every action has a class shown by colour, glyph and words (chipmap.CLASS). A permanent action needs
+# the secrets.py flag, the wallet ARMED (hold B+Y 3 s), and A held 3 s here on the red screen.
+# Runs on the wallet's 50 ms timer: nothing here may take long except the chip operations.
 import time
 import lcd as L
+import signer as S
+import atecc
+import chipmap as C
+import learn as LN
 
-HOLD_MS = 1500          # hold A this long to confirm a permanent action
-ROW_Y, ROW_H = 18, 13   # 16 slot rows fit between the header and the footer
-DIM = L.color(90, 90, 100)
-KIND_COLOR = {"P256": L.WHITE, "PUB": L.GREY, "AES": L.GREY, "DATA": DIM, "?": DIM}
-KIND_LABEL = {"?": "-"}     # a blank chip types nothing yet
-
+HOLD_PERM = 3000        # A held this long on the red screen
+HOLD_REV = 1500         # and this long on the yellow one
+ROW_Y, ROW_H = 25, 12   # 16 slot rows between the header and the footer
+KIND_COLOR = {"P256": L.WHITE, "PUB": L.GREY, "AES": L.GREY, "DATA": C.DIM, "?": C.DIM}
+KIND_LABEL = {"?": "-"}
 DESC = {"P256": "P-256 private key", "PUB": "P-256 public key", "AES": "AES-128 key", "DATA": "plain data",
-        "?": "untyped: the config zone is open"}
+        "?": "untyped by the rules"}
+TRANSIENT = ("busy", "confirm", "confirm_write", "result", "refused", "labres")
+PARTS = {"00006002": "ATECC608A", "00006003": "ATECC608B", "00005000": "ATECC508A"}
 
 
 def fp(s):
@@ -23,82 +29,117 @@ def fp(s):
 
 
 class SlotsUI:
+    HOLD_REV = HOLD_REV
+
     def __init__(self, d, sig, on_change):
         self.d = d
         self.sig = sig
-        self.on_change = on_change      # called after anything that may change the active key
-        self.view = "list"
-        self.cur = 0            # cursor on the list
-        self.act = 0            # cursor on an action menu
+        self.on_change = on_change      # called after anything that may change the active key or the table
+        self.view = "zones"
+        self.stack = []                 # (view, act, scroll) trail for Y
+        self.ret = "zones"              # where a transient screen returns to
+        self.cur = 0                    # cursor on the slot list
+        self.act = 0                    # cursor on a menu
+        self.act2 = 0                   # cursor on a result's sub-menu
+        self.scroll = 0
         self.table = []
         self.st = {}
-        self.action = None      # ("genkey", slot) etc while confirming
-        self.hold = None        # ticks_ms when A went down on the confirm screen
+        self.cfgb = None                # the 128 config bytes as last read
+        self.snap = None                # the saved snapshot, if any
+        self.action = None              # (kind, slot) while confirming
+        self.hold = None                # ticks_ms when A went down on a confirm screen
+        self.armhold = None             # ticks_ms when B+Y went down
+        self.pend = {}                  # B/Y presses waiting for release (chipmap.arm_tick)
+        self.pair = False
         self.msg = ""
         self.ok = True
-        self.back = "list"      # where a result screen returns to
-        self.cfg = None         # config zone bytes for the RAW CONFIG page
+        self.checks = None              # ((label, ok), ...) on a result screen
+        self.sealed = False
+        self.lab = None
+        self.ref = None
+        self.card = None
+        self.done = set()
+        self.diff = None
+        self.difftitle = ""
+        self.zone = None
+        self.view_from = ""
+        self.n = 0
+        self.leave = False
         self.dirty = True
 
-    # ----------------------------------------------------------------------------- data
-    def open(self):
-        self.view = "list"
+    # ----------------------------------------------------------------------------- navigation
+    def go(self, view, act=0):
+        self.stack.append((self.view, self.act, self.scroll))
+        self.view, self.act, self.scroll, self.dirty = view, act, 0, True
+
+    def back(self):
+        if self.stack:
+            self.view, self.act, self.scroll = self.stack.pop()
+        else:
+            self.leave = True
+        self.dirty = True
+
+    def open(self, view="zones"):
+        self.stack = []
+        self.view, self.act, self.scroll = view, 0, 0
         self.cur = getattr(self.sig, "slot", 0)
         self.refresh()
 
+    def busy(self, msg):
+        self.view, self.msg = "busy", msg
+        self.draw()
+
+    def show_result(self, msg, ok):
+        if self.view not in TRANSIENT:
+            self.ret = self.view
+        self.msg, self.ok, self.view, self.dirty = msg[:220], ok, "result", True
+
+    # ----------------------------------------------------------------------------- data
     def refresh(self):
         try:
             self.table = self.sig.slots()
         except Exception as e:
             self.table = []
-            self.msg, self.ok, self.view = "slot table: %r" % e, False, "result"
+            self.show_result("slot table: %r" % e, False)
         try:
             self.st = self.sig.status()
         except Exception as e:
             self.st = {"note": str(e)}
+        try:
+            self.cfgb = self.sig.config()
+        except Exception:
+            self.cfgb = None
+        try:
+            self.snap = self.sig.snapshot()
+        except Exception:
+            self.snap = None
         self.dirty = True
 
     def row(self, n):
         for s in self.table:
             if s["slot"] == n:
                 return s
-        return {"slot": n, "kind": "?", "locked": False, "lockable": False, "genKey": False, "extSign": False, "pubInfo": False, "privWrite": False}
+        return {"slot": n, "kind": "?", "bytes": atecc.SLOT_BYTES[n], "locked": False, "lockable": False, "genKey": False,
+                "extSign": False, "pubInfo": False, "privWrite": False, "clearWrite": "?", "encRead": False, "isSecret": False}
 
-    def may(self, what):
-        try:
-            return self.sig.allowed(what)
-        except Exception:
-            return False
-
-    def gated(self, kind, label, what):
-        """A permanent action's menu label: says up front when secrets.py forbids it."""
-        return (kind, label if self.may(what) else label + " (off)")
+    def part(self):
+        rev = self.st.get("revision", "")
+        return PARTS.get(rev, self.sig.name if not rev else "ATECC?")
 
     def actions(self, s):
-        """What the cursor can do to this slot, given what the config zone allows."""
+        """What the cursor can do to this slot, with its class and why it is off."""
         out = []
         active = s["slot"] == self.sig.slot
         cfg_locked = self.st.get("configLocked", False)
         if s["kind"] == "P256":
             if s.get("hasKey") and not active:
-                out.append(("use", "USE THIS KEY"))
+                out.append(("use", "USE THIS KEY", "safe", ""))
             if s["genKey"] and not s["locked"]:
-                out.append(self.gated("genkey", "NEW KEY" if cfg_locked else "NEW KEY (lock config first)", "genkey"))
+                out.append(("genkey", "NEW KEY", "perm", "config zone still open" if not cfg_locked else self.sig.gate("genkey")))
             if s.get("hasKey"):
-                out.append(("pubkey", "SHOW PUBLIC KEY"))
+                out.append(("pubkey", "SHOW PUBLIC KEY", "safe", ""))
         if s["lockable"] and not s["locked"]:
-            out.append(self.gated("lockslot", "LOCK SLOT FOREVER", "lock"))
-        return out
-
-    def chip_actions(self):
-        out = []
-        if not self.st.get("configLocked"):
-            out.append(self.gated("lockcfg", "WRITE + LOCK CONFIG", "lock"))
-        elif not self.st.get("dataLocked"):
-            out.append(self.gated("lockdata", "LOCK DATA ZONE", "lock"))
-        out.append(("config", "RAW CONFIG ZONE"))
-        out.append(("random", "RANDOM (chip alive?)"))
-        out.append(("refresh", "RE-READ CHIP"))
+            out.append(("lockslot", "LOCK SLOT FOREVER", "perm", "config zone still open" if not cfg_locked else self.sig.gate("lock")))
         return out
 
     # ----------------------------------------------------------------------------- drawing
@@ -106,55 +147,56 @@ class SlotsUI:
         d = self.d
         d.fill(L.BLACK)
         v = self.view
-        if v == "list":
+        if v == "zones":
+            C.draw_zones(self)
+        elif v == "list":
             self.draw_list()
         elif v == "slot":
             self.draw_slot()
-        elif v == "chip":
-            self.draw_chip()
         elif v == "pubkey":
             self.draw_pubkey()
-        elif v == "config":
-            self.draw_config()
+        elif v == "cfg":
+            C.draw_cfg(self)
+        elif v == "raw":
+            C.draw_raw(self)
+        elif v == "diff":
+            C.draw_diff(self)
+        elif v == "otp":
+            C.draw_otp(self)
+        elif v == "counters":
+            C.draw_counters(self)
+        elif v == "refused":
+            C.draw_refused(self)
+        elif v == "rawcmd":
+            C.draw_rawcmd(self)
+        elif v == "confirm_write":
+            C.draw_confirm_write(self)
         elif v == "confirm":
             self.draw_confirm()
+        elif v == "lab":
+            LN.draw_lab(self)
+        elif v == "labres":
+            LN.draw_labres(self)
+        elif v == "why":
+            LN.draw_why(self)
+        elif v == "learn":
+            LN.draw_learn(self)
+        elif v == "card":
+            LN.draw_card(self)
         elif v == "busy":
-            self.header("WORKING", L.BLUE)
+            C.header(self, "WORKING")
             d.center_text(self.msg[:28], 100, L.WHITE)
         elif v == "result":
-            self.header("DONE" if self.ok else "ERROR", L.GREEN if self.ok else L.RED)
-            self.lines(self.msg, 40, L.WHITE)
-            d.center_text("A = ok", 224, L.GREY)
+            self.draw_result()
+        if self.armhold is not None:
+            C.draw_arm_bar(self)
         d.show()
         self.dirty = False
 
-    def header(self, title, color):
-        self.d.fill_rect(0, 0, 240, 22, color)
-        self.d.center_text(title, 3, L.WHITE, 2)
-
-    def lines(self, s, y, c, w=29):
-        """Word-wrapped text, w chars a line."""
-        line = ""
-        for word in s.split(" "):
-            while len(word) > w:
-                if line:
-                    self.d.text(line, 4, y, c); y += 12; line = ""
-                self.d.text(word[:w], 4, y, c); y += 12
-                word = word[w:]
-            if len(line) + len(word) + (1 if line else 0) > w:
-                self.d.text(line, 4, y, c); y += 12; line = word
-            else:
-                line = line + " " + word if line else word
-        if line:
-            self.d.text(line, 4, y, c); y += 12
-        return y
-
     def draw_list(self):
         d = self.d
-        d.text("KEYS", 4, 4, L.YELLOW)
-        d.text(self.sig.name[:9], 48, 4, L.GREY)
+        C.header(self)
         cfg = self.st.get("configLocked")
-        d.text("cfg " + ("locked" if cfg else "OPEN"), 140, 4, L.GREEN if cfg else L.RED)
         if not self.table:
             d.center_text("no slot table", 100, L.RED)
         for n in range(16):
@@ -163,46 +205,52 @@ class SlotsUI:
             if n == self.cur:
                 d.fill_rect(0, y - 2, 240, ROW_H, L.DARK)
                 d.text(">", 2, y, L.YELLOW)
-            c = KIND_COLOR.get(s["kind"], L.DARK)
+            c = KIND_COLOR.get(s["kind"], C.DIM)
             active = n == self.sig.slot
             d.text("%2d" % n, 12, y, L.GREEN if active else c)
-            d.text(KIND_LABEL.get(s["kind"], s["kind"]), 36, y, c)
+            d.text(KIND_LABEL.get(s["kind"], s["kind"]), 32, y, c)
+            d.text("%dB" % s.get("bytes", atecc.SLOT_BYTES[n]), 72, y, C.DIM)
             if s["kind"] == "P256":
                 if s.get("hasKey"):
                     what, wc = fp(s), L.WHITE
                 elif not cfg:
-                    what, wc = "config open", L.RED
+                    what, wc = "hidden", L.RED
                 elif not s.get("pubInfo", True):
-                    what, wc = "hidden", L.GREY
+                    what, wc = "secret", L.GREY
                 else:
                     what, wc = "empty", L.YELLOW
-                d.text(what, 80, y, wc)
+                d.text(what, 108, y, wc)
                 if active:
-                    d.text("ACTIVE", 168, y, L.GREEN)
+                    d.text("ACTIVE", 180, y, L.GREEN)
             if s["locked"]:
-                d.text("L", 226, y, L.RED)
-        d.fill_rect(0, 226, 240, 14, L.DARK)
-        d.text("A open  X chip  Y back", 4, 229, L.GREY)
+                d.text("L", 230, y, L.RED)
+        C.footer(self, "A open  Y up" if cfg else "cfg OPEN: keys hidden  Y up", L.GREY if cfg else L.RED)
 
     def draw_slot(self):
         d = self.d
         s = self.row(self.cur)
-        self.header("SLOT %d" % self.cur, L.BLUE)
-        y = 28
-        d.text(DESC.get(s["kind"], s["kind"]), 4, y, L.WHITE); y += 12
+        C.header(self)
+        y = 27
+        d.text(DESC.get(s["kind"], s["kind"]), 4, y, L.WHITE)
+        d.text("%d B" % s.get("bytes", atecc.SLOT_BYTES[self.cur]), 240 - 8 * 6, y, L.GREY); y += 12
         if s["kind"] == "P256":
             if s.get("hasKey"):
                 d.text("key " + fp(s), 4, y, L.GREEN if self.cur == self.sig.slot else L.WHITE)
                 if self.cur == self.sig.slot:
                     d.text("ACTIVE", 160, y, L.GREEN)
             elif not self.st.get("configLocked"):
-                d.text("unusable until config locks", 4, y, L.RED)
+                d.text("hidden until the rules lock", 4, y, L.RED)
             else:
                 d.text("empty", 4, y, L.YELLOW)
             y += 12
             flags = (("sign external digests", s["extSign"]), ("genkey allowed", s["genKey"]),
                      ("privwrite (import)", s["privWrite"]), ("pubkey readable", s["pubInfo"]),
                      ("limited use (counter)", s.get("limitedUse", False)), ("lockable", s["lockable"]))
+        elif s["kind"] == "DATA":
+            d.text("write", 12, y, L.WHITE); d.text(s.get("clearWrite", "?"), 120, y, L.GREY); y += 12
+            d.text("read", 12, y, L.WHITE)
+            d.text("secret" if s.get("isSecret") else ("encrypted" if s.get("encRead") else "clear"), 120, y, L.GREY); y += 12
+            flags = (("lockable", s["lockable"]),)
         else:
             flags = (("lockable", s["lockable"]),)
         for name, on in flags:
@@ -214,58 +262,16 @@ class SlotsUI:
         y += 16
         acts = self.actions(s)
         if not acts:
-            d.text("nothing to do here", 12, y, L.GREY)
-        for i, (_, label) in enumerate(acts):
-            sel = i == self.act
-            if sel:
-                d.fill_rect(0, y - 2, 240, 13, L.DARK)
-            d.text((">" if sel else " ") + label, 4, y, L.YELLOW if sel else L.WHITE)
-            y += 14
-        d.fill_rect(0, 226, 240, 14, L.DARK)
-        d.text("A do  up/dn pick  Y back", 4, 229, L.GREY)
-
-    def draw_chip(self):
-        d = self.d
-        st = self.st
-        self.header("CHIP", L.BLUE)
-        y = 28
-        d.text(self.sig.name, 4, y, L.WHITE)
-        if st.get("i2cAddr"):
-            d.text("i2c " + st["i2cAddr"], 120, y, L.GREY)
-        y += 12
-        if st.get("serial"):
-            d.text("serial " + st["serial"], 4, y, L.GREY); y += 12
-        if st.get("revision"):
-            d.text("rev " + st["revision"] + (" 608A" if st["revision"].endswith("02") else ""), 4, y, L.GREY); y += 12
-        if "allowLock" in st:
-            ok = st["allowLock"] or st["allowGenkey"]
-            d.text("permanent actions", 4, y, L.WHITE)
-            d.text("ARMED" if ok else "off", 160, y, L.RED if ok else L.GREEN)
-            y += 12
-        y += 4
-        cfg, data = st.get("configLocked"), st.get("dataLocked")
-        d.text("config zone", 4, y, L.WHITE)
-        d.text("LOCKED" if cfg else "OPEN", 160, y, L.GREEN if cfg else L.RED); y += 12
-        d.text(" the slot table, frozen once", 4, y, L.GREY); y += 12
-        d.text("data zone", 4, y, L.WHITE)
-        d.text("LOCKED" if data else "open", 160, y, L.GREEN if data else L.YELLOW); y += 12
-        d.text(" no clear writes, genkey ok", 4, y, L.GREY); y += 12
-        locked = [str(s["slot"]) for s in self.table if s["locked"]]
-        d.text("locked slots " + (" ".join(locked) if locked else "none"), 4, y, L.WHITE); y += 12
-        d.text("active slot %d" % self.sig.slot, 4, y, L.GREEN); y += 16
-        for i, (_, label) in enumerate(self.chip_actions()):
-            sel = i == self.act
-            if sel:
-                d.fill_rect(0, y - 2, 240, 13, L.DARK)
-            d.text((">" if sel else " ") + label, 4, y, L.YELLOW if sel else L.WHITE)
-            y += 14
-        d.fill_rect(0, 226, 240, 14, L.DARK)
-        d.text("A do  up/dn pick  Y back", 4, 229, L.GREY)
+            d.text("nothing to do here yet", 12, y, L.GREY)
+            C.footer(self, "left/right slots  Y up")
+        else:
+            C.menu(self, acts, y, self.act)
+            C.menu_footer(self, acts, self.act)
 
     def draw_pubkey(self):
         d = self.d
         s = self.row(self.cur)
-        self.header("SLOT %d PUBKEY" % self.cur, L.BLUE)
+        C.header(self)
         y = 30
         for name, v in (("qx", s["qx"]), ("qy", s["qy"])):
             d.text(name, 4, y, L.YELLOW); y += 12
@@ -276,154 +282,172 @@ class SlotsUI:
                 y += 24
             y += 4
         d.center_text("the vault pins this key", 200, L.GREY)
-        d.center_text("Y back", 224, L.GREY)
-
-    def draw_config(self):
-        """The 128 config bytes, 8 a row, so a fresh chip's factory table can be read off the screen."""
-        d = self.d
-        self.header("CONFIG ZONE", L.BLUE)
-        cfg = self.cfg or b""
-        for r in range(16):
-            y = 26 + r * 12
-            d.text("%3d" % (r * 8), 2, y, L.GREY)
-            row = cfg[r * 8:r * 8 + 8]
-            if r == 2 or r == 3 or r == 12 or r == 13 or r == 14 or r == 15:
-                c = L.WHITE      # slot config (20-51) and key config (96-127) rows
-            elif r == 10:
-                c = L.YELLOW     # 84-87 lock bytes, 88-89 slot locked
-            else:
-                c = L.GREY
-            d.text(" ".join("%02x" % b for b in row), 30, y, c)
-        d.fill_rect(0, 226, 240, 14, L.DARK)
-        d.text("white=slot table  Y back", 4, 229, L.GREY)
+        C.footer(self, "Y back")
 
     def draw_confirm(self):
         d = self.d
         kind, slot = self.action
-        self.header("ARE YOU SURE", L.RED)
+        C.header(self, "PERMANENT")
+        C.icon(d, "unlock", 6, 27, L.RED)
+        d.big_text("PERMANENT", 26, 26, L.RED, 2)
+        d.text("! cannot be undone", 26, 44, L.RED)
         if kind == "genkey":
-            body = ("NEW KEY IN SLOT %d" % slot, "", "replaces the key there. a vault paired to the old key can NEVER be spent again.")
+            body = ("NEW KEY IN SLOT %d" % slot, "The chip draws a new key from its own randomness and keeps it. The key there now is gone for good; a vault paired to it can never be spent again.")
         elif kind == "lockslot":
-            body = ("LOCK SLOT %d FOREVER" % slot, "", "the key in it can never be replaced or removed.")
+            body = ("LOCK SLOT %d FOREVER" % slot, "The key in it can never be replaced or removed.")
         elif kind == "lockcfg":
-            body = ("LOCK CONFIG ZONE", "", "writes the reference slot table and freezes it. permanent. every chip in use is config-locked.")
+            body = ("SEAL THE RULES", "The config zone on the chip is frozen as it is now. The table can never change again; the data zone opens up and keys can be made.")
         elif kind == "lockdata":
-            body = ("LOCK DATA ZONE", "", "no more clear-text writes to any slot. genkey stays allowed where the table says. permanent.")
+            body = ("LOCK DATA ZONE", "No more clear-text writes to any slot, ever. GenKey stays allowed where the rules say.")
         else:
-            body = (kind,)
-        y = 30
-        for line in body:
-            y = self.lines(line, y, L.WHITE) if line else y + 8
-        d.center_text("hold A to confirm", 176, L.YELLOW)
-        d.rect(20, 192, 200, 14, L.WHITE)
+            body = (kind, "")
+        y = 62
+        d.text(body[0], 4, y, L.WHITE); y += 14
+        for line in C.wrap(body[1])[:5]:
+            d.text(line, 4, y, L.WHITE); y += 12
+        d.center_text("hold A for 3 s", 164, L.YELLOW)
+        d.rect(20, 178, 200, 14, L.WHITE)
         if self.hold is not None:
-            w = min(198, 198 * time.ticks_diff(time.ticks_ms(), self.hold) // HOLD_MS)
-            d.fill_rect(21, 193, w, 12, L.RED)
-        d.center_text("Y cancel", 224, L.GREY)
+            e = time.ticks_diff(time.ticks_ms(), self.hold)
+            d.fill_rect(21, 179, min(198, 198 * e // HOLD_PERM), 12, L.RED)
+            d.center_text("%d" % max(1, (HOLD_PERM - e + 999) // 1000), 198, L.RED, 2)
+        C.footer(self, "Y cancel")
+
+    def draw_result(self):
+        d = self.d
+        C.header(self, "SEALED" if self.sealed else ("DONE" if self.ok else "ERROR"))
+        y = 30
+        if self.sealed:
+            C.icon(d, "lock", 6, y, L.GREEN)
+            d.big_text("SEALED", 26, y - 2, L.GREEN, 2); y += 24
+        for label, ok in self.checks or ():
+            C.icon(d, "check" if ok else "cross", 6, y - 2, L.GREEN if ok else L.RED)
+            d.text(label, 24, y, L.GREEN if ok else L.RED); y += 14
+        if self.checks:
+            y += 4
+        for line in C.wrap(self.msg)[:9]:
+            d.text(line, 4, y, L.WHITE if self.ok else L.YELLOW); y += 12
+        C.footer(self, "A ok")
 
     # ----------------------------------------------------------------------------- input
     def tick(self, pressed, keys):
         """pressed: key names that went down this tick. keys: lcd.Keys, for held(). Returns "home" to leave."""
+        self.n += 1
         v = self.view
-        if v == "confirm":
-            if "Y" in pressed:
-                self.hold, self.view, self.dirty = None, self.back, True
+        if v not in ("confirm", "confirm_write", "busy"):
+            pressed = C.arm_tick(self, pressed, keys)
+        if v == "confirm" or v == "confirm_write":
+            need = HOLD_PERM if v == "confirm" else HOLD_REV
+            if "Y" in pressed or (v == "confirm_write" and "B" in pressed):
+                if v == "confirm_write" and "Y" in pressed:
+                    self.go("diff")
+                else:
+                    self.hold, self.view, self.dirty = None, self.ret, True
             elif keys.held("A"):
                 if self.hold is None:
                     self.hold = time.ticks_ms()
-                if time.ticks_diff(time.ticks_ms(), self.hold) >= HOLD_MS:
+                if time.ticks_diff(time.ticks_ms(), self.hold) >= need:
                     self.hold = None
-                    self.run(*self.action)
+                    if v == "confirm":
+                        self.run(*self.action)
+                    else:
+                        self.busy("writing the config zone...")
+                        C.run_write(self, self.action[0])
                 self.dirty = True
             elif self.hold is not None:
                 self.hold, self.dirty = None, True
-        elif v == "list":
-            for k in pressed:
-                if k == "up":
-                    self.cur = (self.cur - 1) % 16
-                elif k == "down":
-                    self.cur = (self.cur + 1) % 16
-                elif k == "A" or k == "press":
-                    self.view, self.act = "slot", 0
-                elif k == "X":
-                    self.view, self.act = "chip", 0
-                elif k == "Y":
-                    return "home"
-                self.dirty = True
-        elif v == "slot":
-            acts = self.actions(self.row(self.cur))
-            for k in pressed:
-                if k == "up" and acts:
-                    self.act = (self.act - 1) % len(acts)
-                elif k == "down" and acts:
-                    self.act = (self.act + 1) % len(acts)
-                elif k == "left":
-                    self.cur, self.act = (self.cur - 1) % 16, 0
-                elif k == "right":
-                    self.cur, self.act = (self.cur + 1) % 16, 0
-                elif k == "Y":
-                    self.view = "list"
-                elif (k == "A" or k == "press") and acts:
-                    self.choose(acts[self.act][0], self.cur, "slot")
-                self.dirty = True
-        elif v == "chip":
-            acts = self.chip_actions()
-            for k in pressed:
-                if k == "up":
-                    self.act = (self.act - 1) % len(acts)
-                elif k == "down":
-                    self.act = (self.act + 1) % len(acts)
-                elif k == "Y":
-                    self.view = "list"
-                elif k == "A" or k == "press":
-                    self.choose(acts[self.act][0], None, "chip")
-                self.dirty = True
-        elif v == "pubkey":
-            if "Y" in pressed or "A" in pressed:
-                self.view, self.dirty = "slot", True
-        elif v == "config":
-            if "Y" in pressed or "A" in pressed:
-                self.view, self.dirty = "chip", True
+        elif v == "busy":
+            pass
         elif v == "result":
             if "A" in pressed or "Y" in pressed:
-                self.view, self.dirty = self.back, True
+                self.checks, self.sealed = None, False
+                self.view, self.dirty = self.ret, True
+        elif v == "refused":
+            if "A" in pressed and self.ref and self.ref.get("trace"):
+                self.view_from = "refused"
+                self.go("rawcmd")
+            elif "Y" in pressed or "A" in pressed:
+                self.view, self.dirty = self.ret, True
+        elif v == "pubkey":
+            if "Y" in pressed or "A" in pressed:
+                self.back()
+        elif v in ("raw", "diff", "otp", "counters", "rawcmd", "why"):
+            C.scroll_tick(self, pressed)
+            if "Y" in pressed or "A" in pressed:
+                self.back()
+        elif v == "card":
+            LN.tick_card(self, pressed)
+        elif v == "zones":
+            C.tick_zones(self, pressed)
+        elif v == "list":
+            self.tick_list(pressed)
+        elif v == "slot":
+            self.tick_slot(pressed)
+        elif v == "cfg":
+            C.tick_cfg(self, pressed)
+        elif v == "lab":
+            LN.tick_lab(self, pressed)
+        elif v == "labres":
+            LN.tick_labres(self, pressed)
+        elif v == "learn":
+            LN.tick_learn(self, pressed)
+        if "B" in pressed and v not in ("confirm", "confirm_write", "busy", "card", "learn"):
+            LN.context(self)
+        if S.armed() and self.n % 20 == 0:
+            self.dirty = True       # the countdown in the header
         if self.dirty:
             self.draw()
+        if self.leave:
+            self.leave = False
+            return "home"
         return None
 
-    def choose(self, kind, slot, back):
-        self.back = back
+    def tick_list(self, pressed):
+        for k in pressed:
+            if k == "up":
+                self.cur = (self.cur - 1) % 16
+            elif k == "down":
+                self.cur = (self.cur + 1) % 16
+            elif k == "A" or k == "press":
+                self.go("slot")
+            elif k == "Y":
+                self.back()
+            self.dirty = True
+
+    def tick_slot(self, pressed):
+        acts = self.actions(self.row(self.cur))
+        for k in pressed:
+            if k == "up" and acts:
+                self.act = (self.act - 1) % len(acts)
+            elif k == "down" and acts:
+                self.act = (self.act + 1) % len(acts)
+            elif k == "left":
+                self.cur, self.act = (self.cur - 1) % 16, 0
+            elif k == "right":
+                self.cur, self.act = (self.cur + 1) % 16, 0
+            elif k == "Y":
+                self.back()
+            elif (k == "A" or k == "press") and acts:
+                kind, label, cls, off = acts[self.act]
+                if off:
+                    self.show_result("off: " + off + ". Nothing was changed.", False)
+                else:
+                    self.choose(kind, self.cur)
+            self.dirty = True
+
+    def choose(self, kind, slot):
+        """A live action from a slot or the config page: safe ones run, permanent ones go red."""
+        self.ret = self.view
         if kind == "use":
             self.run(kind, slot)
         elif kind == "pubkey":
-            self.view = "pubkey"
-        elif kind == "refresh":
-            self.refresh()
-            self.act = 0
-        elif kind == "config":
-            try:
-                self.cfg = self.sig.config()
-                self.view = "config"
-            except Exception as e:
-                self.msg, self.ok, self.view = "config read failed: %s" % e, False, "result"
-        elif kind == "random":
-            try:
-                r = self.sig.random()
-                self.msg, self.ok = "32 random bytes from the chip: " + "".join("%02x" % b for b in r), True
-            except Exception as e:
-                self.msg, self.ok = "random failed: %s" % e, False
-            self.view = "result"
-        elif kind == "genkey" and not self.st.get("configLocked"):
-            self.msg, self.ok, self.view = "the chip refuses genkey until the config zone is locked. X on the list, then WRITE + LOCK CONFIG.", False, "result"
-        elif not self.may("genkey" if kind == "genkey" else "lock"):
-            flag = "ALLOW_GENKEY" if kind == "genkey" else "ALLOW_LOCK"
-            self.msg, self.ok, self.view = "off: %s is False in secrets.py on the Pico. nothing was changed. this is the safe setting for exploring a chip." % flag, False, "result"
-        else:
+            self.go("pubkey")
+        elif kind in ("genkey", "lockslot", "lockcfg", "lockdata"):
             self.action, self.hold, self.view = (kind, slot), None, "confirm"
 
     def run(self, kind, slot):
-        self.view, self.msg = "busy", {"genkey": "making a key in slot %s" % slot, "use": "switching to slot %s" % slot}.get(kind, kind + "...")
-        self.draw()
+        self.busy({"genkey": "making a key in slot %s" % slot, "use": "switching to slot %s" % slot}.get(kind, kind + "..."))
+        sealed = False
         try:
             if kind == "use":
                 self.sig.use(slot)
@@ -431,23 +455,23 @@ class SlotsUI:
             elif kind == "genkey":
                 x, _ = self.sig.genkey(slot)
                 out = "new key in slot %d: %08x. record qx/qy from SHOW PUBLIC KEY before deploying a vault." % (slot, x >> 224)
-                if slot == self.sig.slot:
-                    out = "new key in slot %d (the ACTIVE slot): %08x. the app will show not paired until a vault uses it." % (slot, x >> 224)
             elif kind == "lockslot":
-                out = str(self.sig.lock_slot(slot))
+                out = str(self.sig.lock_slot(slot)) + ". The key in it can never be replaced."
+                sealed = True
             elif kind == "lockcfg":
-                out = str(self.sig.lock_config()) + ". slots 0, 2 and 7 are now P-256 key slots. next: NEW KEY in a slot."
+                out = str(self.sig.lock_config()) + ". These rules can never be changed again. The data zone is open: NEW KEY in slot 0 is next."
+                sealed = True
             elif kind == "lockdata":
-                out = str(self.sig.lock_data())
+                out = str(self.sig.lock_data()) + ". No more clear-text writes, ever."
+                sealed = True
             else:
                 out = "unknown action " + kind
-            self.ok = True
+            ok = True
         except Exception as e:
-            out, self.ok = "%s failed: %s" % (kind, e), False
-        self.msg = out[:200]
+            out, ok, sealed = "%s failed: %s" % (kind, e), False, False
         self.refresh()
         self.act = 0
-        self.view = "result"
-        self.dirty = True
-        if kind in ("use", "genkey"):
+        self.sealed = sealed
+        self.show_result(out, ok)
+        if kind in ("use", "genkey", "lockcfg"):
             self.on_change()

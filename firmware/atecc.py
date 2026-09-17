@@ -18,6 +18,18 @@ ADDR = 0x60
 KNOWN_ADDRS = (0x60, 0x35, 0x6A, 0x58, 0x36, 0x59)   # Adafruit breakout, Trust&Go/TrustFLEX parts, others seen in the wild
 WAKE_OK = b"\x04\x11\x33\x43"
 OP_READ, OP_NONCE, OP_GENKEY, OP_SIGN, OP_RANDOM, OP_INFO, OP_WRITE, OP_LOCK = 0x02, 0x16, 0x40, 0x41, 0x1B, 0x30, 0x12, 0x17
+OP_COUNTER, OP_SHA, OP_SELFTEST = 0x24, 0x47, 0x77
+
+# The one status byte the chip answers with when it has no data for you (datasheet "Status/Error Codes").
+STATUS = {0x00: "ok", 0x01: "checkmac or verify miscompare", 0x03: "parse error: the chip did not understand the command",
+          0x05: "ecc fault: try again", 0x07: "self-test failed", 0x08: "health test error",
+          0x0F: "execution error: not allowed in this state", 0x11: "just woke up: send the command again",
+          0xEE: "watchdog about to expire", 0xFF: "crc or communication error"}
+SLOT_BYTES = (36,) * 8 + (416,) + (72,) * 7     # data zone: slots 0-7, slot 8, slots 9-15
+
+
+def explain(code):
+    return STATUS.get(code, "unknown status 0x%02x" % code)
 
 # Microchip's ATECC608 reference config (cryptoauthlib test/api_calib/test_calib_config.c,
 # test_ecc608_configdata), byte for byte what reference/pi/signer.py wrote to chip #1, the chip
@@ -55,10 +67,14 @@ def decode_slot(cfg, slot):
     if ktype == 4 and not private:
         kind = "PUB"
     wc = sc >> 12
+    write_policy = ("clear", "pubinvalid", "never", "never", "encrypted", "encrypted", "never", "never")[wc >> 1]
     return {
         "slot": slot,
         "kind": kind,
+        "bytes": SLOT_BYTES[slot],
         "private": private,
+        "clearWrite": write_policy,       # the Write command on this slot: clear, encrypted, pubinvalid, never
+        "encRead": bool(sc & 0x40),       # reads come out encrypted
         "pubInfo": bool(kc & 2),          # private key: its public half may be read out
         "lockable": bool(kc & 0x20),      # this slot can be locked on its own, forever
         "reqRandom": bool(kc & 0x40),
@@ -71,6 +87,19 @@ def decode_slot(cfg, slot):
         "privWrite": private and bool(wc & 4),      # PrivWrite may import a key (encrypted)
         "locked": not (cfg[88 + (slot >> 3)] >> (slot & 7)) & 1,   # SlotLocked: bit clear = locked
     }
+
+
+def diff_config(cur, new):
+    """What writing `new` over `cur` would change: the writable bytes that differ (16-83, 88-127), the
+    per-slot fields that change, and whether the I2C address byte (16) would move."""
+    changed = [i for i in range(128) if (16 <= i < 84 or i >= 88) and cur[i] != new[i]]
+    slots = []
+    for n in range(16):
+        a, b = decode_slot(cur, n), decode_slot(new, n)
+        fields = [(k, a[k], b[k]) for k in ("kind", "extSign", "genKey", "privWrite", "pubInfo", "lockable", "isSecret", "clearWrite") if a[k] != b[k]]
+        if fields:
+            slots.append((n, fields))
+    return {"bytes": changed, "slots": slots, "addrChanges": cur[16] != new[16]}
 
 
 def crc16(data):
@@ -86,7 +115,7 @@ def crc16(data):
 
 
 class AteccError(Exception):
-    pass
+    status = None       # the chip's status byte when it answered with one, else None (transport)
 
 
 def scan(sda=4, scl=5, freq=100_000):
@@ -108,6 +137,7 @@ class ATECC608:
             found = scan(sda, scl, freq)
             addr = ADDR if ADDR in found or not found else next((a for a in KNOWN_ADDRS if a in found), found[0])
         self.addr = addr
+        self.trace = None       # the last command as sent and answered: op, p1, p2, data, resp, ms
 
     # --- transport ---------------------------------------------------------
     def wake(self):
@@ -136,9 +166,13 @@ class ATECC608:
         except OSError:
             pass
 
-    def command(self, opcode, p1, p2, data=b"", resp_len=4, wait_ms=5, timeout_ms=300):
+    def command(self, opcode, p1, p2, data=b"", resp_len=4, wait_ms=5, timeout_ms=300, raw=False):
+        """One command packet, then its answer. A 1-byte nonzero answer is a status code and raises,
+        unless raw (SelfTest answers with a bitmap that looks like one). self.trace keeps the exchange."""
         body = bytes([len(data) + 7, opcode, p1, p2 & 0xFF, p2 >> 8]) + data
         pkt = b"\x03" + body + crc16(body)
+        self.trace = {"op": opcode, "p1": p1, "p2": p2, "data": bytes(data), "resp": b"", "ms": 0}
+        t_send = time.ticks_ms()
         self.i2c.writeto(self.addr, pkt)
         time.sleep_ms(wait_ms)
         t0 = time.ticks_ms()
@@ -150,14 +184,18 @@ class ATECC608:
                 if time.ticks_diff(time.ticks_ms(), t0) > timeout_ms:
                     raise AteccError("timeout on opcode 0x%02x" % opcode)
                 time.sleep_ms(3)
+        self.trace["ms"] = time.ticks_diff(time.ticks_ms(), t_send)
         n = resp[0]
         if n < 4 or n > len(resp):
             raise AteccError("bad length %d" % n)
         if crc16(resp[: n - 2]) != resp[n - 2 : n]:
             raise AteccError("bad crc")
         payload = resp[1 : n - 2]
-        if len(payload) == 1 and payload[0] != 0:
-            raise AteccError("status 0x%02x on opcode 0x%02x" % (payload[0], opcode))
+        self.trace["resp"] = bytes(payload)
+        if len(payload) == 1 and payload[0] != 0 and not raw:
+            e = AteccError("status 0x%02x on opcode 0x%02x" % (payload[0], opcode))
+            e.status = payload[0]
+            raise e
         return payload
 
     def run(self, *args, **kw):
@@ -190,7 +228,48 @@ class ATECC608:
         return {"configLocked": c[87 - 64] == 0x00, "dataLocked": c[86 - 64] == 0x00}
 
     def random(self):
+        """32 bytes from the chip's RNG. Until the config zone is locked the chip answers the fixed
+        test pattern ffff0000... instead (datasheet); that is how you know it is unlocked."""
         return self.run(OP_RANDOM, 0x00, 0x0000, resp_len=32, wait_ms=25)
+
+    # --- read-only questions (the LAB) --------------------------------------
+    def info(self, mode, param=0):
+        """Info: mode 0 revision, 1 KeyValid (param = slot; byte 0 is 1 when the slot holds a usable
+        key), 2 State (TempKey flags), 3 GPIO. 4 bytes."""
+        return self.run(OP_INFO, mode, param, resp_len=4, wait_ms=2)
+
+    def selftest(self, mask=0x3F):
+        """608 only. Runs the chip's own tests and returns the answer byte: 0 = every test passed,
+        otherwise each set bit is a failed test (0 RNG, 1 ECDSA verify, 2 ECDSA sign, 3 ECDH, 4 AES,
+        5 SHA), or a status code if the chip refused (the byte alone cannot tell those apart)."""
+        return self.run(OP_SELFTEST, mask, 0x0000, resp_len=1, wait_ms=250, timeout_ms=1500, raw=True)[0]
+
+    def sha256(self, data):
+        """SHA-256 of up to 63 bytes, computed on the chip: Start, then End with the bytes."""
+        if len(data) > 63:
+            raise ValueError("63 bytes at most here")
+        self.wake()
+        try:
+            self.command(OP_SHA, 0x00, 0x0000, resp_len=1, wait_ms=9)
+            return self.command(OP_SHA, 0x02, len(data), bytes(data), resp_len=32, wait_ms=9)
+        finally:
+            self.sleep()
+
+    def counter(self, idx=0):
+        """Read monotonic counter 0 or 1 (never increments)."""
+        return int.from_bytes(self.run(OP_COUNTER, 0x00, idx, resp_len=4, wait_ms=20), "little")
+
+    def read_otp(self, block=0):
+        """32 bytes of the OTP zone (blocks 0 and 1). Refused until the config zone is locked."""
+        return self.run(OP_READ, 0x81, block << 3, resp_len=32, wait_ms=2)
+
+    def read_data(self, slot, block=0):
+        """32 bytes of a data slot. Refused until the config zone is locked, and per the slot's rules."""
+        return self.run(OP_READ, 0x82, (block << 8) | (slot << 3), resp_len=32, wait_ms=2)
+
+    def read_config_word(self, word):
+        """4 bytes of the config zone (word 4 holds the I2C address byte)."""
+        return self.run(OP_READ, 0x00, word, resp_len=4, wait_ms=2)
 
     def pubkey(self, slot=0):
         """Public key of the private key in `slot`: (x, y) ints. Fails on an empty slot or one
@@ -233,8 +312,16 @@ class ATECC608:
 
     # --- provisioning (once per fresh chip) --------------------------------
     def write_config(self, cfg=CONFIG):
-        """Write the config zone in 4-byte words, skipping the read-only words (0-3 and 21)."""
+        """Write the config zone in 4-byte words, skipping the read-only words (0-3 and 21), then read
+        it back. REVERSIBLE while the zone is open: it can be written again, and again. Refuses to move
+        the I2C address byte (16), since the chip would answer somewhere else after its next wake.
+        Returns how many bytes changed; raises if the readback differs from what was written."""
         assert len(cfg) == 128
+        before = self.read_config_all()
+        if before[87] == 0x00:
+            raise AteccError("config zone is locked: it can never be written again")
+        if cfg[16] != before[16]:
+            raise AteccError("refusing to change the I2C address byte (0x%02x -> 0x%02x)" % (before[16], cfg[16]))
         self.wake()
         try:
             for word in range(32):
@@ -243,6 +330,11 @@ class ATECC608:
                 self.command(OP_WRITE, 0x00, word, cfg[word * 4:word * 4 + 4], resp_len=1, wait_ms=30)
         finally:
             self.sleep()
+        after = self.read_config_all()
+        bad = [i for i in range(128) if (16 <= i < 84 or i >= 88) and after[i] != cfg[i]]
+        if bad:
+            raise AteccError("readback differs at %d bytes (first at byte %d)" % (len(bad), bad[0]))
+        return sum(1 for i in range(128) if before[i] != after[i])
 
     def lock_config(self):
         """PERMANENT. Lock the config zone (no CRC check, mode 0x80). Refuses if already locked."""

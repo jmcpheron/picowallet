@@ -175,10 +175,12 @@ has to wait for `/dev/cu.usbmodem*` before the next mpremote call.
   leakage from VSYS through the divider; the home screen showed an empty bar and `1.1V` instead of
   `usb`. `power.py` now treats anything under 2.5 V as no cell. `vbat` vs a meter: not measured,
   no cell yet.
-- Anything the emulator got wrong compared with the board: two things, both for `atecc_sim.py`.
-  Its blank part has an all-zero slot table where the real factory part types slots 0 to 2 as
-  P-256 (SlotConfig `2083 2087 208f`, KeyConfig `0033`), and its Random is random before the
-  config lock where the real chip returns the fixed `ffff0000` pattern.
+- Anything the emulator got wrong compared with the board: two things, both fixed in
+  `atecc_sim.py` on this branch afterwards. Its blank part had an all-zero slot table where the
+  real factory part types slots 0 to 2 as P-256 (SlotConfig `2083 2087 208f`, KeyConfig `0033`),
+  and its Random was random before the config lock where the real chip returns the fixed
+  `ffff0000` pattern. The sim now also answers Info KeyValid/State, SelfTest, SHA, Counter reads,
+  and refuses OTP and data reads with 0x0F until the config lock.
 
 ## 6. Open questions for upstream
 

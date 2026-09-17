@@ -108,6 +108,28 @@ Record: serial `0123f3acfd2a826bee`, revision `00006002 (608A)`, address `0x60`.
 
 Record: the screen photos are worth keeping (`buildlog/images/`, no feet in the shot).
 
+## 4b. The chip on its own terms: CHIP MAP, LAB, a reversible write
+
+Still `ALLOW_LOCK = False`, `ALLOW_GENKEY = False`. The only write here can be undone.
+
+- [ ] X on the home screen: CHIP MAP. Header `CHIP` and `SAFE o`. CONFIG `OPEN`, DATA and OTP
+      `hidden`, COUNTERS `2`, LAB.
+- [ ] LAB: run every question and write down the chip's answer, including refusals (status byte and
+      the reason the wallet gives). New facts for upstream: which of SelfTest, SHA, Counter, Info
+      State a fresh 608A accepts. Record: `______________________________________________`
+- [ ] OTP and COUNTERS from the map: refused (0x0F) or answered? Record: `________`
+- [ ] B: LEARN. Read the six cards; A from a card lands on the right screen.
+- [ ] Hold B and Y 3 s anywhere in the chip UI: header turns `! ARMED 60s`, counts down, expires.
+      The red items stay off (`ALLOW_LOCK is False on the board`).
+- [ ] CONFIG page: CURRENT `original bytes`, SNAPSHOT `none yet`. `~ WRITE WALLET CONFIG`: the diff
+      screen says how many bytes change and lists the slot changes; hold A 1.5 s. Three checks:
+      WRITE COMPLETE, READBACK MATCHES, CONFIG STILL OPEN. Record bytes changed: `____`
+- [ ] `tools/usb run firmware/chipcheck.py`: `matches the reference table: yes`, byte 87 still 0x55.
+      `tools/usb ls` shows `snapshot-<serial>.bin`.
+- [ ] DATA list: slots 0, 2, 7 `P256 hidden`, 5 and 10 `AES`, 11, 14, 15 `PUB`.
+- [ ] `~ RESTORE SAVED CONFIG`, then chipcheck: dump identical to the one in UPSTREAM.md section 3.
+      Byte 16 (the address) never changed. Record: `________`
+
 ## 5. Battery
 
 Cell out, USB in, switch OFF:
