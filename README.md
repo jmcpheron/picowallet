@@ -248,6 +248,7 @@ digest the device computed.
 | `buildlog/` | dated notes and photos of what actually happened, including the mistakes |
 | `reference/` | the Pi signer this grew out of, with the fresh-chip guide; SeedSigner cap parts (MIT) |
 | `PLAN.md`, `SOLDERING.md` | the plan, and the wiring guide |
+| `TESTPLAN.md`, `UPSTREAM.md` | bring-up and test plan for a fresh chip and the battery; notes to send upstream (the config-table bug, flashing) |
 
 ## Trust model, short
 

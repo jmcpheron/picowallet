@@ -1,0 +1,26 @@
+#!/bin/sh
+# Talk to the Pico over USB serial. The same mpremote commands as tools/pico, no WiFi console needed.
+#   tools/usb                      find the port and open the REPL (Ctrl-] to leave)
+#   tools/usb push                 copy every firmware/*.py (never secrets.example.py) and reset
+#   tools/usb ls | exec 'print(1)' | cp firmware/x.py :x.py | run firmware/chipcheck.py
+# Port: $PICO_PORT, else the first /dev/ttyACM* (Linux) or /dev/tty.usbmodem* (macOS).
+cd "$(dirname "$0")/.." || exit 1
+port="${PICO_PORT:-$(ls /dev/ttyACM* /dev/tty.usbmodem* /dev/cu.usbmodem* 2>/dev/null | head -1)}"
+if [ -z "$port" ]; then
+  echo "no Pico on USB (looked for /dev/ttyACM* and /dev/tty.usbmodem*; set PICO_PORT=...)" >&2
+  exit 1
+fi
+mp="$(command -v mpremote || echo "$HOME/.local/bin/mpremote")"
+case "$1" in
+  push)
+    set -- ; for f in firmware/*.py; do
+      case "$f" in *secrets.example.py) continue;; esac
+      "$mp" connect "$port" resume cp "$f" ":$(basename "$f")" || exit 1
+      echo "  $f"
+    done
+    if [ -f firmware/qr.bin ]; then "$mp" connect "$port" resume cp firmware/qr.bin :qr.bin && echo "  firmware/qr.bin"; fi
+    "$mp" connect "$port" resume reset
+    echo "pushed to $port, rebooting" ;;
+  "") exec "$mp" connect "$port" resume repl ;;
+  *) exec "$mp" connect "$port" resume "$@" ;;
+esac
