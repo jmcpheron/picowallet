@@ -37,6 +37,7 @@ class SlotsUI:
         self.msg = ""
         self.ok = True
         self.back = "list"      # where a result screen returns to
+        self.cfg = None         # config zone bytes for the RAW CONFIG page
         self.dirty = True
 
     # ----------------------------------------------------------------------------- data
@@ -63,6 +64,16 @@ class SlotsUI:
                 return s
         return {"slot": n, "kind": "?", "locked": False, "lockable": False, "genKey": False, "extSign": False, "pubInfo": False, "privWrite": False}
 
+    def may(self, what):
+        try:
+            return self.sig.allowed(what)
+        except Exception:
+            return False
+
+    def gated(self, kind, label, what):
+        """A permanent action's menu label: says up front when secrets.py forbids it."""
+        return (kind, label if self.may(what) else label + " (off)")
+
     def actions(self, s):
         """What the cursor can do to this slot, given what the config zone allows."""
         out = []
@@ -72,19 +83,21 @@ class SlotsUI:
             if s.get("hasKey") and not active:
                 out.append(("use", "USE THIS KEY"))
             if s["genKey"] and not s["locked"]:
-                out.append(("genkey", "NEW KEY" if cfg_locked else "NEW KEY (lock config first)"))
+                out.append(self.gated("genkey", "NEW KEY" if cfg_locked else "NEW KEY (lock config first)", "genkey"))
             if s.get("hasKey"):
                 out.append(("pubkey", "SHOW PUBLIC KEY"))
         if s["lockable"] and not s["locked"]:
-            out.append(("lockslot", "LOCK SLOT FOREVER"))
+            out.append(self.gated("lockslot", "LOCK SLOT FOREVER", "lock"))
         return out
 
     def chip_actions(self):
         out = []
         if not self.st.get("configLocked"):
-            out.append(("lockcfg", "WRITE + LOCK CONFIG"))
+            out.append(self.gated("lockcfg", "WRITE + LOCK CONFIG", "lock"))
         elif not self.st.get("dataLocked"):
-            out.append(("lockdata", "LOCK DATA ZONE"))
+            out.append(self.gated("lockdata", "LOCK DATA ZONE", "lock"))
+        out.append(("config", "RAW CONFIG ZONE"))
+        out.append(("random", "RANDOM (chip alive?)"))
         out.append(("refresh", "RE-READ CHIP"))
         return out
 
@@ -101,6 +114,8 @@ class SlotsUI:
             self.draw_chip()
         elif v == "pubkey":
             self.draw_pubkey()
+        elif v == "config":
+            self.draw_config()
         elif v == "confirm":
             self.draw_confirm()
         elif v == "busy":
@@ -214,11 +229,19 @@ class SlotsUI:
         st = self.st
         self.header("CHIP", L.BLUE)
         y = 28
-        d.text(self.sig.name, 4, y, L.WHITE); y += 12
+        d.text(self.sig.name, 4, y, L.WHITE)
+        if st.get("i2cAddr"):
+            d.text("i2c " + st["i2cAddr"], 120, y, L.GREY)
+        y += 12
         if st.get("serial"):
             d.text("serial " + st["serial"], 4, y, L.GREY); y += 12
         if st.get("revision"):
             d.text("rev " + st["revision"] + (" 608A" if st["revision"].endswith("02") else ""), 4, y, L.GREY); y += 12
+        if "allowLock" in st:
+            ok = st["allowLock"] or st["allowGenkey"]
+            d.text("permanent actions", 4, y, L.WHITE)
+            d.text("ARMED" if ok else "off", 160, y, L.RED if ok else L.GREEN)
+            y += 12
         y += 4
         cfg, data = st.get("configLocked"), st.get("dataLocked")
         d.text("config zone", 4, y, L.WHITE)
@@ -254,6 +277,25 @@ class SlotsUI:
             y += 4
         d.center_text("the vault pins this key", 200, L.GREY)
         d.center_text("Y back", 224, L.GREY)
+
+    def draw_config(self):
+        """The 128 config bytes, 8 a row, so a fresh chip's factory table can be read off the screen."""
+        d = self.d
+        self.header("CONFIG ZONE", L.BLUE)
+        cfg = self.cfg or b""
+        for r in range(16):
+            y = 26 + r * 12
+            d.text("%3d" % (r * 8), 2, y, L.GREY)
+            row = cfg[r * 8:r * 8 + 8]
+            if r == 2 or r == 3 or r == 12 or r == 13 or r == 14 or r == 15:
+                c = L.WHITE      # slot config (20-51) and key config (96-127) rows
+            elif r == 10:
+                c = L.YELLOW     # 84-87 lock bytes, 88-89 slot locked
+            else:
+                c = L.GREY
+            d.text(" ".join("%02x" % b for b in row), 30, y, c)
+        d.fill_rect(0, 226, 240, 14, L.DARK)
+        d.text("white=slot table  Y back", 4, 229, L.GREY)
 
     def draw_confirm(self):
         d = self.d
@@ -339,6 +381,9 @@ class SlotsUI:
         elif v == "pubkey":
             if "Y" in pressed or "A" in pressed:
                 self.view, self.dirty = "slot", True
+        elif v == "config":
+            if "Y" in pressed or "A" in pressed:
+                self.view, self.dirty = "chip", True
         elif v == "result":
             if "A" in pressed or "Y" in pressed:
                 self.view, self.dirty = self.back, True
@@ -355,8 +400,24 @@ class SlotsUI:
         elif kind == "refresh":
             self.refresh()
             self.act = 0
+        elif kind == "config":
+            try:
+                self.cfg = self.sig.config()
+                self.view = "config"
+            except Exception as e:
+                self.msg, self.ok, self.view = "config read failed: %s" % e, False, "result"
+        elif kind == "random":
+            try:
+                r = self.sig.random()
+                self.msg, self.ok = "32 random bytes from the chip: " + "".join("%02x" % b for b in r), True
+            except Exception as e:
+                self.msg, self.ok = "random failed: %s" % e, False
+            self.view = "result"
         elif kind == "genkey" and not self.st.get("configLocked"):
             self.msg, self.ok, self.view = "the chip refuses genkey until the config zone is locked. X on the list, then WRITE + LOCK CONFIG.", False, "result"
+        elif not self.may("genkey" if kind == "genkey" else "lock"):
+            flag = "ALLOW_GENKEY" if kind == "genkey" else "ALLOW_LOCK"
+            self.msg, self.ok, self.view = "off: %s is False in secrets.py on the Pico. nothing was changed. this is the safe setting for exploring a chip." % flag, False, "result"
         else:
             self.action, self.hold, self.view = (kind, slot), None, "confirm"
 

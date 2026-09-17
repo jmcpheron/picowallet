@@ -96,7 +96,8 @@ joystick poke through. Keycaps and a joystick dome are in `case/out/` (PLA, 0.12
 
 ![ATECC608 breakout jammed in the gap](buildlog/images/2026-09-05-21-atecc-jammed-in-the-gap.jpg)
 
-`SOLDERING.md` has the pinout diagram and the soldered version if you want it permanent.
+`SOLDERING.md` has the pinout diagram and the soldered perfboard version, with an 18650 cell behind
+a switch and a diode for running unplugged, and how to explore a fresh chip without changing it.
 
 ## 4. Flash the firmware
 

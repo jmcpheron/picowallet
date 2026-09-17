@@ -15,6 +15,7 @@ from machine import I2C, Pin
 import time
 
 ADDR = 0x60
+KNOWN_ADDRS = (0x60, 0x35, 0x6A, 0x58, 0x36, 0x59)   # Adafruit breakout, Trust&Go/TrustFLEX parts, others seen in the wild
 WAKE_OK = b"\x04\x11\x33\x43"
 OP_READ, OP_NONCE, OP_GENKEY, OP_SIGN, OP_RANDOM, OP_INFO, OP_WRITE, OP_LOCK = 0x02, 0x16, 0x40, 0x41, 0x1B, 0x30, 0x12, 0x17
 
@@ -88,9 +89,24 @@ class AteccError(Exception):
     pass
 
 
+def scan(sda=4, scl=5, freq=100_000):
+    """Every I2C address that answers. A sleeping ATECC does not ACK, so wake the bus first."""
+    i2c = I2C(0, sda=Pin(sda), scl=Pin(scl), freq=freq)
+    try:
+        i2c.writeto(0, b"\x00")
+    except OSError:
+        pass
+    time.sleep_ms(2)
+    return i2c.scan()
+
+
 class ATECC608:
-    def __init__(self, sda=4, scl=5, addr=ADDR, freq=100_000):
+    def __init__(self, sda=4, scl=5, addr=None, freq=100_000):
+        """addr None: use 0x60 if it answers, else the first known ATECC address on the bus."""
         self.i2c = I2C(0, sda=Pin(sda), scl=Pin(scl), freq=freq)
+        if addr is None:
+            found = scan(sda, scl, freq)
+            addr = ADDR if ADDR in found or not found else next((a for a in KNOWN_ADDRS if a in found), found[0])
         self.addr = addr
 
     # --- transport ---------------------------------------------------------
@@ -270,6 +286,7 @@ class ATECC608:
 
     def status(self, slot=0):
         s = self.lock_state()
+        s["i2cAddr"] = "0x%02x" % self.addr
         s["serial"] = "".join("%02x" % b for b in self.serial())
         try:
             s["revision"] = "".join("%02x" % b for b in self.revision())

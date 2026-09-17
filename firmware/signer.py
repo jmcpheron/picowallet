@@ -7,6 +7,9 @@
 #   use(slot)                        make a slot the active signer (persisted in slot.txt)
 #   lock_config() / lock_data() / lock_slot(slot)      permanent, gated by secrets.ALLOW_LOCK
 #   status() -> dict                 what the app sees on announce
+#   allowed(what) -> bool            "genkey" or "lock": may this backend do it right now (secrets.py flags)
+#   config() -> bytes                the 128 config bytes (the software signer fakes them)
+#   random() -> bytes                32 bytes from the chip's RNG, a harmless "is it alive" test
 #   name
 # SoftSigner: P-256 keys in files on the Pico's flash, one per slot. Only until the ATECC608 is wired.
 # ChipSigner: the ATECC608 over I2C. The keys never leave the chip.
@@ -115,6 +118,16 @@ class SoftSigner:
     def lock_slot(self, slot):
         return "software key: nothing to lock"
 
+    def allowed(self, what):
+        return True
+
+    def config(self):
+        from atecc import CONFIG
+        return CONFIG
+
+    def random(self):
+        return os.urandom(32)
+
     def status(self):
         st = {"configLocked": True, "dataLocked": False, "slot": self.slot, "activeSlot": self.slot,
               "note": "software keys on the Pico (no chip yet)"}
@@ -195,8 +208,18 @@ class ChipSigner:
         self.chip.lock_slot(slot)
         return "slot %d locked" % slot
 
+    def allowed(self, what):
+        return _allowed("ALLOW_GENKEY" if what == "genkey" else "ALLOW_LOCK")
+
+    def config(self):
+        return self.chip.read_config_all()
+
+    def random(self):
+        return self.chip.random()
+
     def status(self):
         st = self.chip.status(self.slot)
+        st["allowLock"], st["allowGenkey"] = self.allowed("lock"), self.allowed("genkey")
         st["activeSlot"] = self.slot
         if st.get("hasKey"):
             st["fingerprint"] = _fp(self.pubkey()[0])

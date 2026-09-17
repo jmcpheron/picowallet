@@ -12,6 +12,7 @@ import net
 import eip712
 import signer as S
 import slots as SL
+import power
 import secrets
 
 APP = secrets.APP_URL
@@ -107,6 +108,15 @@ def draw_home():
     # top-left: which chain. Test money and real money must never look alike.
     if chain:
         d.text("mainnet" if chain.get("id") == 1 else (chain.get("name", "?").lower()[:8]), 4, 4, L.GREEN if chain.get("id") == 1 else L.YELLOW)
+    # top-middle: power. USB, or the cell voltage from the divider on GP28 (power.py, SOLDERING.md)
+    pw = power.status()
+    if pw["usb"] and not pw["percent"]:
+        d.text("usb", 100, 4, L.GREY)
+    elif pw["percent"] is not None:
+        d.rect(92, 4, 14, 8, L.GREY)
+        d.fill_rect(106, 6, 2, 4, L.GREY)
+        d.fill_rect(94, 6, max(1, 10 * pw["percent"] // 100), 4, L.RED if pw["low"] else L.GREEN)
+        d.text("%.1fV" % pw["vbat"], 112, 4, L.RED if pw["low"] else L.GREY)
     # top-right: the KEYS screen hint and the pairing dot
     d.text("X keys", 170, 4, L.GREY)
     d.fill_rect(226, 4, 8, 8, L.GREEN if paired else L.RED)
@@ -141,6 +151,8 @@ def draw_home():
         warn = "no app for %ds" % age
     if not paired:
         warn = "not paired" if qx else "no key"
+    if pw["low"] and not pw["usb"]:
+        warn = "battery low %.2fV" % pw["vbat"]
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
         d.fill_rect(0, 224, 240, 16, L.DARK)
         d.center_text(msg[:30], 228, L.YELLOW)

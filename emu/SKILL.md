@@ -72,7 +72,7 @@ that should ship for good goes in `firmware/` and through `tools/push`.
   plain bytecode in the emulator, slower). Files: `open("x.bin","rb")`, `os.listdir()`.
 - Other firmware you can import: `mock` (fake wallet screens, `mock.goto("send")`),
   `wallet` (the real wallet: talks to the app through `/app`; `main` boots it), `slots` (the KEYS
-  screen), `eip712`, `keccak`, `p256`, `signer`, `atecc`.
+  screen), `power` (battery/USB; the ADC reads 0 here so it shows usb), `eip712`, `keccak`, `p256`, `signer`, `atecc`.
 - The chip: a virtual ATECC608 answers at 0x60 on `machine.I2C`, speaking the real packet
   protocol, so `atecc.py` and `signer.ChipSigner` run unchanged. It starts as a BLANK part (config
   zone open, nothing can sign) and keeps its state across reboots (server: `emu/chip.json`;
