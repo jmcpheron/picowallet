@@ -162,6 +162,24 @@ So an unlocked 608A will identify itself, self-test, hash, and report its counte
 data zones and returns the test pattern for Random. The wallet's CHIP MAP and LAB (this branch)
 show each of these on the device, refusals included.
 
+### After the config lock, data zone still open (2026-09-17, same chip)
+
+| command | answer |
+|---|---|
+| lock bytes 87 / 86 | `00` / `55`: config locked, data open |
+| Random, twice | two different 32-byte values: the RNG is live (40 ms) |
+| SelfTest 0x3F | `0x00`, all pass (257 ms) |
+| SHA-256, Info State, Counter 0 | as before |
+| Info KeyValid slot 0 | `00000000`: no key yet |
+| GenKey mode 0 (public key) slot 0 | refused `0x0F`: empty slot |
+| Read OTP blocks 0 and 1 | refused `0x0F` |
+| Read data slots 0, 8, 12, 13 | refused `0x0F`, clear and secret slots alike |
+
+The rule, which the datasheet states and this confirms: with the config zone locked and the data
+zone open the chip accepts clear writes into slots and OTP but refuses to read any of them back;
+reads begin only once the data zone is locked (LockValue). Neither the wallet firmware nor the
+emulator knew that until this chip said so; both now do.
+
 ## 4. Flashing this branch's firmware
 
 What changed for someone flashing from upstream `main`:

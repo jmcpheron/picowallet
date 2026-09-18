@@ -181,8 +181,9 @@ the next vault gets deployed with.
    - [ ] chipcheck: byte 87 = 0x00, `matches the reference table: yes`, slots 0/2/7 `P256 empty`,
          `random` no longer `ffff0000`. Lock round trip: `____ ms`
 4. LAB: MAKE RANDOMNESS twice, different, no WHY layer. ARE YOU HEALTHY? passes. WHAT'S IN YOUR OTP?
-   answers. TRY READING SECRET SLOT 8: refused, the secret reason. IS YOUR SLOT A KEY?: no.
-   - [ ] Record the OTP bytes: `________________`
+   and TRY READING SECRET SLOT 8: both refused with "the DATA zone is still open" (the chip reads
+   nothing back from slots or OTP until the data lock). IS YOUR SLOT A KEY?: no.
+   - [x] Seen 2026-09-17: every Data/OTP read refused with 0x0F while the data zone is open.
 5. Arm again if the header says SAFE. DATA, slot 0 (`empty`), `! NEW KEY`, red screen, hold A 3 s.
    KEY CREATED ceremony; the tile shows the fingerprint over the green bar.
    - [ ] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;
@@ -191,7 +192,8 @@ the next vault gets deployed with.
    Record: fingerprint `________`, qx `________`, qy `________`, GenKey round trip `____ ms`.
 6. Slot 0, `o SIGN TEST`: SIGNATURE VERIFIED, r and s, counter 0 is now 1. Again: 2. LAB WHAT'S
    COUNTER 0? agrees. Record: sign round trip `____ ms`.
-7. Optional: slot 12, `~ WRITE A NOTE`, hold A 1.5 s, three checks; `o READ THE BYTES` shows it.
+7. Optional: slot 12, `~ WRITE A NOTE`, hold A 1.5 s: WRITE COMPLETE, and "read back after data
+   lock" (the chip accepts the clear write but will not read it back until the DATA zone is locked).
    Also optional and never run on real silicon: slot 2 `NEW KEY` then `USE THIS KEY` (the app would
    say not paired; `USE` slot 0 puts it back).
 8. Do NOT lock the data zone or any slot in this session unless you have decided you never want

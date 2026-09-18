@@ -147,7 +147,7 @@ class SlotsUI:
             if s.get("clearWrite") == "clear" and not s.get("isSecret"):
                 out.append(("note", "WRITE A NOTE", "rev", "config zone still open" if not cfg_locked else ("data zone is locked" if data_locked else "")))
             if not s.get("isSecret"):
-                out.append(("readnote", "READ THE BYTES", "safe", "config zone still open" if not cfg_locked else ""))
+                out.append(("readnote", "READ THE BYTES", "safe", "config zone still open" if not cfg_locked else ("data zone open: reads after its lock" if not data_locked else "")))
         if s["lockable"] and not s["locked"]:
             out.append(("lockslot", "LOCK SLOT FOREVER", "perm", "config zone still open" if not cfg_locked else self.sig.gate("lock")))
         return out

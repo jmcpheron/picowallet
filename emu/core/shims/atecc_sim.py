@@ -2,9 +2,9 @@
 # (wake token, 0x03 command packets with CRC-16, count+payload+CRC responses) so firmware/atecc.py
 # runs here unchanged. Models what a wallet touches: the config zone and its locks, the slot table
 # (SlotConfig / KeyConfig), GenKey, Nonce pass-through + Sign, Random, Info, per-slot locks.
-# Also answered, read-only: Info KeyValid/State, SelfTest (all pass), SHA-256, Counter reads, and
-# Read of the OTP and data zones once the config zone is locked (zeros; writes there are not
-# modeled). Not modeled: MAC/encrypted anything, the watchdog, counter increments.
+# Also answered: Info KeyValid/State, SelfTest (all pass), SHA-256, Counter reads, clear data
+# writes once the config zone is locked, and reads of the OTP and data zones only once the DATA
+# zone is locked, as the real chip does. Not modeled: MAC/encrypted anything, the watchdog, OTP writes.
 #
 # A fresh emulator answers like a real fresh part: the factory config of an Adafruit 4314 breakout
 # (UPSTREAM.md section 3: slots 0-2 already typed P-256, GenKey allowed), config zone unlocked, and
@@ -185,8 +185,8 @@ class Chip:
             zone = p1 & 3
             if zone == 3:
                 raise _Fail(STATUS_PARSE)
-            if zone != 0 and not self.config_locked():
-                raise _Fail(STATUS_EXEC)      # data and OTP are hidden until the config zone is locked
+            if zone != 0 and not self.data_locked():
+                raise _Fail(STATUS_EXEC)      # data and OTP cannot be read until the DATA zone is locked (seen on silicon)
             if zone == 1:
                 block = p2 >> 3
                 if block > 1 or not p1 & 0x80:

@@ -20,7 +20,7 @@ CARDS = (
     ("MAKE A KEY", "list",
      "A key is made by GenKey: the chip draws it from its own random generator and keeps it. You never see it, choose it, or read it out; only the public half comes out. Slot 7 also accepts PrivWrite, a key you bring, sent encrypted. A new key REPLACES the old one: there is no erase, and a locked slot never changes again. The chip refuses GenKey until the rules are sealed, so this chapter waits for that. Press A to look at the slots."),
     ("SEAL THE VAULT", "cfg",
-     "Three one-way doors. LOCK CONFIG seals the rules: after it the DATA zone opens up and keys can be made, but the table can never change. GenKey in a slot creates a key and the old one is gone. LOCK SLOT seals one key forever. Every red step needs three things: the flag on the board, the wallet ARMED (hold B and Y together 3 s), and A held 3 s on the red screen. Not today: this chip stays as it came."),
+     "Three one-way doors. LOCK CONFIG seals the rules: after it keys can be made and slots written, but the table can never change, and the chip reads nothing back from slots or OTP until the next door. LOCK DATA ZONE ends clear writes and opens reads. LOCK SLOT seals one key forever. Every red step needs three things: the flag on the board, the wallet ARMED (hold B and Y together 3 s), and A held 3 s on the red screen."),
     ("COLOURS AND GATES", None,
      "o green SAFE TO EXPLORE: changes nothing. ~ yellow REVERSIBLE CHANGE: can be restored. ! red PERMANENT: cannot be undone. Red needs ALLOW_LOCK or ALLOW_GENKEY True in secrets.py on the board, the wallet ARMED (hold B+Y 3 s, good for 60 s, shown in the header), and the red screen's hold. Refusals from the chip are shown as the chip said them, with the reason first."),
 )
@@ -153,7 +153,7 @@ def q_counter(ui, chip):
 
 
 def q_otp(ui, chip):
-    return ("The first 32 of my 64 OTP bytes.", chip.read_otp(0), None)
+    return ("The first 32 of my 64 OTP bytes. Readable only once the DATA zone is locked.", chip.read_otp(0), None)
 
 
 def q_data(ui, chip):

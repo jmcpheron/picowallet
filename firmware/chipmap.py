@@ -266,8 +266,8 @@ def draw_zones(ui):
     cfg, data = st.get("configLocked"), st.get("dataLocked")
     key, name, zone, blurb = ZONES[ui.act]
     state = {"cfg": ("LOCKED" if cfg else "OPEN", T.C["safe"] if cfg else T.C["perm"]),
-             "list": (("LOCKED" if data else "open") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
-             "otp": (("LOCKED" if data else "open") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
+             "list": (("LOCKED" if data else "write-only") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
+             "otp": (("LOCKED" if data else "write-only") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
              "counters": ("", L.WHITE), "lab": ("", L.WHITE)}[key]
     size = {"cfg": "128 B", "list": "16 slots", "otp": "64 B", "counters": "2", "lab": ""}[key]
     y = 180
@@ -417,8 +417,8 @@ def draw_cfg(ui):
     d.text("none yet" if ui.snap is None else "saved", X, y, DIM if ui.snap is None else L.GREEN); y += 12
     d.text("  the original bytes, kept" if ui.snap is not None else "  taken before the first write", 4, y, DIM); y += 14
     d.text("DATA ZONE", 4, y, L.GREY)
-    d.text("hidden" if not cfg else ("LOCKED" if data else "open"), X, y, L.RED if not cfg else (L.GREEN if data else L.YELLOW)); y += 12
-    d.text("  until CONFIG is locked" if not cfg else ("  no clear writes, ever" if data else "  clear writes allowed"), 4, y, DIM); y += 16
+    d.text("hidden" if not cfg else ("LOCKED" if data else "open, write-only"), X, y, L.RED if not cfg else (L.GREEN if data else L.YELLOW)); y += 12
+    d.text("  until CONFIG is locked" if not cfg else ("  no clear writes, ever" if data else "  clear writes ok, reads after lock"), 4, y, DIM); y += 16
     items = cfg_actions(ui)
     menu(ui, items, y, ui.act)
     menu_footer(ui, items, ui.act)
@@ -548,9 +548,14 @@ def run_write(ui, kind, slot=None):
     try:
         if kind == "note":
             ui.sig.write_note(NOTE_TEXT, slot)
-            back = ui.sig.read_note(slot)
-            ui.checks = (("WRITE COMPLETE", True), ("READ BACK: " + back[:14], back == NOTE_TEXT), ("DATA ZONE STILL OPEN", not ui.st.get("dataLocked")))
-            ui.show_result("Slot %d now holds the note. READ THE BYTES shows it; writing again replaces it." % slot, True)
+            if ui.st.get("dataLocked"):
+                back = ui.sig.read_note(slot)
+                ui.checks = (("WRITE COMPLETE", True), ("READ BACK: " + back[:14], back == NOTE_TEXT))
+                ui.show_result("Slot %d holds the note; READ THE BYTES shows it." % slot, True)
+            else:
+                ui.checks = (("WRITE COMPLETE", True), ("READ BACK: after data lock", True), ("DATA ZONE STILL OPEN", True))
+                ui.show_result("Slot %d took the 32 bytes. The chip will not read them back while the DATA zone is open; "
+                               "writing again replaces them meanwhile." % slot, True)
             return
         n = ui.sig.write_config() if kind == "writecfg" else ui.sig.restore_snapshot()
         ui.refresh()
@@ -567,8 +572,16 @@ def run_write(ui, kind, slot=None):
 
 
 # ----------------------------------------------------------------------------- refusals
+WRITE_ONLY = ("The rules are sealed, but the DATA zone is still open. While it is open the chip takes clear "
+              "writes into slots and the OTP but refuses to read anything back; reads only start once the DATA zone "
+              "is locked (LOCK DATA ZONE, permanent).")
+
+
 def why_refused(ui, what, status):
     cfg_open = not ui.st.get("configLocked")
+    data_open = not ui.st.get("dataLocked")
+    if status == 0x0F and not cfg_open and data_open and what in ("otp", "data"):
+        return WRITE_ONLY
     if status == 0x0F and cfg_open:
         zone = {"otp": "the OTP zone", "data": "the DATA zone", "counters": "the counters", "keyvalid": "any key"}
         if what in zone:
