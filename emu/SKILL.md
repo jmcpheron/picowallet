@@ -99,7 +99,8 @@ Firmware that should ship for good goes in `firmware/` and through `tools/push`.
   keys. From Python: `import atecc_sim; atecc_sim.provision(); atecc_sim.wipe(); atecc_sim.state()`.
   In the wallet, X on the home screen opens the CHIP MAP (config, data slots, OTP, counters, the
   LAB of read-only questions) and B opens LEARN (the tutorial); `chipmap.py`, `learn.py` and
-  `slots.py` draw them. A fresh virtual chip answers like a real fresh Adafruit part (factory
+  `slots.py` draw them, with `theme.py` (zone colours), `icons.py` (16 px bitmaps, `icons.draw(d,
+  "key", x, y, color, scale)`) and `ceremony.py` (the permanent transitions' animations). A fresh virtual chip answers like a real fresh Adafruit part (factory
   table, Random = ffff0000 until the lock); OTP and data reads refuse until the config lock. Red
   actions need `ALLOW_*` True (the emulator's secrets) AND the wallet armed: hold B and Y for 3 s,
   or `--exec 'import signer; signer.arm()'` headless.

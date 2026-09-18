@@ -130,9 +130,10 @@ is normal; every chip in use is locked. Generate the final key before deploying 
 
 ### Keys and slots, on the wallet itself
 
-Press **X** on the home screen for the **CHIP MAP**: the chip as a place you can walk through.
-CONFIG (128 bytes of rules), DATA (16 slots of 36, 416 or 72 bytes), OTP (64 write-once bytes),
-COUNTERS (two numbers that only go up) and the LAB, where each question is one real command
+Press **X** on the home screen for the **CHIP MAP**: the chip drawn as a floor plan you can walk
+through. CONFIG (128 bytes of rules) across the top, DATA (16 slots of 36, 416 or 72 bytes, a 4×4
+field of tiles coloured by what each slot is), OTP (64 write-once bytes), COUNTERS (two numbers
+that only go up) and the LAB docked below, where each question is one real command
 ("WHO ARE YOU?", "ARE YOU HEALTHY?", "MAKE RANDOMNESS") with the answer in words, the bytes, a
 "why that's weird" layer and the raw command underneath. The header always says where you are
 (`CHIP > DATA > SLOT 3`) and whether the wallet is `SAFE` or `ARMED`. **B** opens **LEARN**, five
@@ -144,7 +145,11 @@ Every action is one of three classes, said by colour, a glyph and words: `o SAFE
 still open, after the chip's original bytes are saved as a snapshot, with a diff of what changes
 shown first), `! PERMANENT` (cannot be undone). A permanent action needs three things: the
 `ALLOW_LOCK` / `ALLOW_GENKEY` flag in `secrets.py` on the board, the wallet **armed** (hold B and Y
-together for 3 s; good for 60 s, shown in the header), and A held for 3 s on the red screen.
+together for 3 s; good for 60 s, shown in the header), and A held for 3 s on the red screen. The
+permanent steps end in a small ceremony: the CONFIG strip on the die pulses and the padlock closes
+for RULES SEALED; noise from the chip's own randomness settles into the key for KEY CREATED. A key
+slot has a SIGN TEST (sign, then verify on the Pico, and watch counter 0 climb); the clear data
+slots take a NOTE you can overwrite until the data zone is locked. `CHIPMAP.md` has the tour.
 
 How the slots work. The ATECC608 has 16 data slots. What each slot *is* (a P-256 private key, a
 public key, an AES key, plain data) and what it *may do* (sign digests handed in from outside, be
@@ -223,9 +228,9 @@ also has **Cancel on Pico**. Monitor `RecoveryStarted` events. See `SECURITY.md`
 
 ![SIGN? $69 USDS to atg.eth, green bar at A, red bar at Y](buildlog/images/2026-09-05-20-sign-screen-69-usds.jpg)
 
-**Boot:** a chip icon whose legs light up while the board comes up, and a checklist that fills in:
-screen, wifi (joining, then the IP), chip (part, address, and whether it is new, empty or holds a
-key), app.
+**Boot:** a navy gradient, a chip die whose legs chase the rainbow while a step waits, an underline
+that fills as the steps complete, and a checklist with an icon per step: screen, wifi (joining,
+then the IP), chip (part, address, and whether it is new, empty or holds a key), app.
 
 **Chip map and LEARN:** X and B from the home screen, described under "Keys and slots" above. The
 chip's own refusals, the fixed Random pattern before the lock, and the reversible config write are
