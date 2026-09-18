@@ -210,6 +210,7 @@ digest the device computed.
 | `emu/` | the virtual wallet: MicroPython in WebAssembly, `machine` shims, the case STLs in 3D, a CLI for bots |
 | `tools/` | `pico` console, `push` firmware, `qr` (QR of the vault for the screen), `emu` (the virtual wallet) |
 | `buildlog/` | dated notes and photos of what actually happened, including the mistakes |
+| `notes/` | design notes: `open-hardware-signing.md`, the Pico as one leg of a multisig and where it stands against open, verifiable hardware |
 | `reference/` | the Pi signer this grew out of, with the fresh-chip guide; SeedSigner cap parts (MIT) |
 | `PLAN.md`, `SOLDERING.md` | the plan, and the wiring guide |
 
