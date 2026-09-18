@@ -267,6 +267,16 @@ class ATECC608:
         """32 bytes of a data slot. Refused until the config zone is locked, and per the slot's rules."""
         return self.run(OP_READ, 0x82, (block << 8) | (slot << 3), resp_len=32, wait_ms=2)
 
+    def write_data(self, slot, block, data):
+        """Write 32 bytes into a data slot in clear (Write zone 2). Allowed once the config zone is
+        locked and while the data zone is open, where the slot's rules say clear writes are ok.
+        Overwriting again is allowed, so this is reversible until the data zone is locked."""
+        if len(data) != 32:
+            raise ValueError("32 bytes at a time")
+        if block * 32 + 32 > SLOT_BYTES[slot]:
+            raise ValueError("block %d is past the end of slot %d" % (block, slot))
+        self.run(OP_WRITE, 0x82, (block << 8) | (slot << 3), bytes(data), resp_len=1, wait_ms=30)
+
     def read_config_word(self, word):
         """4 bytes of the config zone (word 4 holds the I2C address byte)."""
         return self.run(OP_READ, 0x00, word, resp_len=4, wait_ms=2)

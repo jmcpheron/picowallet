@@ -14,6 +14,8 @@ import signer as S
 import slots as SL
 import power
 import splash
+import icons as ICONS
+import theme as THEME
 try:
     import secrets
 except ImportError:
@@ -190,6 +192,9 @@ def draw_status():
     key; wifi; the app. Nothing here touches the chip, it reads chip_st from the last probe."""
     st = chip_st
     soft = sig is not None and sig.name != "atecc608"
+    if sig is not None and not soft:
+        ICONS.draw(d, "chip", 4, 22, THEME.C["chip"])
+        ICONS.draw(d, "lock" if st.get("configLocked") else "unlock", 220, 22, THEME.C["safe"] if st.get("configLocked") else THEME.C["perm"])
     if secrets is None:
         d.center_text("no secrets.py", 22, L.RED, 2)
         d.center_text("copy it to the board", 44, L.GREY)

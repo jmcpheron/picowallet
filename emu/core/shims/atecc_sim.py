@@ -75,12 +75,13 @@ class Chip:
             self.cfg = bytearray(bytes.fromhex(st["config"]))
             self.keys = {int(k): int(v, 16) for k, v in st.get("keys", {}).items()}
             self.counters = list(st.get("counters", [0, 0]))
+            self.data = {int(k): bytearray(bytes.fromhex(v)) for k, v in st.get("data", {}).items()}
         except Exception as e:
             print("atecc_sim: bad saved state (%s), starting blank" % e)
 
     def save(self):
         st = {"config": "".join("%02x" % b for b in self.cfg), "keys": {str(k): "%064x" % v for k, v in self.keys.items()},
-              "counters": self.counters}
+              "counters": self.counters, "data": {str(k): "".join("%02x" % b for b in v) for k, v in self.data.items()}}
         try:
             _emu.chip_save(json.dumps(st))
         except Exception as e:
@@ -208,6 +209,18 @@ class Chip:
                 raise _Fail(STATUS_PARSE)
             return self._data(bytes(self.cfg[p2 * 4:p2 * 4 + 4]))
         if opcode == OP_WRITE:
+            if p1 & 3 == 2:
+                # a data slot, 32 bytes in clear: after the config lock, while the data zone is open,
+                # where the slot's WriteConfig says clear writes are allowed
+                slot, block = (p2 >> 3) & 0xF, p2 >> 8
+                if not p1 & 0x80 or len(data) != 32 or block * 32 + 32 > SLOT_BYTES[slot]:
+                    raise _Fail(STATUS_PARSE)
+                if not self.config_locked() or self.data_locked() or (self.slot_cfg(slot) >> 13) & 7:
+                    raise _Fail(STATUS_EXEC)
+                buf = self.data.setdefault(slot, bytearray(SLOT_BYTES[slot]))
+                buf[block * 32:block * 32 + 32] = data
+                self.save()
+                return self._status(STATUS_OK)
             if p1 & 3 != 0 or p1 & 0x80 or len(data) != 4:
                 raise _Fail(STATUS_PARSE)
             if self.config_locked() or p2 < 4 or p2 == 21 or p2 > 31:
@@ -303,6 +316,9 @@ class Chip:
         if not self.slot_cfg(slot) & 1:
             raise _Fail(STATUS_EXEC)          # ReadKey bit 0: external signatures not permitted
         digest, self.tempkey = self.tempkey, None
+        if self.slot_cfg(slot) & 0x20:          # LimitedUse: every signature spends one on counter 0
+            self.counters[0] += 1
+            self.save()
         r, s = p256.sign(self.keys[slot], digest)
         return self._data(r.to_bytes(32, "big") + s.to_bytes(32, "big"))
 

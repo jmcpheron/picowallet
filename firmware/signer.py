@@ -192,6 +192,20 @@ class SoftSigner:
     def provision(self):
         return "software key: nothing to lock"
 
+    def sign_test(self, slot=None):
+        import hashlib
+        slot = self.slot if slot is None else slot
+        digest = hashlib.sha256(b"picowallet").digest()
+        r, s = self.sign(digest, slot)
+        qx, qy = self.pubkey(slot)
+        return p256.verify(qx, qy, digest, r, s), r, s
+
+    def write_note(self, text, slot=12):
+        raise Exception("software key: no data slots")
+
+    def read_note(self, slot=12):
+        raise Exception("software key: no data slots")
+
     def random(self):
         return os.urandom(32)
 
@@ -321,6 +335,28 @@ class ChipSigner:
         self._slots = None
         self.chip.lock_slot(slot)
         return "slot %d locked" % slot
+
+    def sign_test(self, slot=None):
+        """Sign SHA-256 of b"picowallet" with the slot and verify it on the Pico. Returns
+        (verified, r, s). A signature spends one count on counter 0 if the slot has LimitedUse."""
+        import hashlib
+        slot = self.slot if slot is None else slot
+        digest = hashlib.sha256(b"picowallet").digest()
+        r, s = self.sign(digest, slot)
+        qx, qy = self.pubkey(slot)
+        return p256.verify(qx, qy, digest, r, s), r, s
+
+    def write_note(self, text, slot=12):
+        """REVERSIBLE while the data zone is open: put a short line into a clear data slot (with
+        the wallet config, slots 12 and 13 are the clear ones: 72 bytes, read and written in clear)."""
+        b = text.encode()[:32]
+        b = b + bytes(32 - len(b))
+        self.chip.write_data(slot, 0, b)
+        return len(text)
+
+    def read_note(self, slot=12):
+        b = self.chip.read_data(slot, 0)
+        return bytes(b).rstrip(b"\x00").decode()
 
     def allowed(self, what):
         return _allowed("ALLOW_GENKEY" if what == "genkey" else "ALLOW_LOCK")

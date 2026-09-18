@@ -13,10 +13,14 @@ import time
 import lcd as L
 import signer as S
 import atecc
+import theme as T
+import icons as I
 
-CLASS = {"safe": ("o", L.GREEN, "SAFE TO EXPLORE: no changes"),
-         "rev": ("~", L.YELLOW, "REVERSIBLE: can be restored"),
-         "perm": ("!", L.RED, "PERMANENT: cannot be undone")}
+CLASS = {"safe": ("o", T.C["safe"], "SAFE TO EXPLORE: no changes"),
+         "rev": ("~", T.C["rev"], "REVERSIBLE: can be restored"),
+         "perm": ("!", T.C["perm"], "PERMANENT: cannot be undone")}
+KIND_COLOR = {"P256": T.C["learn"], "PUB": T.C["config"], "AES": T.C["counters"], "DATA": T.C["grey"], "?": T.C["dim"]}
+KIND_ICON = {"P256": "key", "PUB": "pub", "AES": "aes", "DATA": "bytes", "?": "bytes"}
 ARM_HOLD_MS = 3000
 DIM = L.color(90, 90, 100)
 NAMES = {"zones": "CHIP", "list": "DATA", "cfg": "CONFIG", "raw": "RAW", "diff": "DIFF", "otp": "OTP",
@@ -63,7 +67,7 @@ def crumb(ui, limit=22):
 def header(ui, text=None):
     """One line in the bar: the breadcrumb left, the wallet's ARM state right."""
     d = ui.d
-    d.fill_rect(0, 0, 240, 22, L.DARK)
+    d.fill_rect(0, 0, 240, 22, T.shade(T.zone_of(ui.view), 0.35))
     left = S.armed()
     arm = ("! ARMED %ds" % left) if left else "SAFE o"
     d.text(text[:28 - len(arm)] if text is not None else crumb(ui, 28 - len(arm)), 4, 7, L.WHITE)
@@ -75,39 +79,29 @@ def footer(ui, text, color=L.GREY):
     ui.d.text(text[:29], 4, 229, color)
 
 
-def icon(d, name, x, y, c):
-    """Small marks the 8x8 font cannot type: check, cross, warn, lock (open/closed). 12 px tall."""
-    if name == "check":
-        for dx in (0, 1):
-            d.line(x + dx, y + 6, x + 4 + dx, y + 10, c)
-            d.line(x + 4 + dx, y + 10, x + 11 + dx, y + 2, c)
-    elif name == "cross":
-        for dx in (0, 1):
-            d.line(x + dx, y + 1, x + 9 + dx, y + 10, c)
-            d.line(x + 9 + dx, y + 1, x + dx, y + 10, c)
-    elif name == "warn":
-        d.line(x + 5, y, x, y + 11, c); d.line(x + 5, y, x + 10, y + 11, c); d.line(x, y + 11, x + 10, y + 11, c)
-        d.fill_rect(x + 5, y + 4, 1, 4, c); d.fill_rect(x + 5, y + 9, 1, 1, c)
-    elif name == "lock":
-        d.fill_rect(x, y + 6, 12, 8, c)
-        d.rect(x + 2, y + 1, 8, 6, c)
-    elif name == "unlock":
-        d.fill_rect(x, y + 6, 12, 8, c)
-        d.rect(x + 6, y, 8, 6, c)
-        d.fill_rect(x + 7, y + 5, 6, 2, L.BLACK)
+def icon(d, name, x, y, c, scale=1):
+    """A 16 px bitmap from icons.py in colour c: check, cross, warn, lock, unlock, key, ..."""
+    I.draw(d, name, x, y, c, scale)
+
+
+def badge(d, cls, x, y):
+    """The class as a small filled square with its glyph: o safe, ~ reversible, ! permanent."""
+    glyph, color, _ = CLASS[cls]
+    d.fill_rect(x, y - 1, 10, 10, color)
+    d.text(glyph, x + 1, y, L.BLACK)
 
 
 def menu(ui, items, y, sel):
     """Rows of (kind, label, cls, off). Glyph in the class colour, label white (yellow when picked,
     dim when off). Returns the next y. The footer words come from menu_footer."""
     d = ui.d
+    zone = T.C[T.zone_of(ui.view)]
     for i, (kind, label, cls, off) in enumerate(items):
-        glyph, color, _ = CLASS[cls]
         if i == sel:
-            d.fill_rect(0, y - 2, 240, 13, L.DARK)
-        d.text(">" if i == sel else " ", 2, y, L.YELLOW)
-        d.text(glyph, 12, y, color)
-        d.text(label[:26], 24, y, DIM if off else (L.YELLOW if i == sel else L.WHITE))
+            d.fill_rect(0, y - 2, 240, 13, T.C["ink"])
+            d.fill_rect(0, y - 2, 3, 13, zone)
+        badge(d, cls, 10, y)
+        d.text(label[:26], 26, y, DIM if off else (L.YELLOW if i == sel else L.WHITE))
         y += 14
     return y
 
@@ -195,44 +189,92 @@ def draw_arm_bar(ui):
 
 
 # ----------------------------------------------------------------------------- CHIP MAP
-ZONES = (("cfg", "CONFIG", "the rules for every slot"),
-         ("list", "DATA", "keys and bytes, 36/416/72 B"),
-         ("otp", "OTP", "64 write-once bytes"),
-         ("counters", "COUNTERS", "two numbers, only ever up"),
-         ("lab", "LAB", "ask the chip, read-only"))
+ZONES = (("cfg", "CONFIG", "config", "the rules for every slot"),
+         ("list", "DATA", "data", "keys and bytes, 36/416/72 B"),
+         ("otp", "OTP", "otp", "64 write-once bytes"),
+         ("counters", "COUNTERS", "counters", "two numbers, only ever up"),
+         ("lab", "LAB", "lab", "ask the chip, read-only"))
+
+
+def regions(x, y, w, h):
+    """Where each zone sits on the die, as (rx, ry, rw, rh)."""
+    return {"cfg": (x + 8, y + 8, w - 16, 26),
+            "list": (x + 8, y + 40, 116, 72),
+            "otp": (x + 132, y + 40, w - 140, 32),
+            "counters": (x + 132, y + 80, w - 140, 32),
+            "lab": (x + 8, y + 118, w - 16, 16)}
+
+
+def draw_die(d, ui, x, y, w, h, sel=None, pulse=None, locked=None):
+    """The chip as a floor plan: CONFIG across the top, the 4x4 field of slots, OTP, COUNTERS, the
+    LAB docked at the bottom. sel gets a white frame; pulse recolours the selected region."""
+    st = ui.st
+    cfg = st.get("configLocked") if locked is None else locked
+    data = st.get("dataLocked")
+    for i in range(6):
+        ly = y + 14 + i * 22
+        d.fill_rect(x - 8, ly, 8, 4, T.C["dim"])
+        d.fill_rect(x + w, ly, 8, 4, T.C["dim"])
+    d.fill_rect(x, y, w, h, T.C["ink"])
+    d.rect(x, y, w, h, T.C["chip"])
+    d.fill_rect(x + 3, y + 3, 4, 4, T.C["learn"])
+    R = regions(x, y, w, h)
+    for key, name, zone, _ in ZONES:
+        rx, ry, rw, rh = R[key]
+        color = T.C[zone]
+        fill = pulse if (pulse and key == sel) else T.shade(zone, 0.28)
+        d.fill_rect(rx, ry, rw, rh, fill)
+        d.rect(rx, ry, rw, rh, color)
+        if key == "list":
+            for n in range(16):
+                s = ui.row(n)
+                kc = KIND_COLOR.get(s["kind"], T.C["dim"]) if cfg or s["kind"] != "?" else T.C["dim"]
+                tx, ty = rx + 6 + (n % 4) * 27, ry + 14 + (n // 4) * 14
+                d.fill_rect(tx, ty, 20, 10, kc if s["kind"] != "DATA" else T.shade("data", 0.5))
+                if n == ui.sig.slot:
+                    d.rect(tx - 1, ty - 1, 22, 12, T.C["safe"])
+            d.text("DATA", rx + 4, ry + 3, color)
+        elif key == "cfg":
+            I.draw(d, "config", rx + 4, ry + 5, color)
+            d.text("CONFIG 128 B", rx + 24, ry + 9, L.WHITE)
+            I.draw(d, "lock" if cfg else "unlock", rx + rw - 22, ry + 5, T.C["safe"] if cfg else T.C["perm"])
+        elif key == "otp":
+            I.draw(d, "otp", rx + 3, ry + 8, color)
+            d.text("OTP", rx + 22, ry + 12, L.WHITE)
+            if not cfg:
+                d.text("?", rx + rw - 12, ry + 12, T.C["perm"])
+        elif key == "counters":
+            I.draw(d, "counter", rx + 3, ry + 8, color)
+            d.text("CTR", rx + 22, ry + 12, L.WHITE)
+        elif key == "lab":
+            I.draw(d, "lab", rx + 2, ry, color)
+            d.text("LAB: ask the chip", rx + 22, ry + 4, L.WHITE)
+        if key == sel:
+            d.rect(rx - 2, ry - 2, rw + 4, rh + 4, L.WHITE)
+            d.rect(rx - 3, ry - 3, rw + 6, rh + 6, L.WHITE)
+    return R
 
 
 def draw_zones(ui):
     d = ui.d
     st = ui.st
     header(ui)
-    y = 27
-    part = ui.part()
-    d.text(part, 4, y, L.WHITE)
-    if st.get("i2cAddr"):
-        d.text("i2c " + st["i2cAddr"], 240 - 8 * 8, y, L.GREY)
-    y += 12
-    d.text("serial " + st.get("serial", "?"), 4, y, L.GREY); y += 16
+    draw_die(d, ui, 20, 30, 200, 140, sel=ZONES[ui.act][0])
     cfg, data = st.get("configLocked"), st.get("dataLocked")
-    for i, (view, name, blurb) in enumerate(ZONES):
-        sel = i == ui.act
-        if sel:
-            d.fill_rect(0, y - 2, 240, 25, L.DARK)
-        d.text(">" if sel else " ", 2, y, L.YELLOW)
-        d.text(name, 14, y, L.YELLOW if sel else L.WHITE)
-        if view == "cfg":
-            d.text("128 B", 92, y, L.GREY)
-            d.text("LOCKED" if cfg else "OPEN", 150, y, L.GREEN if cfg else L.RED)
-        elif view == "list":
-            d.text("16 slots", 92, y, L.GREY)
-            d.text("hidden" if not cfg else ("LOCKED" if data else "open"), 162, y, L.RED if not cfg else (L.GREEN if data else L.YELLOW))
-        elif view == "otp":
-            d.text("64 B", 92, y, L.GREY)
-            d.text("hidden" if not cfg else ("LOCKED" if data else "open"), 162, y, L.RED if not cfg else (L.GREEN if data else L.YELLOW))
-        elif view == "counters":
-            d.text("2", 92, y, L.GREY)
-        d.text(blurb, 14, y + 12, DIM)
-        y += 26
+    key, name, zone, blurb = ZONES[ui.act]
+    state = {"cfg": ("LOCKED" if cfg else "OPEN", T.C["safe"] if cfg else T.C["perm"]),
+             "list": (("LOCKED" if data else "open") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
+             "otp": (("LOCKED" if data else "open") if cfg else "hidden", T.C["safe"] if data else (T.C["rev"] if cfg else T.C["perm"])),
+             "counters": ("", L.WHITE), "lab": ("", L.WHITE)}[key]
+    size = {"cfg": "128 B", "list": "16 slots", "otp": "64 B", "counters": "2", "lab": ""}[key]
+    y = 180
+    I.draw(d, {"cfg": "config", "list": "data", "otp": "otp", "counters": "counter", "lab": "lab"}[key], 4, y - 4, T.C[zone])
+    d.text(name, 24, y, T.C[zone])
+    d.text(size, 24 + 8 * len(name) + 8, y, L.GREY)
+    if state[0]:
+        d.text(state[0], 236 - 8 * len(state[0]), y, state[1])
+    d.text(blurb[:29], 4, y + 14, L.WHITE)
+    d.text("%s  i2c %s" % (ui.part(), st.get("i2cAddr", "?")), 4, y + 28, DIM)
     footer(ui, "A open  B learn  Y home")
 
 
@@ -285,6 +327,39 @@ def draw_counters(ui):
     lines += ["", "counter 0   %d" % c0, "counter 1   %d" % c1]
     draw_scroll(ui, lines)
     footer(ui, "Y back")
+
+
+def draw_tile(d, ui, s, x, y, w, h, sel=False):
+    """One slot as a tile: number, kind icon, size, and a fingerprint or state word."""
+    cfg = ui.st.get("configLocked")
+    kind = s["kind"]
+    color = KIND_COLOR.get(kind, T.C["dim"])
+    d.fill_rect(x, y, w, h, T.shade("data", 0.18) if kind == "DATA" else T.C["ink"])
+    d.text("%2d" % s["slot"], x + 2, y + 3, L.WHITE if kind != "DATA" else L.GREY)
+    if s["locked"]:
+        I.draw(d, "lock", x + w - 19, y + 2, T.C["perm"])
+    else:
+        I.draw(d, KIND_ICON.get(kind, "bytes"), x + w - 19, y + 2, color)
+    d.text("%dB" % s.get("bytes", 36), x + 2, y + h - 21, DIM)
+    if kind == "P256":
+        if s.get("hasKey"):
+            what, wc = ("%08x" % (s["qx"] >> 224))[:6], L.WHITE
+        elif not cfg:
+            what, wc = "hidden", T.C["perm"]
+        elif not s.get("pubInfo", True):
+            what, wc = "secret", L.GREY
+        else:
+            what, wc = "empty", T.C["rev"]
+        d.text(what, x + 2, y + h - 10, wc)
+    elif kind == "DATA":
+        d.text("secret" if s.get("isSecret") else "clear", x + 2, y + h - 10, T.C["dim"] if s.get("isSecret") else color)
+    elif kind != "?":
+        d.text(kind.lower(), x + 2, y + h - 10, color)
+    if s["slot"] == ui.sig.slot:
+        d.fill_rect(x, y + h - 2, w, 2, T.C["safe"])
+    if sel:
+        d.rect(x - 1, y - 1, w + 2, h + 2, L.WHITE)
+        d.rect(x - 2, y - 2, w + 4, h + 4, L.WHITE)
 
 
 # ----------------------------------------------------------------------------- CONFIG
@@ -423,12 +498,18 @@ def draw_diff(ui):
 
 
 # ----------------------------------------------------------------------------- the reversible write
-def start_write(ui, kind):
+NOTE_TEXT = "hello from picowallet"
+
+
+def start_write(ui, kind, slot=None):
     """Show what a write would change, then wait for A held: a REVERSIBLE CHANGE, yellow."""
-    target = atecc.CONFIG if kind == "writecfg" else ui.snap
-    ui.diff = atecc.diff_config(ui.cfgb, target)
-    ui.difftitle = "chip vs " + ("wallet config" if kind == "writecfg" else "saved snapshot")
-    ui.action, ui.hold, ui.ret = (kind, None), None, ui.view
+    if kind == "note":
+        ui.diff = None
+    else:
+        target = atecc.CONFIG if kind == "writecfg" else ui.snap
+        ui.diff = atecc.diff_config(ui.cfgb, target)
+        ui.difftitle = "chip vs " + ("wallet config" if kind == "writecfg" else "saved snapshot")
+    ui.action, ui.hold, ui.ret = (kind, slot), None, ui.view
     ui.view = "confirm_write"
 
 
@@ -438,23 +519,36 @@ def draw_confirm_write(ui):
     diff = ui.diff
     header(ui, "REVERSIBLE CHANGE")
     y = 27
-    d.text("WRITE WALLET CONFIG" if kind == "writecfg" else "RESTORE SAVED CONFIG", 4, y, L.YELLOW); y += 12
-    d.text("~ can be restored", 4, y, L.YELLOW); y += 14
-    for line in diff_lines(diff, full=False)[:6]:
-        d.text(line[:29], 4, y, L.WHITE); y += 12
-    d.text("I2C address unchanged 0x%02x" % ((ui.cfgb[16] >> 1) if ui.cfgb else 0), 4, y, L.GREEN if not diff["addrChanges"] else L.RED); y += 12
-    d.text("config zone stays OPEN", 4, y, L.GREEN); y += 12
+    badge(d, "rev", 4, y)
+    d.text({"writecfg": "WRITE WALLET CONFIG", "restore": "RESTORE SAVED CONFIG", "note": "WRITE A NOTE INTO SLOT %s" % ui.action[1]}[kind], 18, y, L.YELLOW); y += 12
+    d.text("can be restored", 18, y, L.YELLOW); y += 14
+    if kind == "note":
+        for line in wrap("32 bytes of clear text go into slot %s (plain data, readable in clear). Writing again replaces them, so this can be undone until the data zone is locked." % ui.action[1]):
+            d.text(line, 4, y, L.WHITE); y += 12
+        y += 6
+        d.text('"%s"' % NOTE_TEXT[:27], 4, y, L.WHITE); y += 12
+    else:
+        for line in diff_lines(diff, full=False)[:6]:
+            d.text(line[:29], 4, y, L.WHITE); y += 12
+        d.text("I2C address unchanged 0x%02x" % ((ui.cfgb[16] >> 1) if ui.cfgb else 0), 4, y, L.GREEN if not diff["addrChanges"] else L.RED); y += 12
+        d.text("config zone stays OPEN", 4, y, L.GREEN); y += 12
     d.center_text("hold A to write", 176, L.YELLOW)
     d.rect(20, 192, 200, 14, L.WHITE)
     if ui.hold is not None:
         w = min(198, 198 * time.ticks_diff(time.ticks_ms(), ui.hold) // ui.HOLD_REV)
         d.fill_rect(21, 193, w, 12, L.YELLOW)
-    footer(ui, "Y details  B cancel")
+    footer(ui, "B cancel" if kind == "note" else "Y details  B cancel")
 
 
-def run_write(ui, kind):
-    """The write itself, then the three checks."""
+def run_write(ui, kind, slot=None):
+    """The write itself, then the checks."""
     try:
+        if kind == "note":
+            ui.sig.write_note(NOTE_TEXT, slot)
+            back = ui.sig.read_note(slot)
+            ui.checks = (("WRITE COMPLETE", True), ("READ BACK: " + back[:14], back == NOTE_TEXT), ("DATA ZONE STILL OPEN", not ui.st.get("dataLocked")))
+            ui.show_result("Slot %d now holds the note. READ THE BYTES shows it; writing again replaces it." % slot, True)
+            return
         n = ui.sig.write_config() if kind == "writecfg" else ui.sig.restore_snapshot()
         ui.refresh()
         ui.checks = (("WRITE COMPLETE", True), ("READBACK MATCHES", True), ("CONFIG STILL OPEN", not ui.st.get("configLocked")))
@@ -462,7 +556,10 @@ def run_write(ui, kind):
     except Exception as e:
         ui.refresh()
         ui.checks = (("WRITE COMPLETE", False),)
-        ui.show_result("%s. The chip's table may now be a mix: RESTORE SAVED CONFIG puts the snapshot back." % e, False)
+        if kind == "note":
+            ui.show_result("%s." % e, False)
+        else:
+            ui.show_result("%s. The chip's table may now be a mix: RESTORE SAVED CONFIG puts the snapshot back." % e, False)
     ui.on_change()
 
 
@@ -477,7 +574,7 @@ def why_refused(ui, what, status):
             return "GenKey and Sign are refused until the CONFIG zone is locked: no key can exist before the rules are sealed."
         return "The chip will not do this while its CONFIG zone is open."
     if status == 0x0F and what == "data":
-        return "This slot's rules forbid reading it in clear (IsSecret), or the block is out of range."
+        return "Slot 8's rules mark it secret: the chip never hands its bytes out in clear. Slots 12 and 13 are the clear ones."
     if status == 0x03:
         return "The chip did not understand the command as sent. That is a firmware bug, not the chip's state."
     if status is None:

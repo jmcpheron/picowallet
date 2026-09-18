@@ -12,6 +12,9 @@ import signer as S
 import atecc
 import chipmap as C
 import learn as LN
+import ceremony as CE
+import theme as T
+import icons as I
 
 HOLD_PERM = 3000        # A held this long on the red screen
 HOLD_REV = 1500         # and this long on the yellow one
@@ -131,13 +134,20 @@ class SlotsUI:
         out = []
         active = s["slot"] == self.sig.slot
         cfg_locked = self.st.get("configLocked", False)
+        data_locked = self.st.get("dataLocked", False)
         if s["kind"] == "P256":
             if s.get("hasKey") and not active:
                 out.append(("use", "USE THIS KEY", "safe", ""))
-            if s["genKey"] and not s["locked"]:
-                out.append(("genkey", "NEW KEY", "perm", "config zone still open" if not cfg_locked else self.sig.gate("genkey")))
             if s.get("hasKey"):
                 out.append(("pubkey", "SHOW PUBLIC KEY", "safe", ""))
+                out.append(("signtest", "SIGN TEST", "safe", "" if s["extSign"] else "this slot may not sign"))
+            if s["genKey"] and not s["locked"]:
+                out.append(("genkey", "NEW KEY", "perm", "config zone still open" if not cfg_locked else self.sig.gate("genkey")))
+        if s["kind"] == "DATA":
+            if s.get("clearWrite") == "clear" and not s.get("isSecret"):
+                out.append(("note", "WRITE A NOTE", "rev", "config zone still open" if not cfg_locked else ("data zone is locked" if data_locked else "")))
+            if not s.get("isSecret"):
+                out.append(("readnote", "READ THE BYTES", "safe", "config zone still open" if not cfg_locked else ""))
         if s["lockable"] and not s["locked"]:
             out.append(("lockslot", "LOCK SLOT FOREVER", "perm", "config zone still open" if not cfg_locked else self.sig.gate("lock")))
         return out
@@ -193,37 +203,19 @@ class SlotsUI:
         d.show()
         self.dirty = False
 
+    TILE_W, TILE_H, TILE_X, TILE_Y = 56, 46, 4, 27
+
     def draw_list(self):
+        """The 16 slots as a 4x4 field of tiles, the chip's own layout."""
         d = self.d
         C.header(self)
         cfg = self.st.get("configLocked")
         if not self.table:
             d.center_text("no slot table", 100, L.RED)
         for n in range(16):
-            s = self.row(n)
-            y = ROW_Y + n * ROW_H
-            if n == self.cur:
-                d.fill_rect(0, y - 2, 240, ROW_H, L.DARK)
-                d.text(">", 2, y, L.YELLOW)
-            c = KIND_COLOR.get(s["kind"], C.DIM)
-            active = n == self.sig.slot
-            d.text("%2d" % n, 12, y, L.GREEN if active else c)
-            d.text(KIND_LABEL.get(s["kind"], s["kind"]), 32, y, c)
-            d.text("%dB" % s.get("bytes", atecc.SLOT_BYTES[n]), 72, y, C.DIM)
-            if s["kind"] == "P256":
-                if s.get("hasKey"):
-                    what, wc = fp(s), L.WHITE
-                elif not cfg:
-                    what, wc = "hidden", L.RED
-                elif not s.get("pubInfo", True):
-                    what, wc = "secret", L.GREY
-                else:
-                    what, wc = "empty", L.YELLOW
-                d.text(what, 108, y, wc)
-                if active:
-                    d.text("ACTIVE", 180, y, L.GREEN)
-            if s["locked"]:
-                d.text("L", 230, y, L.RED)
+            x = self.TILE_X + (n % 4) * (self.TILE_W + 4)
+            y = self.TILE_Y + (n // 4) * (self.TILE_H + 3)
+            C.draw_tile(d, self, self.row(n), x, y, self.TILE_W, self.TILE_H, sel=n == self.cur)
         C.footer(self, "A open  Y up" if cfg else "cfg OPEN: keys hidden  Y up", L.GREY if cfg else L.RED)
 
     def draw_slot(self):
@@ -231,8 +223,9 @@ class SlotsUI:
         s = self.row(self.cur)
         C.header(self)
         y = 27
-        d.text(DESC.get(s["kind"], s["kind"]), 4, y, L.WHITE)
-        d.text("%d B" % s.get("bytes", atecc.SLOT_BYTES[self.cur]), 240 - 8 * 6, y, L.GREY); y += 12
+        I.draw(d, "lock" if s["locked"] else C.KIND_ICON.get(s["kind"], "bytes"), 220, y - 1, T.C["perm"] if s["locked"] else C.KIND_COLOR.get(s["kind"], C.DIM))
+        d.text(DESC.get(s["kind"], s["kind"]), 4, y, L.WHITE); y += 12
+        d.text("%d bytes" % s.get("bytes", atecc.SLOT_BYTES[self.cur]), 4, y, L.GREY); y += 12
         if s["kind"] == "P256":
             if s.get("hasKey"):
                 d.text("key " + fp(s), 4, y, L.GREEN if self.cur == self.sig.slot else L.WHITE)
@@ -288,9 +281,9 @@ class SlotsUI:
         d = self.d
         kind, slot = self.action
         C.header(self, "PERMANENT")
-        C.icon(d, "unlock", 6, 27, L.RED)
-        d.big_text("PERMANENT", 26, 26, L.RED, 2)
-        d.text("! cannot be undone", 26, 44, L.RED)
+        C.icon(d, "unlock", 4, 26, L.RED, 2)
+        d.big_text("PERMANENT", 40, 26, L.RED, 2)
+        d.text("! cannot be undone", 40, 44, L.RED)
         if kind == "genkey":
             body = ("NEW KEY IN SLOT %d" % slot, "The chip draws a new key from its own randomness and keeps it. The key there now is gone for good; a vault paired to it can never be spent again.")
         elif kind == "lockslot":
@@ -318,11 +311,11 @@ class SlotsUI:
         C.header(self, "SEALED" if self.sealed else ("DONE" if self.ok else "ERROR"))
         y = 30
         if self.sealed:
-            C.icon(d, "lock", 6, y, L.GREEN)
-            d.big_text("SEALED", 26, y - 2, L.GREEN, 2); y += 24
+            C.icon(d, "lock", 4, y - 6, L.GREEN, 2)
+            d.big_text("SEALED", 40, y - 2, L.GREEN, 2); y += 28
         for label, ok in self.checks or ():
-            C.icon(d, "check" if ok else "cross", 6, y - 2, L.GREEN if ok else L.RED)
-            d.text(label, 24, y, L.GREEN if ok else L.RED); y += 14
+            C.icon(d, "check" if ok else "cross", 4, y - 4, L.GREEN if ok else L.RED)
+            d.text(label[:26], 24, y, L.GREEN if ok else L.RED); y += 14
         if self.checks:
             y += 4
         for line in C.wrap(self.msg)[:9]:
@@ -351,8 +344,8 @@ class SlotsUI:
                     if v == "confirm":
                         self.run(*self.action)
                     else:
-                        self.busy("writing the config zone...")
-                        C.run_write(self, self.action[0])
+                        self.busy("writing..." if self.action[0] == "note" else "writing the config zone...")
+                        C.run_write(self, self.action[0], self.action[1])
                 self.dirty = True
             elif self.hold is not None:
                 self.hold, self.dirty = None, True
@@ -405,8 +398,12 @@ class SlotsUI:
     def tick_list(self, pressed):
         for k in pressed:
             if k == "up":
-                self.cur = (self.cur - 1) % 16
+                self.cur = (self.cur - 4) % 16
             elif k == "down":
+                self.cur = (self.cur + 4) % 16
+            elif k == "left":
+                self.cur = (self.cur - 1) % 16
+            elif k == "right":
                 self.cur = (self.cur + 1) % 16
             elif k == "A" or k == "press":
                 self.go("slot")
@@ -438,31 +435,56 @@ class SlotsUI:
     def choose(self, kind, slot):
         """A live action from a slot or the config page: safe ones run, permanent ones go red."""
         self.ret = self.view
-        if kind == "use":
+        if kind in ("use", "signtest", "readnote"):
             self.run(kind, slot)
         elif kind == "pubkey":
             self.go("pubkey")
+        elif kind == "note":
+            C.start_write(self, "note", slot)
         elif kind in ("genkey", "lockslot", "lockcfg", "lockdata"):
             self.action, self.hold, self.view = (kind, slot), None, "confirm"
 
     def run(self, kind, slot):
-        self.busy({"genkey": "making a key in slot %s" % slot, "use": "switching to slot %s" % slot}.get(kind, kind + "..."))
+        self.busy({"genkey": "making a key in slot %s" % slot, "use": "switching to slot %s" % slot,
+                   "signtest": "signing 32 bytes in slot %s" % slot}.get(kind, kind + "..."))
         sealed = False
+        self.checks = None
         try:
             if kind == "use":
                 self.sig.use(slot)
                 out = "slot %d is now the signing key. the app shows paired only if the vault was deployed with it." % slot
             elif kind == "genkey":
                 x, _ = self.sig.genkey(slot)
+                CE.key_created(self, slot, "%08x" % (x >> 224))
                 out = "new key in slot %d: %08x. record qx/qy from SHOW PUBLIC KEY before deploying a vault." % (slot, x >> 224)
+            elif kind == "signtest":
+                ok_sig, r, sg = self.sig.sign_test(slot)
+                cnt = ""
+                chip = getattr(self.sig, "chip", None)
+                if chip and self.row(slot).get("limitedUse"):
+                    try:
+                        cnt = " Counter 0 is now %d: this slot spends one count per signature." % chip.counter(0)
+                    except Exception:
+                        pass
+                self.checks = (("SIGNATURE VERIFIED" if ok_sig else "SIGNATURE DID NOT VERIFY", ok_sig),)
+                out = "Slot %d signed SHA-256 of 'picowallet' and the Pico verified it with the slot's public key. r %08x.. s %08x..%s" % (slot, r >> 224, sg >> 224, cnt)
+                if not ok_sig:
+                    raise Exception(out)
+            elif kind == "readnote":
+                note = self.sig.read_note(slot)
+                out = 'Slot %d says: "%s"' % (slot, note) if note else "Slot %d holds no text yet (all zero bytes)." % slot
             elif kind == "lockslot":
                 out = str(self.sig.lock_slot(slot)) + ". The key in it can never be replaced."
+                CE.sealed(self, "KEY SEALED", "slot %d can never change" % slot)
                 sealed = True
             elif kind == "lockcfg":
                 out = str(self.sig.lock_config()) + ". These rules can never be changed again. The data zone is open: NEW KEY in slot 0 is next."
+                self.refresh()
+                CE.rules_sealed(self)
                 sealed = True
             elif kind == "lockdata":
                 out = str(self.sig.lock_data()) + ". No more clear-text writes, ever."
+                CE.sealed(self, "DATA SEALED", "no clear writes, ever")
                 sealed = True
             else:
                 out = "unknown action " + kind

@@ -5,6 +5,10 @@
 import lcd as L
 import atecc
 import chipmap as C
+import theme as T
+import icons as I
+
+CARD_ICON = ("chip", "lab", "config", "key", "lock", "book")
 
 CARDS = (
     ("WHAT'S INSIDE?", "zones",
@@ -32,13 +36,14 @@ def draw_learn(ui):
     for i, (title, view, _) in enumerate(CARDS):
         sel = i == ui.act
         if sel:
-            d.fill_rect(0, y - 2, 240, 13, L.DARK)
-        d.text(">" if sel else " ", 2, y, L.YELLOW)
-        d.text("%d" % (i + 1) if i < 5 else "?", 12, y, L.GREY)
-        d.text(title, 28, y, L.YELLOW if sel else L.WHITE)
+            d.fill_rect(0, y - 4, 240, 20, T.C["ink"])
+            d.fill_rect(0, y - 4, 3, 20, T.C["learn"])
+        I.draw(d, CARD_ICON[i], 8, y - 4, T.C["learn"] if sel else T.C["grey"])
+        d.text("%d" % (i + 1) if i < 5 else "?", 30, y, L.GREY)
+        d.text(title, 46, y, L.YELLOW if sel else L.WHITE)
         if i in ui.done:
-            C.icon(d, "check", 220, y - 2, L.GREEN)
-        y += 16
+            I.draw(d, "check", 216, y - 4, T.C["safe"])
+        y += 20
     C.footer(ui, "A read  Y home")
 
 
@@ -60,7 +65,8 @@ def draw_card(ui):
     d = ui.d
     title, view, text = CARDS[ui.card]
     C.header(ui, "LEARN > %d %s" % (ui.card + 1, title) if ui.card < 5 else "LEARN > " + title)
-    C.draw_scroll(ui, C.wrap(text))
+    C.draw_scroll(ui, C.wrap(text), bottom=196)
+    I.draw(d, CARD_ICON[ui.card], 206, 194, T.C["learn"], 2)
     C.footer(ui, ("A go  up/dn  Y back") if view else "up/dn scroll  Y back")
 
 
@@ -151,7 +157,7 @@ def q_otp(ui, chip):
 
 
 def q_data(ui, chip):
-    return ("The first 32 bytes of slot 8, my biggest slot: 416 bytes of plain data.", chip.read_data(8, 0), None)
+    return ("The first 32 bytes of slot 8, my biggest slot: 416 bytes. Its rules allowed a clear read.", chip.read_data(8, 0), None)
 
 
 def q_addr(ui, chip):
@@ -159,15 +165,15 @@ def q_addr(ui, chip):
     return ("Config word 4. Its first byte is my I2C address as I store it, 0x%02x, which is 0x%02x on the bus (the chip keeps it shifted one bit)." % (w[0], w[0] >> 1), w, None)
 
 
-QUESTIONS = (("WHO ARE YOU?", "Info revision + serial", "info", q_who),
-             ("ARE YOU HEALTHY?", "SelfTest", "selftest", q_health),
-             ("MAKE RANDOMNESS", "Random", "random", q_random),
-             ("HASH SOMETHING", "SHA-256 of 'picowallet'", "sha", q_hash),
-             ("IS YOUR SLOT A KEY?", "Info KeyValid, active slot", "keyvalid", q_keyvalid),
-             ("WHAT'S COUNTER 0?", "Counter read", "counters", q_counter),
-             ("WHAT'S IN YOUR OTP?", "Read OTP block 0", "otp", q_otp),
-             ("TRY READING SLOT 8", "Read data slot 8", "data", q_data),
-             ("READ YOUR OWN ADDRESS", "Read config word 4", "info", q_addr))
+QUESTIONS = (("WHO ARE YOU?", "Info revision + serial", "info", q_who, "idcard"),
+             ("ARE YOU HEALTHY?", "SelfTest", "selftest", q_health, "heart"),
+             ("MAKE RANDOMNESS", "Random", "random", q_random, "dice"),
+             ("HASH SOMETHING", "SHA-256 of 'picowallet'", "sha", q_hash, "hash"),
+             ("IS YOUR SLOT A KEY?", "Info KeyValid, this slot", "keyvalid", q_keyvalid, "key"),
+             ("WHAT'S COUNTER 0?", "Counter read", "counters", q_counter, "counter"),
+             ("WHAT'S IN YOUR OTP?", "Read OTP block 0", "otp", q_otp, "otp"),
+             ("TRY READING SECRET SLOT 8", "Read data slot 8", "data", q_data, "bytes"),
+             ("READ YOUR OWN ADDRESS", "Read config word 4", "info", q_addr, "pin"))
 
 
 def draw_lab(ui):
@@ -176,16 +182,17 @@ def draw_lab(ui):
     y = 26
     top = max(0, min(ui.act - 4, len(QUESTIONS) - 6))
     for i in range(top, min(len(QUESTIONS), top + 6)):
-        title, cmd, what, fn = QUESTIONS[i]
+        title, cmd, what, fn, ic = QUESTIONS[i]
         sel = i == ui.act
         if sel:
-            d.fill_rect(0, y - 2, 240, 30, L.DARK)
-        d.text(">" if sel else " ", 2, y, L.YELLOW)
-        d.text("o", 12, y, L.GREEN)
-        d.text(title, 24, y, L.YELLOW if sel else L.WHITE)
-        d.text(cmd[:27], 24, y + 12, C.DIM)
+            d.fill_rect(0, y - 2, 240, 30, T.C["ink"])
+            d.fill_rect(0, y - 2, 3, 30, T.C["lab"])
+        I.draw(d, ic, 8, y + 2, T.C["lab"] if sel else T.C["grey"])
+        C.badge(d, "safe", 28, y)
+        d.text(title, 42, y, L.YELLOW if sel else L.WHITE)
+        d.text(cmd[:24], 42, y + 12, C.DIM)
         y += 31
-    C.footer(ui, "SAFE TO EXPLORE: changes nothing", L.GREEN)
+    C.footer(ui, C.CLASS["safe"][2], T.C["safe"])
 
 
 def tick_lab(ui, pressed):
@@ -202,7 +209,7 @@ def tick_lab(ui, pressed):
 
 
 def ask(ui, i):
-    title, cmd, what, fn = QUESTIONS[i]
+    title, cmd, what, fn, ic = QUESTIONS[i]
     chip = getattr(ui.sig, "chip", None)
     if chip is None:
         return C.refuse(ui, what, None, "There is no chip on the bus; the software key cannot answer questions.")
@@ -215,7 +222,7 @@ def ask(ui, i):
     except Exception as e:
         ui.view = "lab"
         return C.refuse(ui, what, None, "The Pico side failed: %s" % e)
-    ui.lab = {"q": title, "cmd": cmd, "text": text, "raw": raw, "why": why, "trace": chip.trace}
+    ui.lab = {"q": title, "cmd": cmd, "text": text, "raw": raw, "why": why, "trace": chip.trace, "icon": ic}
     ui.ret, ui.view, ui.act2, ui.dirty = "lab", "labres", 0, True
 
 
@@ -232,6 +239,7 @@ def draw_labres(ui):
     lab = ui.lab
     C.header(ui)
     y = 27
+    I.draw(d, lab.get("icon", "lab"), 206, 192, T.C["lab"], 2)
     d.text(lab["q"], 4, y, L.YELLOW); y += 14
     for line in C.wrap(lab["text"])[:6]:
         d.text(line, 4, y, L.WHITE); y += 12
