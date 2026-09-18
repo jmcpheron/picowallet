@@ -177,3 +177,112 @@ Which failure each leg absorbs. Fill this in properly before designing the contr
   actually formally check? The `eip712.py` rebuild-and-compare step is close to a spec already.
 - Does any of this change the case? Two Picos in one shell, or a second-leg "key fob" with no
   screen, is a different `case/gen.py`.
+
+## 7. Thought experiment: bring your own entropy, verify the chip's key
+
+The question (2026-09-18): on an air-gapped machine, make our own randomness, emulate what the
+chip would do with it, check the result independently, then feed the *same* entropy to the real
+chip and confirm it reports the same public key. Does the ATECC608 let you do that?
+
+### Short answer
+
+- **Seeding GenKey: no.** GenKey (0x40, mode "create") draws from the chip's internal RNG and takes
+  no input. There is no command that says "derive a key from these bytes I give you". You cannot
+  reproduce or predict a GenKey result from outside, by design.
+- **Importing the key itself: yes, PrivWrite (0x46).** You generate the 32-byte private scalar
+  yourself, write it into a P-256 slot, then ask the chip for the slot's public key and compare it
+  with the one you computed offline. Match means the chip holds exactly the scalar you gave it.
+  That is the check you were after, one level down: import the key, not the entropy.
+- **Traditional EOA key (secp256k1): no,** not on this chip. The ATECC608 is P-256 only. The same
+  import-then-compare trick works on any secure element that has a key-import command and the
+  curve you want (NXP SE050 lists secp256k1; check TROPIC01's curve list before assuming).
+- **It closes one door, not two.** Importing the key removes the chip's RNG from *key generation*.
+  ECDSA still needs a fresh random `k` for every signature, and the ATECC608 picks `k` internally
+  from the same RNG, with no deterministic (RFC 6979) mode and no host-supplied `k`. A dishonest RNG
+  can leak the private key through the signatures. You cannot detect that from outside if it is
+  done competently. So even with your own key inside, every signature still trusts the chip.
+
+### How the relevant commands actually behave
+
+| command | what the host supplies | what it does | usable for this? |
+|---|---|---|---|
+| Random (0x1B) | nothing | 32 bytes from the internal RNG mixed with an EEPROM seed | you can read it, not steer it |
+| Nonce (0x16) | 20 or 32 bytes | mixes host bytes into TempKey (mode 0x03 is the pass-through the wallet uses to load a digest) | feeds Sign, GenDig, MAC. GenKey never reads TempKey. |
+| GenKey (0x40) mode 0x04 | nothing | new random private key in the slot, returns the public key | no input path for entropy |
+| GenKey (0x40) mode 0x00 | nothing | returns the public key of the key already in the slot | **the read-back half of the check**; this is `atecc.pubkey()` |
+| PrivWrite (0x46) | 36 bytes: 4 zero pad + 32-byte scalar | writes a private key into a slot whose config allows it | **the import half of the check** |
+| DeriveKey (0x1C), KDF (0x56) | a nonce / input | SHA-256 or HKDF-derived 32-byte secrets into a slot | symmetric keys; not a documented way to make an ECC private key |
+| Sign (0x41) | digest via TempKey | ECDSA with the chip's own random `k` | no host `k`, not deterministic |
+
+PrivWrite is gated per slot by `SlotConfig.WriteConfig` bit 2 (bit 1 is GenKey). Encrypted
+PrivWrite uses a session key derived from a "write key" in another slot. cryptoauthlib's
+`atcab_priv_write` states the unencrypted form is allowed only while the **data zone is unlocked**,
+which on a provisioning bench is the case you want anyway: the scalar goes over I2C once, in the
+clear, on an air-gapped Pico over USB with no WiFi firmware loaded.
+
+### The procedure that does work
+
+1. Air-gapped machine. Make the scalar `d` from entropy you control. Dice plus the OS RNG, hashed
+   together, is the usual move: if either source is honest, `d` is fine. Reject `d = 0` or
+   `d >= n`.
+2. Compute `Q = d·G` with **two independent implementations** and require them to agree. This
+   repo already has both: `firmware/p256.py` `pubkey(d)` (pure Python, readable in one sitting)
+   and the `cryptography` library, which `reference/pi/signer.py` already uses via
+   `derive_private_key`. `openssl` is a third.
+3. PrivWrite `d` into a slot configured for it. Data zone unlocked, so plaintext is allowed.
+4. Read back the public key with GenKey mode 0x00. Compare with `Q`. Match, or stop.
+5. Sign a known digest on the chip, verify it against `Q` offline (PLAN step 1 already does this).
+6. Decide what happens to `d` on the bench. Wipe it, and the key now exists only in the chip,
+   same story as today. Or keep it on paper in a safe, and the story becomes "hardware for daily
+   use, paper for disaster". For a *backup leg* of a multisig the paper copy is arguably the point.
+7. Optionally lock the data zone. After that nothing can be written to the slot again.
+
+### What this buys
+
+- Rules out a weak or kleptographic RNG in key generation. You cannot detect a Dual-EC-style
+  backdoor by inspecting outputs; a key you generated yourself is the only defence.
+- Rules out "the factory pre-loaded a key someone else knows". (An honest GenKey also rules that
+  out, but "honest" is the thing in question.)
+- Gives you a public key you computed on a machine you trust, before the chip ever saw it. The
+  contract can be deployed from that value, and the chip's report is a confirmation rather than
+  the source of truth.
+
+### What it does not buy
+
+- Nonce leakage, as above. A cold backup leg that signs a handful of times in its life is exposed
+  to this far less than a daily signer, which is another argument for the Pico as the backup leg.
+- Side channels, hidden commands, laser and glitch extraction: unchanged.
+- The key crossed a wire and lived in a host's RAM. The bench has to be clean and the wipe has to
+  be real. This is the SeedSigner trade: trust your process instead of the chip's RNG.
+- "Emulating the chip" only reproduces `d → Q`. Signatures are not reproducible because `k` is
+  random. What the Pico *can* do cheaply is verify-only emulation: `p256.verify` already exists,
+  so the firmware could check every chip signature against the pinned `Q` before handing it to the
+  relay. That catches a swapped chip or the wrong slot. It does not catch a leaky `k`.
+
+### What the chips we have can and cannot do
+
+Decoded from the two config arrays in the repo (`SlotConfig` bytes 20-51, `KeyConfig` 96-127):
+
+- **Chip #1** (on the Pi, config locked, data unlocked) was provisioned with
+  `reference/pi/provision.py`'s config. Slot 0: P-256, external sign, `WriteConfig = 0b0010`,
+  so **GenKey only, PrivWrite refused**. Slot 7 allows PrivWrite (`0b0110`) but its `ReadKey`
+  permits ECDH only, no external signatures. No slot on chip #1 can take an imported *signing*
+  key. The config is locked, so that will never change.
+- **Chip #2** is blank. It can get a config where slot 0 has `WriteConfig = 0b0110` (GenKey and
+  PrivWrite), `ReadKey = 0xF`, `KeyConfig = 0x0033`. That is the chip for this experiment.
+
+### A bug found while decoding, do not lock a chip with the Pico's CONFIG
+
+`firmware/atecc.py` says its `CONFIG` is "the same bytes the Pi signer used". It is not. The
+Pico array has an extra row of `0xFF` at bytes 96-111, which is where `KeyConfig` for slots 0-7
+lives. Decoded, slot 0's `KeyConfig` is `0xFFFF`: `KeyType = 7`, not P-256. The Pi's array has
+`0x0033` there, which is correct, and its `KeyConfig` row for slots 8-15 is what the Pico array
+has shifted down into bytes 112-127.
+
+The buildlog for 2026-09-05 says the Pico's lock and GenKey paths "have NOT yet run on a fresh
+chip", which is consistent: no chip has been locked with this array. If someone follows README
+step 5 on a fresh chip, `lock_config` is permanent and GenKey on slot 0 will most likely be
+refused, bricking that chip for our purpose. Fix before anyone provisions from the wallet, and
+before chip #2 is touched: make the Pico array byte-identical to the Pi's (and add the PrivWrite
+bit for slot 0 while at it, if the import experiment is wanted), and add a test that decodes
+`KeyConfig[0]` and asserts P-256.
