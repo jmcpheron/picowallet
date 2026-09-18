@@ -25,7 +25,7 @@ CARDS = (
      "o green SAFE TO EXPLORE: changes nothing. ~ yellow REVERSIBLE CHANGE: can be restored. ! red PERMANENT: cannot be undone. Red needs ALLOW_LOCK or ALLOW_GENKEY True in secrets.py on the board, the wallet ARMED (hold B+Y 3 s, good for 60 s, shown in the header), and the red screen's hold. Refusals from the chip are shown as the chip said them, with the reason first."),
 )
 CONTEXT = {"zones": 0, "otp": 0, "counters": 0, "lab": 1, "labres": 1, "why": 1, "rawcmd": 1, "cfg": 2, "raw": 2, "diff": 2,
-           "confirm_write": 2, "list": 3, "slot": 3, "pubkey": 3, "confirm": 4, "refused": 1, "result": 5, "learn": 5}
+           "confirm_write": 2, "list": 3, "slot": 3, "pubkey": 3, "pubqr": 3, "confirm": 4, "refused": 1, "result": 5, "learn": 5}
 
 
 def draw_learn(ui):

@@ -57,7 +57,7 @@ CHIP  (ATECC608A, i2c 0x60)
 ├── DATA       16 slots                   a 4x4 grid of tiles: 36 B (0-7), 416 B (8), 72 B (9-15)
 │   └── SLOT n                            kind, size, its rules, then its actions
 │       ├── o USE THIS KEY                make it the signing slot
-│       ├── o SHOW PUBLIC KEY             qx and qy
+│       ├── o SHOW PUBLIC KEY             qx and qy; A there shows it as a QR code
 │       ├── o SIGN TEST                   sign 32 bytes, verify on the Pico, read counter 0
 │       ├── ! NEW KEY                     permanent: GenKey replaces what is there
 │       ├── ~ WRITE A NOTE                clear data slots only: 32 bytes you can overwrite
@@ -209,6 +209,18 @@ The CONFIG page names what is on the chip: `CURRENT original bytes`, `wallet con
 `LOCK CONFIG FOREVER` is offered only when the chip already holds the wallet table, so the old
 one-step "write + lock" is now two steps with a checkpoint you can undo in between.
 
+## The public key as a QR code
+
+On `SHOW PUBLIC KEY`, A draws the key as a QR code filling the panel, made on the Pico by
+`firmware/qrcode.py` (a small encoder: versions 1 to 6, levels L and M, alphanumeric and byte modes,
+Reed-Solomon over GF(256), all eight masks scored; checked module for module against the `qrcode`
+Python package and decoded back with OpenCV from the emulator's own screenshots). Left/right switch
+between the two standard forms: SEC1 uncompressed `04` + x + y (130 hex characters, version 5, 37
+modules at 5 px) and compressed `02`/`03` + x (66 characters, version 3, 29 modules at 6 px). Both
+are uppercase hex so the QR can use its alphanumeric mode. Encoding takes about 1.2 s on the Pico,
+once per key, behind the WORKING screen. Scan it with a phone and paste; the app's `.env` wants x and
+y, which are the two halves after `04`.
+
 ## SIGN TEST
 
 Once a slot holds a key, `o SIGN TEST` signs SHA-256 of `picowallet` on the chip and verifies the
@@ -244,6 +256,8 @@ the real screen and marks the chapter done for this boot.
   to. **`firmware/icons.py`** is the icon set: 25 sixteen-pixel bitmaps written as ASCII art,
   packed at import into MONO_HLSB bitmaps and blitted in any colour through a two-entry palette
   (`icons.draw(d, "key", x, y, color, scale)`). **`firmware/ceremony.py`** is the three animations.
+- **`firmware/qrcode.py`** is the QR encoder, pure Python, the same file runs on the laptop for
+  tests (`encode(text, level) -> (n, rows)` in the form `wallet.draw_qr` uses).
 - **`firmware/splash.py`** is the boot screen; **`firmware/signer.py`** gained `arm / disarm /
   armed`, `gate`, the snapshot functions, `write_config`, `restore_snapshot`, `sign_test`,
   `write_note`, `read_note`; **`firmware/atecc.py`** gained status-code names, a `trace` of the last

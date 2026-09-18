@@ -15,6 +15,7 @@ import learn as LN
 import ceremony as CE
 import theme as T
 import icons as I
+import qrcode
 
 HOLD_PERM = 3000        # A held this long on the red screen
 HOLD_REV = 1500         # and this long on the yellow one
@@ -65,6 +66,8 @@ class SlotsUI:
         self.diff = None
         self.difftitle = ""
         self.zone = None
+        self.qr = None                  # (slot, form, n, rows): the last public-key QR made
+        self.qrform = 0                 # 0 = uncompressed 04||x||y, 1 = compressed 02/03||x
         self.view_from = ""
         self.n = 0
         self.leave = False
@@ -165,6 +168,8 @@ class SlotsUI:
             self.draw_slot()
         elif v == "pubkey":
             self.draw_pubkey()
+        elif v == "pubqr":
+            self.draw_pubqr()
         elif v == "cfg":
             C.draw_cfg(self)
         elif v == "raw":
@@ -275,7 +280,40 @@ class SlotsUI:
                 y += 24
             y += 4
         d.center_text("the vault pins this key", 200, L.GREY)
-        C.footer(self, "Y back")
+        C.footer(self, "A qr code  Y back")
+
+    def pubkey_text(self, s):
+        """The key as text for a QR: SEC1 uncompressed 04||x||y, or compressed 02/03||x. Uppercase
+        hex so the QR can use its alphanumeric mode (130 chars fit version 5, 66 fit version 3)."""
+        if self.qrform == 0:
+            return "04%064X%064X" % (s["qx"], s["qy"])
+        return "%02X%064X" % (2 + (s["qy"] & 1), s["qx"])
+
+    def make_qr(self):
+        s = self.row(self.cur)
+        key = (self.cur, self.qrform, s.get("qx"))
+        if self.qr is None or self.qr[0] != key:
+            self.busy("making the qr code...")
+            n, rows = qrcode.encode(self.pubkey_text(s), "L")
+            self.qr = (key, n, rows)
+        self.view, self.dirty = "pubqr", True
+
+    def draw_pubqr(self):
+        """The key as a QR, as large as the panel allows below the header, two modules of quiet zone.
+        Version 5 (37 modules) lands at 5 px a module, version 3 (29) at 6. Y back, left/right form."""
+        d = self.d
+        C.header(self)
+        _, n, rows = self.qr
+        avail = 240 - 24
+        size = avail // (n + 4)
+        box = size * (n + 4)
+        x0, y0 = (240 - box) // 2, 24 + (avail - box) // 2
+        d.fill_rect(x0, y0, box, box, L.WHITE)
+        for r in range(n):
+            bits = rows[r]
+            for c in range(n):
+                if bits >> c & 1:
+                    d.fill_rect(x0 + (c + 2) * size, y0 + (r + 2) * size, size, size, L.BLACK)
 
     def draw_confirm(self):
         """The red screen: what is about to become permanent, and first of all what is LOST."""
@@ -388,8 +426,16 @@ class SlotsUI:
             elif "Y" in pressed or "A" in pressed:
                 self.view, self.dirty = self.ret, True
         elif v == "pubkey":
-            if "Y" in pressed or "A" in pressed:
+            if "Y" in pressed:
                 self.back()
+            elif "A" in pressed or "press" in pressed:
+                self.make_qr()
+        elif v == "pubqr":
+            if "Y" in pressed or "A" in pressed:
+                self.view, self.dirty = "pubkey", True
+            elif "left" in pressed or "right" in pressed:
+                self.qrform ^= 1
+                self.make_qr()
         elif v in ("raw", "diff", "otp", "counters", "rawcmd", "why"):
             C.scroll_tick(self, pressed)
             if "Y" in pressed or "A" in pressed:

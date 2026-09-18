@@ -126,7 +126,8 @@ is normal; every chip in use is locked. Generate the final key before deploying 
    first and the chip's original bytes are saved as a snapshot). Hold **B and Y** together for 3 s
    to arm, then `LOCK CONFIG FOREVER` and hold A 3 s: the rules are sealed. Then DATA, slot 0,
    `NEW KEY`, hold A 3 s: the key is drawn from the chip's own random generator. `SHOW PUBLIC KEY`
-   gives `qx` and `qy`; `SIGN TEST` proves the slot signs. The app's Setup page can drive the lock
+   gives `qx` and `qy`; `SIGN TEST` proves the slot signs; A on the public key shows it as a QR code to scan. The app's
+   Setup page can drive the lock
    and key steps over WiFi instead; it needs the same flags and the same arming on the device.
    The driver refuses the lock unless the chip really holds the wallet table with a P-256 slot 0.
 3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and push again.
