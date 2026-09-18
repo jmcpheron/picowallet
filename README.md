@@ -117,11 +117,18 @@ The screen comes up, finds the chip on the bus, and shows "no key" until step 5.
 ## 5. Set up the chip (once)
 
 A fresh ATECC608 refuses to make a key until its config zone is locked, once, permanently. This
-is normal; every chip in use is locked. Generate the final key before deploying the contract:
+is normal; every chip in use is locked. Generate the final key before deploying the contract. The
+lock and key commands come from the app's **/setup** page: the wallet polls the app for them over
+WiFi, so the wallet must be on WiFi with `APP_URL` pointing at a running app (step 6) first.
 
-1. In `firmware/secrets.py` temporarily set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`.
-2. Over USB, lock the config zone and generate the key. Record the public `qx` and `qy` values.
-3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and flash again.
+1. In `firmware/secrets.py` temporarily set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`, then
+   copy it over USB: `mpremote cp firmware/secrets.py :` and `mpremote reset`.
+2. Open the app's `/setup` page. The device card shows the chip's serial and `config zone
+   unlocked`. Press **Lock config zone**. The wallet writes Microchip's reference config, reads it
+   back, refuses to lock unless slot 0 really decodes as a P-256 private key, then locks. Press
+   **Generate key**. Record the public `qx` and `qy` values it shows.
+3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and copy `secrets.py`
+   over USB again.
 4. Put `qx` and `qy` in `app/packages/foundry/.env`, set a fixed `RECOVERY_ADDRESS`, and deploy.
    Losing the chip starts the documented 14-day recovery process.
 
