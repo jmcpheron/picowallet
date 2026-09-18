@@ -157,6 +157,7 @@ def arm_tick(ui, pressed, keys):
         ui.pair = True
         if ui.armhold is None:
             ui.armhold = now
+            ui.dirty = True
         elif time.ticks_diff(now, ui.armhold) >= ARM_HOLD_MS:
             if S.armed():
                 S.disarm()
@@ -164,7 +165,9 @@ def arm_tick(ui, pressed, keys):
                 S.arm()
             ui.armhold = None
             ui.pair = "done"        # swallow both keys until both are up
-        ui.dirty = True
+            ui.dirty = True
+        elif ui.n % 4 == 0:
+            ui.dirty = True         # the bar moves 5 times a second; a full redraw is up to 140 ms
         return out
     if ui.armhold is not None:
         ui.armhold, ui.dirty = None, True

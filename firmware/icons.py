@@ -111,17 +111,14 @@ _pal = framebuf.FrameBuffer(bytearray(4), 2, 1, framebuf.RGB565)
 
 
 def _build(name, scale):
-    rows = ART[name]
+    """Pack the art into a MONO_HLSB bitmap: one bit per pixel, rows of w/8 bytes, MSB first."""
     w = 16 * scale
-    fb = framebuf.FrameBuffer(bytearray(w * w // 8), w, w, framebuf.MONO_HLSB)
-    for y, row in enumerate(rows):
-        for x, ch in enumerate(row):
-            if ch == "#":
-                if scale == 1:
-                    fb.pixel(x, y, 1)
-                else:
-                    fb.fill_rect(x * scale, y * scale, scale, scale, 1)
-    return fb
+    out = bytearray()
+    for row in ART[name]:
+        packed = int("".join(("1" if ch == "#" else "0") * scale for ch in row), 2).to_bytes(w // 8, "big")
+        for _ in range(scale):
+            out += packed
+    return framebuf.FrameBuffer(out, w, w, framebuf.MONO_HLSB)
 
 
 def draw(d, name, x, y, color, scale=1):
@@ -135,3 +132,8 @@ def draw(d, name, x, y, color, scale=1):
 
 def names():
     return sorted(ART)
+
+
+# every icon at scale 1 is built now, once, so no screen pays for it on its first draw
+for _name in ART:
+    _cache[(_name, 1)] = _build(_name, 1)
