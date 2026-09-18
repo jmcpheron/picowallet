@@ -278,32 +278,54 @@ class SlotsUI:
         C.footer(self, "Y back")
 
     def draw_confirm(self):
+        """The red screen: what is about to become permanent, and first of all what is LOST."""
         d = self.d
         kind, slot = self.action
         C.header(self, "PERMANENT")
         C.icon(d, "unlock", 4, 26, L.RED, 2)
         d.big_text("PERMANENT", 40, 26, L.RED, 2)
         d.text("! cannot be undone", 40, 44, L.RED)
-        if kind == "genkey":
-            body = ("NEW KEY IN SLOT %d" % slot, "The chip draws a new key from its own randomness and keeps it. The key there now is gone for good; a vault paired to it can never be spent again.")
-        elif kind == "lockslot":
-            body = ("LOCK SLOT %d FOREVER" % slot, "The key in it can never be replaced or removed.")
-        elif kind == "lockcfg":
-            body = ("SEAL THE RULES", "The config zone on the chip is frozen as it is now. The table can never change again; the data zone opens up and keys can be made.")
-        elif kind == "lockdata":
-            body = ("LOCK DATA ZONE", "No more clear-text writes to any slot, ever. GenKey stays allowed where the rules say.")
-        else:
-            body = (kind, "")
         y = 62
-        d.text(body[0], 4, y, L.WHITE); y += 14
-        for line in C.wrap(body[1])[:5]:
+        s = self.row(slot) if slot is not None else None
+        if kind == "genkey":
+            d.text("NEW KEY IN SLOT %d" % slot, 4, y, L.WHITE); y += 14
+            if s and s.get("hasKey"):
+                I.draw(d, "key", 4, y - 3, T.C["perm"])
+                d.text("LOST: key %s" % fp(s), 24, y, T.C["perm"]); y += 12
+                d.text("  a vault paired to it can", 4, y, T.C["perm"]); y += 12
+                d.text("  never be spent again", 4, y, T.C["perm"]); y += 12
+            else:
+                d.text("LOST: nothing, the slot is empty", 4, y, T.C["safe"]); y += 12
+            I.draw(d, "dice", 4, y - 3, L.GREY)
+            d.text("NEW: from the chip's RNG", 24, y, L.GREY); y += 14
+            body = "The chip keeps the new key; you never see or choose it."
+        elif kind == "lockslot":
+            d.text("LOCK SLOT %d FOREVER" % slot, 4, y, L.WHITE); y += 14
+            I.draw(d, "lock", 4, y - 3, T.C["perm"])
+            d.text("SEALED: key %s" % (fp(s) if s and s.get("hasKey") else "(empty slot)"), 24, y, T.C["perm"]); y += 12
+            d.text("LOST: NEW KEY here, ever", 4, y, T.C["perm"]); y += 14
+            body = "The key in it can never be replaced or removed."
+        elif kind == "lockcfg":
+            d.text("SEAL THE RULES", 4, y, L.WHITE); y += 14
+            d.text("LOST: any change to the table", 4, y, T.C["perm"]); y += 12
+            d.text("LOST: RESTORE SAVED CONFIG", 4, y, T.C["perm"]); y += 14
+            body = "The table on the chip is frozen as it is now; keys can then be made and slots written."
+        elif kind == "lockdata":
+            d.text("LOCK DATA ZONE", 4, y, L.WHITE); y += 14
+            d.text("LOST: clear writes to any slot", 4, y, T.C["perm"]); y += 12
+            d.text("LOST: rewriting the note", 4, y, T.C["perm"]); y += 14
+            body = "GenKey stays allowed where the rules say; reads of slots and OTP begin."
+        else:
+            d.text(kind, 4, y, L.WHITE); y += 14
+            body = ""
+        for line in C.wrap(body)[:3]:
             d.text(line, 4, y, L.WHITE); y += 12
-        d.center_text("hold A for 3 s", 164, L.YELLOW)
-        d.rect(20, 178, 200, 14, L.WHITE)
+        d.center_text("hold A for 3 s", 168, L.YELLOW)
+        d.rect(20, 182, 200, 14, L.WHITE)
         if self.hold is not None:
             e = time.ticks_diff(time.ticks_ms(), self.hold)
-            d.fill_rect(21, 179, min(198, 198 * e // HOLD_PERM), 12, L.RED)
-            d.center_text("%d" % max(1, (HOLD_PERM - e + 999) // 1000), 198, L.RED, 2)
+            d.fill_rect(21, 183, min(198, 198 * e // HOLD_PERM), 12, L.RED)
+            d.center_text("%d" % max(1, (HOLD_PERM - e + 999) // 1000), 200, L.RED, 2)
         C.footer(self, "Y cancel")
 
     def draw_result(self):

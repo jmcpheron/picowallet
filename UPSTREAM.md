@@ -52,7 +52,20 @@ The fix is a one-hunk change to the constant; the rest of the branch is optional
 **Verification available without hardware:** `emu/core/shims/atecc_sim.py` on this branch is a
 virtual ATECC608 that speaks the packet protocol; with the fixed table, lock config, GenKey in
 slot 0, and Sign all succeed and the signature verifies; with the old table GenKey on slot 0 is
-refused. Hardware verification: *(fill in from TESTPLAN phase 6, if done)*.
+refused.
+
+**Hardware verification (2026-09-17, Adafruit 4314, ATECC608A, serial `0123f3acfd2a826bee`).** The
+fixed table was written to the fresh chip from the wallet's own screen (49 bytes changed from the
+factory table, read back identical), then the config zone was locked the same way. After the lock:
+byte 87 = `0x00`, the table matches the fixed `CONFIG` byte for byte, slots 0, 2 and 7 decode as
+P-256 private with GenKey allowed. GenKey in slot 0 succeeded three times in a row, each replacing
+the last (`a427c739`, then two more, the current one `cc01b14a`, one of them on battery power);
+Info KeyValid on slot 0 reads 1, the public key reads back, Random is live. Then the control
+experiment on the same sealed chip: GenKey on slot 3, whose SlotConfig allows GenKey but whose
+KeyConfig is `0x001C` (KeyType 7, "not an ECC key"), is refused with status `0x0F`; slot 1 likewise;
+slot 0's key was untouched. Upstream's table gives every one of slots 0 to 7 KeyType 7 (KeyConfig
+`0xFFFF`), so a chip locked with it answers GenKey on slot 0 exactly like our slot 3: `0x0F`,
+permanently. Sign from slot 0 was not exercised on this chip yet (SIGN TEST is the next step).
 
 **Suggested upstream text:** the issue draft is at the end of this file.
 
@@ -259,4 +272,17 @@ this table.
 Fix: replace CONFIG with the bytes from reference/pi/signer.py (cryptoauthlib
 test/api_calib/test_calib_config.c, test_ecc608_configdata). Regenerating from cryptoauthlib
 rather than hand-editing would avoid a repeat. A PR with the one-hunk fix is at <link>.
+
+Verified on a fresh Adafruit ATECC608A (2026-09-17): with the reference bytes written and locked,
+GenKey in slot 0 works (three keys made in a row, KeyValid 1, public key readable, Random live).
+On the same sealed chip, GenKey on a slot whose KeyConfig has KeyType 7 but whose SlotConfig
+allows GenKey (slot 3 of the reference table) is refused with status 0x0F. That is the state
+main's table puts slots 0-7 in, so the failure mode is observed, not inferred.
+
+Two cheap guards would stop this class of bug for good (both on the fork's branch): assert at
+import that decode_slot(CONFIG, 0) is a P-256 private slot with GenKey allowed, and have
+lock_config() read the zone back and refuse to send Lock unless the chip's table matches CONFIG
+and slot 0 passes the same check. Also README step 5 says "over USB, lock the config zone and
+generate the key", but there is no USB command for that; the mechanism is the app's Setup page
+(or, on the fork, the wallet's own screens).
 ```

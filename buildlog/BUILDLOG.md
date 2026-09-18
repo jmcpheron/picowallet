@@ -271,3 +271,54 @@ Gotchas:
 Not done today, on purpose: config lock, GenKey, data-zone lock, slot lock. The chip leaves this
 session exactly as it arrived. Not done for lack of a cell: TESTPLAN phase 5. Next: the battery
 phase when a cell is here; `TESTPLAN.md` phase 6 when the vault deployment is planned.
+
+## 2026-09-17 — the map, the ceremony, and the chip is sealed
+
+The chip UI grew a look: the map is the die itself, drawn as a floor plan with the CONFIG strip,
+the 4x4 field of slots coloured by kind, OTP, COUNTERS and the LAB docked below; DATA is a grid
+of tiles; menus carry class badges; headers are tinted by zone; 25 sixteen-pixel icons, a palette
+in `theme.py`; the boot screen got a navy gradient and a rainbow leg chase. Icons are packed from
+ASCII art at import (the first draw of a screen paid 8 ms per icon before that). On the panel a
+`show()` is 46 ms and the busiest screen draws in about 70 ms. Two new actions: SIGN TEST on a key
+slot (sign, verify on the Pico, read counter 0) and WRITE A NOTE on a clear data slot. Two guards
+before the lock: `CONFIG` is checked at import for a P-256 slot 0, and `lock_config()` reads the
+zone back and refuses unless the table matches and slot 0 decodes right. `CHIPMAP.md` has it all.
+
+Then the finale on the one chip, flags flipped in `secrets.py` and pushed. Jason at the device,
+me reading the chip from the laptop between steps:
+
+- WRITE WALLET CONFIG (the chip had been restored to its original bytes earlier): 49 bytes
+  changed, read back identical, config still open. chipcheck: `matches the reference table: yes`.
+- Hold B+Y, `! LOCK CONFIG FOREVER`, hold A three seconds: the CONFIG strip pulsed, a flash, the
+  padlock closed, RULES SEALED ("the cool sealed animation"). chipcheck: byte 87 = `0x00`, slots
+  0/2/7 `P256 empty`. Random live: two different 32-byte values. SelfTest all pass.
+- OTP from the map: NOT ALLOWED, status 0x0F. Not a bug on our side of the wire: with the config
+  zone locked and the data zone still open the chip accepts clear writes into slots and OTP but
+  reads nothing back until the data zone is locked too. Every Data and OTP read refused, clear and
+  secret slots alike. Neither the firmware nor the emulator knew; both do now (write-only state on
+  the map, the reason on the refusal screen, the note reports "read back after data lock").
+- NEW KEY in slot 0: KEY CREATED, `a427c739`. Then Jason unplugged USB, ran the wallet on the
+  18650 and made another key on battery; back on USB, rebooted, a third: `cc01b14a`. Counters 0
+  and 0 throughout, which is right: GenKey does not spend a count, signing does.
+- The control experiment for upstream: GenKey on slot 3 (KeyType 7 but GenKey allowed by its
+  SlotConfig, the shape of every slot 0-7 in upstream's table) refused with 0x0F; slot 0 untouched.
+- One rewrite while it happened: the red screen now leads with what is LOST (the key being
+  replaced and its fingerprint, in red; "nothing, the slot is empty" otherwise; for the locks, the
+  abilities that go away).
+
+Decisions today:
+- Slot 0 stays replaceable; LOCK SLOT waits for a vault deployed with it.
+- The data zone stays open; the note in slot 12 and the OTP wait for that decision.
+- Slot 7 is where a brought key would go (PrivWrite, encrypted against the write-only secret in
+  slot 4); a seed phrase via SLIP-10 nist256p1 is the idea. Not built.
+- The upstream issue has its silicon evidence now (UPSTREAM.md section 1 and the draft at the end).
+
+Gotchas:
+- My checkpoint script ended with a reset and rebooted the wallet under Jason's hands. Pause the
+  timer (`wallet.stop()`), read, `wallet.start_timer()`: the screen stays where it was.
+- The plan said slot 8 was 416 bytes of clear data. Under the wallet config it is secret (write
+  never, read never in clear); the clear ones are 12 and 13.
+- Reads of Data and OTP need the data lock, not just the config lock.
+
+Not done today, on purpose: LOCK SLOT 0, LOCK DATA ZONE, PrivWrite. Not done yet: SIGN TEST on the
+new key (counter 0 will show it), the note in slot 12, slot 2. Flags back to False and pushed.

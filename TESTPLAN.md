@@ -174,22 +174,25 @@ the next vault gets deployed with.
 1. `secrets.py`: `ALLOW_LOCK = True`, `ALLOW_GENKEY = True`. `tools/usb push`.
 2. X, CONFIG. CURRENT must read `wallet config`; if it reads `original bytes`, `~ WRITE WALLET
    CONFIG` (the diff first, hold A 1.5 s, three green checks).
-   - [ ] chipcheck: `matches the reference table: yes`, byte 87 = 0x55. Bytes changed: `____`
+   - [x] chipcheck: `matches the reference table: yes`, byte 87 = 0x55. Bytes changed: `49`
 3. Hold B and Y together 3 s: header `! ARMED 60s`. CONFIG, `! LOCK CONFIG FOREVER` (live only with
    the wallet table on the chip), read the red screen, hold A 3 s through the countdown. RULES
    SEALED ceremony, then the green SEALED screen.
-   - [ ] chipcheck: byte 87 = 0x00, `matches the reference table: yes`, slots 0/2/7 `P256 empty`,
-         `random` no longer `ffff0000`. Lock round trip: `____ ms`
+   - [x] chipcheck: byte 87 = 0x00, `matches the reference table: yes`, slots 0/2/7 `P256 empty`,
+         `random` no longer `ffff0000`. Lock round trip: `not timed (done on the device)`
 4. LAB: MAKE RANDOMNESS twice, different, no WHY layer. ARE YOU HEALTHY? passes. WHAT'S IN YOUR OTP?
    and TRY READING SECRET SLOT 8: both refused with "the DATA zone is still open" (the chip reads
    nothing back from slots or OTP until the data lock). IS YOUR SLOT A KEY?: no.
    - [x] Seen 2026-09-17: every Data/OTP read refused with 0x0F while the data zone is open.
 5. Arm again if the header says SAFE. DATA, slot 0 (`empty`), `! NEW KEY`, red screen, hold A 3 s.
    KEY CREATED ceremony; the tile shows the fingerprint over the green bar.
-   - [ ] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;
+   - [x] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;
          print(["0x%064x" % v for v in wallet.sig.pubkey()])'` prints the same.
-   - [ ] LAB IS YOUR SLOT A KEY?: yes. chipcheck: slot 0 `P256 <fingerprint>`.
-   Record: fingerprint `________`, qx `________`, qy `________`, GenKey round trip `____ ms`.
+   - [x] LAB IS YOUR SLOT A KEY?: yes. chipcheck: slot 0 `P256 <fingerprint>`.
+   Record: fingerprint `cc01b14a` (third key; the first was `a427c739`, one was made on battery),
+   qx `0xcc01b14ac97dd23eb2810865ba4ac37df91e9719089b72f029ccf416196f3d24`,
+   qy `0xc25a18a11de1086c98eb05d135de120e5d5943370d4392d168b9d9dde88cb079`, GenKey round trip
+   `about 130 ms`. Control: GenKey on slot 3 (KeyType 7) refused 0x0F, slot 0 untouched.
 6. Slot 0, `o SIGN TEST`: SIGNATURE VERIFIED, r and s, counter 0 is now 1. Again: 2. LAB WHAT'S
    COUNTER 0? agrees. Record: sign round trip `____ ms`.
 7. Optional: slot 12, `~ WRITE A NOTE`, hold A 1.5 s: WRITE COMPLETE, and "read back after data
