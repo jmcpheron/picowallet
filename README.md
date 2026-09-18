@@ -120,9 +120,16 @@ The screen comes up, finds the chip on the bus, and shows "no key" until step 5.
 A fresh ATECC608 refuses to make a key until its config zone is locked, once, permanently. This
 is normal; every chip in use is locked. Generate the final key before deploying the contract:
 
-1. In `firmware/secrets.py` temporarily set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`.
-2. Over USB, lock the config zone and generate the key. Record the public `qx` and `qy` values.
-3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and flash again.
+1. In `firmware/secrets.py` temporarily set `ALLOW_LOCK = True` and `ALLOW_GENKEY = True`, then
+   `tools/usb push` (or `tools/push` over the WiFi console).
+2. On the wallet: **X** for the CHIP MAP, CONFIG, `WRITE WALLET CONFIG` (reversible: the diff shows
+   first and the chip's original bytes are saved as a snapshot). Hold **B and Y** together for 3 s
+   to arm, then `LOCK CONFIG FOREVER` and hold A 3 s: the rules are sealed. Then DATA, slot 0,
+   `NEW KEY`, hold A 3 s: the key is drawn from the chip's own random generator. `SHOW PUBLIC KEY`
+   gives `qx` and `qy`; `SIGN TEST` proves the slot signs. The app's Setup page can drive the lock
+   and key steps over WiFi instead; it needs the same flags and the same arming on the device.
+   The driver refuses the lock unless the chip really holds the wallet table with a P-256 slot 0.
+3. Set both flags back to `False`, leave `ENABLE_NETWORK_CONSOLE = False`, and push again.
 4. Put `qx` and `qy` in `app/packages/foundry/.env`, set a fixed `RECOVERY_ADDRESS`, and deploy.
    Losing the chip starts the documented 14-day recovery process.
 

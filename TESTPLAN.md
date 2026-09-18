@@ -171,20 +171,35 @@ Do not do this on the wallet that owns the mainnet vault. Do not do it until the
 (`app/packages/foundry/.env`, recovery address) is planned, because the key made here is the one
 the next vault gets deployed with.
 
-1. `secrets.py`: `ALLOW_LOCK = True`, `ALLOW_GENKEY = True`. `tools/usb cp ... reset`.
-2. Chip page shows `permanent actions ARMED` in red.
-3. `WRITE + LOCK CONFIG`: red screen, hold A 1.5 s. DONE says slots 0, 2, 7 are P-256 slots.
-   - [ ] `chipcheck`: byte 87 = 0x00, `matches the reference table: yes`, slots 0/2/7 `P256 empty`.
-4. Slot 0, `NEW KEY`, hold A. DONE shows an 8-hex fingerprint; the row reads `0 P256 <fp> ACTIVE`.
-   - [ ] `SHOW PUBLIC KEY`: write down qx and qy. `tools/usb exec 'import signer; s=signer.load(); print(["0x%064x" % v for v in s.pubkey()])'` prints the same.
-   - [ ] Sign test: `tools/usb exec 'import signer, p256; s=signer.load(); d=bytes(range(32)); r,ss=s.sign(d); print(p256.verify(s.pubkey()[0], s.pubkey()[1], d, r, ss))'` prints `True`.
-5. Optional, and these two have never run on real silicon: slot 2 `NEW KEY` then `USE THIS KEY`
-   (the app should now say not paired; `USE` slot 0 again puts it back). Then slot 7 `NEW KEY`.
-6. Do NOT lock the data zone or any slot in this session unless you have decided you never want
+1. `secrets.py`: `ALLOW_LOCK = True`, `ALLOW_GENKEY = True`. `tools/usb push`.
+2. X, CONFIG. CURRENT must read `wallet config`; if it reads `original bytes`, `~ WRITE WALLET
+   CONFIG` (the diff first, hold A 1.5 s, three green checks).
+   - [ ] chipcheck: `matches the reference table: yes`, byte 87 = 0x55. Bytes changed: `____`
+3. Hold B and Y together 3 s: header `! ARMED 60s`. CONFIG, `! LOCK CONFIG FOREVER` (live only with
+   the wallet table on the chip), read the red screen, hold A 3 s through the countdown. RULES
+   SEALED ceremony, then the green SEALED screen.
+   - [ ] chipcheck: byte 87 = 0x00, `matches the reference table: yes`, slots 0/2/7 `P256 empty`,
+         `random` no longer `ffff0000`. Lock round trip: `____ ms`
+4. LAB: MAKE RANDOMNESS twice, different, no WHY layer. ARE YOU HEALTHY? passes. WHAT'S IN YOUR OTP?
+   answers. TRY READING SECRET SLOT 8: refused, the secret reason. IS YOUR SLOT A KEY?: no.
+   - [ ] Record the OTP bytes: `________________`
+5. Arm again if the header says SAFE. DATA, slot 0 (`empty`), `! NEW KEY`, red screen, hold A 3 s.
+   KEY CREATED ceremony; the tile shows the fingerprint over the green bar.
+   - [ ] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;
+         print(["0x%064x" % v for v in wallet.sig.pubkey()])'` prints the same.
+   - [ ] LAB IS YOUR SLOT A KEY?: yes. chipcheck: slot 0 `P256 <fingerprint>`.
+   Record: fingerprint `________`, qx `________`, qy `________`, GenKey round trip `____ ms`.
+6. Slot 0, `o SIGN TEST`: SIGNATURE VERIFIED, r and s, counter 0 is now 1. Again: 2. LAB WHAT'S
+   COUNTER 0? agrees. Record: sign round trip `____ ms`.
+7. Optional: slot 12, `~ WRITE A NOTE`, hold A 1.5 s, three checks; `o READ THE BYTES` shows it.
+   Also optional and never run on real silicon: slot 2 `NEW KEY` then `USE THIS KEY` (the app would
+   say not paired; `USE` slot 0 puts it back).
+8. Do NOT lock the data zone or any slot in this session unless you have decided you never want
    to regenerate that key. Leave them for a later, deliberate step.
-7. Flags back to False, `tools/usb cp` secrets, reset. Chip page: `permanent actions off`.
+9. Flags back to False, push. CONFIG page: `! LOCK DATA ZONE` off with `ALLOW_LOCK is False`.
 
-Record: fingerprint slot 0 `________`, qx `________`, qy `________`, and whether step 5 was done.
+Record: whether step 7 was done `____`, anything the emulator got wrong compared with the board
+`________________`.
 
 ## 7. Wrap up
 

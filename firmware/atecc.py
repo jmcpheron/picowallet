@@ -89,6 +89,12 @@ def decode_slot(cfg, slot):
     }
 
 
+# The table above must make slot 0 a P-256 private key that GenKey may fill, or locking a chip with
+# it leaves the chip unable to ever hold the wallet key (that is the bug UPSTREAM.md describes).
+# Checked here, at import, on the Pico, before any lock can happen.
+assert decode_slot(CONFIG, 0)["kind"] == "P256" and decode_slot(CONFIG, 0)["genKey"], "CONFIG does not make slot 0 a P-256 key slot"
+
+
 def diff_config(cur, new):
     """What writing `new` over `cur` would change: the writable bytes that differ (16-83, 88-127), the
     per-slot fields that change, and whether the I2C address byte (16) would move."""
@@ -346,10 +352,22 @@ class ATECC608:
             raise AteccError("readback differs at %d bytes (first at byte %d)" % (len(bad), bad[0]))
         return sum(1 for i in range(128) if before[i] != after[i])
 
-    def lock_config(self):
-        """PERMANENT. Lock the config zone (no CRC check, mode 0x80). Refuses if already locked."""
-        if self.lock_state()["configLocked"]:
+    def lock_config(self, expect=CONFIG):
+        """PERMANENT. Lock the config zone (no CRC check, mode 0x80). Before sending the Lock it reads
+        the zone back and refuses if it is already locked, if the table on the chip differs from
+        `expect` in the writable bytes (16-83, 88-127; pass None to lock any table), or if slot 0
+        does not decode as a P-256 private key with GenKey allowed. A chip locked with such a table
+        could never hold the wallet key, and the lock cannot be undone."""
+        cfg = self.read_config_all()
+        if cfg[87] == 0x00:
             raise AteccError("config zone is already locked")
+        if expect is not None:
+            bad = [i for i in range(128) if (16 <= i < 84 or i >= 88) and cfg[i] != expect[i]]
+            if bad:
+                raise AteccError("refusing to lock: the chip's table differs from the expected one at %d bytes (first at byte %d)" % (len(bad), bad[0]))
+        s0 = decode_slot(cfg, 0)
+        if s0["kind"] != "P256" or not s0["genKey"]:
+            raise AteccError("refusing to lock: slot 0 would be %s with genkey %s, not a P-256 key slot" % (s0["kind"], "allowed" if s0["genKey"] else "forbidden"))
         self.run(OP_LOCK, 0x80, 0x0000, resp_len=1, wait_ms=35)
         if not self.lock_state()["configLocked"]:
             raise AteccError("lock command returned but the zone is still unlocked")
