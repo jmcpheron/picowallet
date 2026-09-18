@@ -573,8 +573,7 @@ def run_write(ui, kind, slot=None):
 
 # ----------------------------------------------------------------------------- refusals
 WRITE_ONLY = ("The rules are sealed, but the DATA zone is still open. While it is open the chip takes clear "
-              "writes into slots and the OTP but refuses to read anything back; reads only start once the DATA zone "
-              "is locked (LOCK DATA ZONE, permanent).")
+              "writes into slots and OTP but reads nothing back. Reads start once the DATA zone is locked.")
 
 
 def why_refused(ui, what, status):
