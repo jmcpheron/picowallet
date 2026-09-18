@@ -320,5 +320,10 @@ Gotchas:
   never, read never in clear); the clear ones are 12 and 13.
 - Reads of Data and OTP need the data lock, not just the config lock.
 
-Not done today, on purpose: LOCK SLOT 0, LOCK DATA ZONE, PrivWrite. Not done yet: SIGN TEST on the
-new key (counter 0 will show it), the note in slot 12, slot 2. Flags back to False and pushed.
+Later the same evening: the red screen's doomed key went cyan at double size, the one thing on
+that screen that is not red ("this is the unique thing that's going to be deleted"). Jason made
+a fourth key with it (`9fad2e82`), then SIGN TEST twice: SIGNATURE VERIFIED both times and counter 0
+went 1, 2, on the screen and from the laptop. `UPSTREAM-ISSUE.md` is the short version for Austin.
+
+Not done today, on purpose: LOCK SLOT 0, LOCK DATA ZONE, PrivWrite, the note in slot 12, slot 2.
+Flags back to False and pushed.

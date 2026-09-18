@@ -189,12 +189,13 @@ the next vault gets deployed with.
    - [x] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;
          print(["0x%064x" % v for v in wallet.sig.pubkey()])'` prints the same.
    - [x] LAB IS YOUR SLOT A KEY?: yes. chipcheck: slot 0 `P256 <fingerprint>`.
-   Record: fingerprint `cc01b14a` (third key; the first was `a427c739`, one was made on battery),
-   qx `0xcc01b14ac97dd23eb2810865ba4ac37df91e9719089b72f029ccf416196f3d24`,
-   qy `0xc25a18a11de1086c98eb05d135de120e5d5943370d4392d168b9d9dde88cb079`, GenKey round trip
+   Record: fingerprint `9fad2e82` (fourth key; earlier ones `a427c739`, two more, `cc01b14a`; one
+   was made on battery), qx `0x9fad2e82da0ed2679d3cf40ff0b61b048ec4df75619c22ccbcdffc01539f4b75`,
+   qy `0xda78e1783424ecfc5523216ae3389b16b7b211e4a97bb0c1e8be23c064a38f67`, GenKey round trip
    `about 130 ms`. Control: GenKey on slot 3 (KeyType 7) refused 0x0F, slot 0 untouched.
-6. Slot 0, `o SIGN TEST`: SIGNATURE VERIFIED, r and s, counter 0 is now 1. Again: 2. LAB WHAT'S
-   COUNTER 0? agrees. Record: sign round trip `____ ms`.
+6. [x] Slot 0, `o SIGN TEST`: SIGNATURE VERIFIED, r and s, counter 0 is now 1. Again: 2. LAB WHAT'S
+   COUNTER 0? agrees. Record: sign round trip `not timed (done on the device)`; counter 0 = 2 read
+   from the laptop afterwards.
 7. Optional: slot 12, `~ WRITE A NOTE`, hold A 1.5 s: WRITE COMPLETE, and "read back after data
    lock" (the chip accepts the clear write but will not read it back until the DATA zone is locked).
    Also optional and never run on real silicon: slot 2 `NEW KEY` then `USE THIS KEY` (the app would

@@ -65,7 +65,9 @@ experiment on the same sealed chip: GenKey on slot 3, whose SlotConfig allows Ge
 KeyConfig is `0x001C` (KeyType 7, "not an ECC key"), is refused with status `0x0F`; slot 1 likewise;
 slot 0's key was untouched. Upstream's table gives every one of slots 0 to 7 KeyType 7 (KeyConfig
 `0xFFFF`), so a chip locked with it answers GenKey on slot 0 exactly like our slot 3: `0x0F`,
-permanently. Sign from slot 0 was not exercised on this chip yet (SIGN TEST is the next step).
+permanently. A fourth key was then made (`9fad2e82`) and signed two test digests from the wallet's
+SIGN TEST, each verified on the Pico with the slot's public key; counter 0 went 0, 1, 2 (slot 0 has
+LimitedUse), confirming Sign as well. The short issue text is in `UPSTREAM-ISSUE.md`.
 
 **Suggested upstream text:** the issue draft is at the end of this file.
 
@@ -274,7 +276,8 @@ test/api_calib/test_calib_config.c, test_ecc608_configdata). Regenerating from c
 rather than hand-editing would avoid a repeat. A PR with the one-hunk fix is at <link>.
 
 Verified on a fresh Adafruit ATECC608A (2026-09-17): with the reference bytes written and locked,
-GenKey in slot 0 works (three keys made in a row, KeyValid 1, public key readable, Random live).
+GenKey in slot 0 works (four keys made in a row, KeyValid 1, public key readable, Sign verified
+twice with counter 0 climbing, Random live).
 On the same sealed chip, GenKey on a slot whose KeyConfig has KeyType 7 but whose SlotConfig
 allows GenKey (slot 3 of the reference table) is refused with status 0x0F. That is the state
 main's table puts slots 0-7 in, so the failure mode is observed, not inferred.
