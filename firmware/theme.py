@@ -10,6 +10,7 @@ RGB = {
     "config": (70, 140, 255), "data": (40, 210, 160), "otp": (255, 150, 40), "counters": (180, 110, 255),
     "lab": (255, 90, 160), "learn": (255, 200, 60),
     "safe": (0, 220, 90), "rev": (255, 200, 0), "perm": (255, 40, 40),
+    "lost": (90, 230, 255),     # the one thing a permanent action erases or seals: the only non-red on the red screen
     "white": (255, 255, 255), "grey": (120, 120, 120), "dim": (90, 90, 100),
 }
 C = {name: L.color(*rgb) for name, rgb in RGB.items()}

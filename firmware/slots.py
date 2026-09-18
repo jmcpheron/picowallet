@@ -290,20 +290,24 @@ class SlotsUI:
         if kind == "genkey":
             d.text("NEW KEY IN SLOT %d" % slot, 4, y, L.WHITE); y += 14
             if s and s.get("hasKey"):
-                I.draw(d, "key", 4, y - 3, T.C["perm"])
-                d.text("LOST: key %s" % fp(s), 24, y, T.C["perm"]); y += 12
-                d.text("  a vault paired to it can", 4, y, T.C["perm"]); y += 12
-                d.text("  never be spent again", 4, y, T.C["perm"]); y += 12
+                # the one thing this erases, in the one colour that is not red: the key's fingerprint
+                I.draw(d, "key", 4, y, T.C["lost"])
+                d.big_text(fp(s), 24, y, T.C["lost"], 2); y += 20
+                d.text("erased for good. a vault tied", 4, y, T.C["perm"]); y += 12
+                d.text("to it can never spend again", 4, y, T.C["perm"]); y += 14
             else:
-                d.text("LOST: nothing, the slot is empty", 4, y, T.C["safe"]); y += 12
+                d.text("LOST: nothing, the slot is empty", 4, y, T.C["safe"]); y += 14
             I.draw(d, "dice", 4, y - 3, L.GREY)
             d.text("NEW: from the chip's RNG", 24, y, L.GREY); y += 14
             body = "The chip keeps the new key; you never see or choose it."
         elif kind == "lockslot":
             d.text("LOCK SLOT %d FOREVER" % slot, 4, y, L.WHITE); y += 14
-            I.draw(d, "lock", 4, y - 3, T.C["perm"])
-            d.text("SEALED: key %s" % (fp(s) if s and s.get("hasKey") else "(empty slot)"), 24, y, T.C["perm"]); y += 12
-            d.text("LOST: NEW KEY here, ever", 4, y, T.C["perm"]); y += 14
+            if s and s.get("hasKey"):
+                I.draw(d, "lock", 4, y, T.C["lost"])
+                d.big_text(fp(s), 24, y, T.C["lost"], 2); y += 20
+            else:
+                d.text("(empty slot)", 4, y, L.GREY); y += 14
+            d.text("sealed: NEW KEY here, never", 4, y, T.C["perm"]); y += 14
             body = "The key in it can never be replaced or removed."
         elif kind == "lockcfg":
             d.text("SEAL THE RULES", 4, y, L.WHITE); y += 14
