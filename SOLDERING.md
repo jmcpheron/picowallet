@@ -7,7 +7,12 @@ and powers over USB.
 
 ![wiring](buildlog/images/wiring-battery-atecc.svg)
 
-(`tools/wiring` redraws that file.)
+The same build without a charger on the board: a spring-loaded holder, and the cell is lifted out
+and charged elsewhere. Everything else is identical.
+
+![wiring, cell swapped out to charge](buildlog/images/wiring-battery-atecc-swap.svg)
+
+(`tools/wiring` redraws both files.)
 
 Everything below solders to the **outside of the Pico's header pins** (the tails that poke through
 the perfboard), so nothing on the Pico or the LCD board is modified. Physical pin numbers count
@@ -95,7 +100,9 @@ What it costs: the diode drops ~0.3 V, so VSYS is 2.7 to 3.9 V on battery. The P
 holds 3.3 V down to VSYS 1.8 V, so the whole usable range of the cell is available. A 3000 mAh
 cell runs the wallet with the backlight on for roughly a day; days more if you dim it.
 
-Charging: take the cell out and charge it in a charger, or put a TP4056 module **with** protection
+Charging: take the cell out and charge it in a charger (a spring-loaded holder makes that a
+few seconds, and a second charged cell means no downtime; switch OFF first, and mind the polarity
+going back in: + at the flat contact, − at the spring), or put a TP4056 module **with** protection
 (the ones with a DW01 and two extra pads, usually USB-C) between the holder and the switch, with
 the cell on the module's B+/B− and the switch on OUT+, OUT− to ground (the diagram shows it dashed).
 Then charging happens through the module's own USB port, never through the Pico. Switch the wallet

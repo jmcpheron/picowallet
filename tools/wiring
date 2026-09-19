@@ -131,7 +131,7 @@ def build(charger):
         wire([(OX, TY + TH + 5), (OX, CY)], RED); wire([(OM, TY + TH + 5), (OM, CY)], BLK)
         text(CX + CW / 2, CY + CH + 18, "a bare cell has no over-discharge or short", 9, RED, "middle")
         text(CX + CW / 2, CY + CH + 30, "protection: protected cell, or a holder + DW01 board", 9, RED, "middle")
-        text(CX + CW / 2, CY + CH + 48, "without the module: cell + straight to the switch, cell - to GND", 9, GREY, "middle")
+        text(CX + CW / 2, CY + CH + 48, "no charger at all: see wiring-battery-atecc-swap.svg", 9, GREY, "middle")
     else:
         # a spring-loaded holder, the cell lifted out to charge; + contact at the left, the spring at the right
         OM = 1250

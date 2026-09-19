@@ -168,7 +168,7 @@
 <path d="M1250 367 L1250 420" fill="none" stroke="#222" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
 <text x="1210.0" y="484" font-size="9" text-anchor="middle" fill="#b3261e" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">a bare cell has no over-discharge or short</text>
 <text x="1210.0" y="496" font-size="9" text-anchor="middle" fill="#b3261e" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">protection: protected cell, or a holder + DW01 board</text>
-<text x="1210.0" y="514" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">without the module: cell + straight to the switch, cell - to GND</text>
+<text x="1210.0" y="514" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">no charger at all: see wiring-battery-atecc-swap.svg</text>
 <path d="M1010 145 L1010 175" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="1002" y="175" width="16" height="50" rx="2" fill="#fff" stroke="#6a3fbf" stroke-width="2"/>
 <text x="996" y="205" font-size="10" text-anchor="end" fill="#6a3fbf" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100k</text>
