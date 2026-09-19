@@ -69,6 +69,8 @@ CHIP  (ATECC608A, i2c 0x60)
     ├── WHO ARE YOU?                      Info revision + serial
     ├── ARE YOU HEALTHY?                  SelfTest
     ├── MAKE RANDOMNESS                   Random
+    ├── PLAY SNAKE                        make randomness yourself: the apples come from a hash of
+    │                                     your presses; the report counts the bits (snakelab.py)
     ├── HASH SOMETHING                    SHA-256 of "picowallet", compared with the Pico's
     ├── IS YOUR SLOT A KEY?               Info KeyValid on the active slot
     ├── WHAT'S COUNTER 0?                 Counter read
@@ -162,7 +164,16 @@ parameters, data, the answer bytes, round trip.
 
 In the LAB the same idea has one more layer. An answer screen gives the meaning in words and the
 bytes; when the answer is odd (`MAKE RANDOMNESS` on an unlocked chip returns `ffff0000` eight
-times) it offers `WHY THAT'S WEIRD >`; `RAW COMMAND >` is always there.
+times) it offers `WHY THAT'S WEIRD >`; `RAW COMMAND >` is there whenever a command was sent.
+
+`PLAY SNAKE` is the one row that asks you instead of the chip. The flip-phone game runs full
+screen on the wallet's 50 ms tick; every press goes into a pool (which key, how many ticks since
+the last press, the microsecond clock) and every apple after the first is placed from a SHA-256
+of that pool. When a game ends, A shows the report on the same answer screen: how many bits the
+presses were worth, counted honestly (only the gap between presses is credited, by NIST SP
+800-90B's most common value rule with its small-sample bound, so a few evenly timed presses are
+worth almost nothing), the pool digest as the bytes, `HOW IT WAS COUNTED >` for the method, and
+one line on how the chip's own Random compares. Nothing from the game ever becomes a key.
 
 ![the lab](buildlog/images/chipmap-07-lab.png)
 ![the fixed random pattern](buildlog/images/chipmap-08-lab-random.png)
@@ -250,7 +261,8 @@ the real screen and marks the chapter done for this boot.
   class badges, footers, word wrap, scrolling, and the B+Y arming gesture.
 - **`firmware/learn.py`** holds the LEARN cards, the context lookup (which card B opens on which
   screen), and the LAB: each question is a small function that runs one driver call and returns
-  (words, bytes, why-or-None).
+  (words, bytes, why-or-None). **`firmware/snakelab.py`** is the PLAY SNAKE row: the game as a
+  chip-UI view, the press pool, the entropy estimate and the report it hands to the answer screen.
 - **`firmware/theme.py`** is the palette: RGB triples for the background, the panel, one identity
   colour per zone and the three classes; `shade`, `mix`, `gradient`, and which zone a screen belongs
   to. **`firmware/icons.py`** is the icon set: 25 sixteen-pixel bitmaps written as ASCII art,
@@ -271,7 +283,8 @@ return to, so A or Y lands where you were.
 
 Things worth knowing if you change it:
 
-- **B and Y are delivered on release** inside the chip UI (`chipmap.arm_tick`). Otherwise pressing
+- **B and Y are delivered on release** inside the chip UI (`chipmap.arm_tick`), except inside
+  PLAY SNAKE, where B pauses and Y quits on press and B+Y cannot arm. Otherwise pressing
   B then Y to arm would first open a card or go back. A B or Y that was part of a B+Y hold is
   swallowed until both are up.
 - **Draw only when dirty, and know the cost.** On the real panel a `show()` is 46 ms, a cached icon

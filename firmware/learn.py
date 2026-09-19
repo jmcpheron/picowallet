@@ -2,11 +2,14 @@
 # that leads into the real screen (the map, the lab, the config page). LAB asks the chip questions
 # in plain words, one command each, and shows the answer three ways: what it means, the bytes, and
 # the raw command underneath. A refusal is an answer too. Nothing here changes a byte on the chip.
+# PLAY SNAKE is the one row that asks you instead of the chip (snakelab.py); its answer lands on
+# the same screen.
 import lcd as L
 import atecc
 import chipmap as C
 import theme as T
 import icons as I
+import snakelab as SN
 
 CARD_ICON = ("chip", "lab", "config", "key", "lock", "book")
 
@@ -25,7 +28,7 @@ CARDS = (
      "o green SAFE TO EXPLORE: changes nothing. ~ yellow REVERSIBLE CHANGE: can be restored. ! red PERMANENT: cannot be undone. Red needs ALLOW_LOCK or ALLOW_GENKEY True in secrets.py on the board, the wallet ARMED (hold B+Y 3 s, good for 60 s, shown in the header), and the red screen's hold. Refusals from the chip are shown as the chip said them, with the reason first."),
 )
 CONTEXT = {"zones": 0, "otp": 0, "counters": 0, "lab": 1, "labres": 1, "why": 1, "rawcmd": 1, "cfg": 2, "raw": 2, "diff": 2,
-           "confirm_write": 2, "list": 3, "slot": 3, "pubkey": 3, "pubqr": 3, "confirm": 4, "refused": 1, "result": 5, "learn": 5}
+           "confirm_write": 2, "snake": 1, "list": 3, "slot": 3, "pubkey": 3, "pubqr": 3, "confirm": 4, "refused": 1, "result": 5, "learn": 5}
 
 
 def draw_learn(ui):
@@ -168,6 +171,7 @@ def q_addr(ui, chip):
 QUESTIONS = (("WHO ARE YOU?", "Info revision + serial", "info", q_who, "idcard"),
              ("ARE YOU HEALTHY?", "SelfTest", "selftest", q_health, "heart"),
              ("MAKE RANDOMNESS", "Random", "random", q_random, "dice"),
+             ("PLAY SNAKE", "make randomness yourself", "snake", None, "snake"),
              ("HASH SOMETHING", "SHA-256 of 'picowallet'", "sha", q_hash, "hash"),
              ("IS YOUR SLOT A KEY?", "Info KeyValid, this slot", "keyvalid", q_keyvalid, "key"),
              ("WHAT'S COUNTER 0?", "Counter read", "counters", q_counter, "counter"),
@@ -210,6 +214,8 @@ def tick_lab(ui, pressed):
 
 def ask(ui, i):
     title, cmd, what, fn, ic = QUESTIONS[i]
+    if fn is None:
+        return SN.open(ui)          # the game needs no chip
     chip = getattr(ui.sig, "chip", None)
     if chip is None:
         return C.refuse(ui, what, None, "There is no chip on the bus; the software key cannot answer questions.")
@@ -229,8 +235,9 @@ def ask(ui, i):
 def labres_items(ui):
     items = []
     if ui.lab.get("why"):
-        items.append(("why", "WHY THAT'S WEIRD >", "safe", ""))
-    items.append(("rawcmd", "RAW COMMAND >", "safe", ""))
+        items.append(("why", ui.lab.get("whylabel", "WHY THAT'S WEIRD >"), "safe", ""))
+    if ui.lab.get("trace"):
+        items.append(("rawcmd", "RAW COMMAND >", "safe", ""))
     return items
 
 

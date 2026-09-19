@@ -26,7 +26,7 @@ DIM = L.color(90, 90, 100)
 NAMES = {"zones": "CHIP", "list": "DATA", "cfg": "CONFIG", "raw": "RAW", "diff": "DIFF", "otp": "OTP",
          "counters": "COUNTERS", "lab": "LAB", "learn": "LEARN", "labres": "ANSWER", "why": "WHY",
          "rawcmd": "RAW", "refused": "REFUSED", "confirm": "PERMANENT", "confirm_write": "WRITE",
-         "result": "RESULT", "busy": "...", "pubkey": "PUBKEY", "pubqr": "QR"}
+         "result": "RESULT", "busy": "...", "pubkey": "PUBKEY", "pubqr": "QR", "snake": "SNAKE"}
 
 
 # ----------------------------------------------------------------------------- text and chrome

@@ -17,7 +17,7 @@ C = {name: L.color(*rgb) for name, rgb in RGB.items()}
 # which identity a screen belongs to (chipmap.header tints the bar with it)
 ZONE = {"zones": "chip", "cfg": "config", "raw": "config", "diff": "config", "confirm_write": "config",
         "list": "data", "slot": "data", "pubkey": "data", "pubqr": "data", "otp": "otp", "counters": "counters",
-        "lab": "lab", "labres": "lab", "why": "lab", "rawcmd": "lab", "learn": "learn", "card": "learn",
+        "lab": "lab", "labres": "lab", "why": "lab", "rawcmd": "lab", "snake": "lab", "learn": "learn", "card": "learn",
         "refused": "perm", "confirm": "perm", "result": "safe", "busy": "chip"}
 RAINBOW = ("config", "data", "learn", "otp", "perm", "lab", "counters")   # the boot screen's leg chase
 

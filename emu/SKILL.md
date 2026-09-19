@@ -98,8 +98,8 @@ Firmware that should ship for good goes in `firmware/` and through `tools/push`.
   `tools/emu chip fresh` = blank again, `tools/emu chip show` = lock state and which slots hold
   keys. From Python: `import atecc_sim; atecc_sim.provision(); atecc_sim.wipe(); atecc_sim.state()`.
   In the wallet, X on the home screen opens the CHIP MAP (config, data slots, OTP, counters, the
-  LAB of read-only questions) and B opens LEARN (the tutorial); `chipmap.py`, `learn.py` and
-  `slots.py` draw them, with `theme.py` (zone colours), `icons.py` (16 px bitmaps, `icons.draw(d,
+  LAB of read-only questions, PLAY SNAKE among them) and B opens LEARN (the tutorial); `chipmap.py`, `learn.py`,
+  `snakelab.py` and `slots.py` draw them, with `theme.py` (zone colours), `icons.py` (16 px bitmaps, `icons.draw(d,
   "key", x, y, color, scale)`), `ceremony.py` (the permanent transitions' animations) and
   `qrcode.py` (a QR encoder, versions 1-6; `qrcode.encode(text) -> (n, rows)`). A fresh virtual chip answers like a real fresh Adafruit part (factory
   table, Random = ffff0000 until the lock); OTP and data reads refuse until the config lock. Red

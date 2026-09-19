@@ -143,7 +143,8 @@ through. CONFIG (128 bytes of rules) across the top, DATA (16 slots of 36, 416 o
 field of tiles coloured by what each slot is), OTP (64 write-once bytes), COUNTERS (two numbers
 that only go up) and the LAB docked below, where each question is one real command
 ("WHO ARE YOU?", "ARE YOU HEALTHY?", "MAKE RANDOMNESS") with the answer in words, the bytes, a
-"why that's weird" layer and the raw command underneath. The header always says where you are
+"why that's weird" layer and the raw command underneath; "PLAY SNAKE" asks you instead, and its
+report counts how few bits a game of button presses is really worth. The header always says where you are
 (`CHIP > DATA > SLOT 3`) and whether the wallet is `SAFE` or `ARMED`. **B** opens **LEARN**, five
 short chapters that lead into those screens. A refusal from the chip is shown as a lesson: the
 reason first ("the CONFIG zone is still open, so the DATA zone is hidden"), the status byte second.

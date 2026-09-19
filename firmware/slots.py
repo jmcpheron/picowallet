@@ -16,6 +16,7 @@ import ceremony as CE
 import theme as T
 import icons as I
 import qrcode
+import snakelab as SN
 
 HOLD_PERM = 3000        # A held this long on the red screen
 HOLD_REV = 1500         # and this long on the yellow one
@@ -198,6 +199,8 @@ class SlotsUI:
             LN.draw_learn(self)
         elif v == "card":
             LN.draw_card(self)
+        elif v == "snake":
+            SN.draw(self)
         elif v == "busy":
             C.header(self, "WORKING")
             d.center_text(self.msg[:28], 100, L.WHITE)
@@ -391,7 +394,7 @@ class SlotsUI:
         """pressed: key names that went down this tick. keys: lcd.Keys, for held(). Returns "home" to leave."""
         self.n += 1
         v = self.view
-        if v not in ("confirm", "confirm_write", "busy"):
+        if v not in ("confirm", "confirm_write", "busy", "snake"):   # the game takes B and Y on press
             pressed = C.arm_tick(self, pressed, keys)
         if v == "confirm" or v == "confirm_write":
             need = HOLD_PERM if v == "confirm" else HOLD_REV
@@ -456,9 +459,11 @@ class SlotsUI:
             LN.tick_labres(self, pressed)
         elif v == "learn":
             LN.tick_learn(self, pressed)
-        if "B" in pressed and v not in ("confirm", "confirm_write", "busy", "card", "learn"):
+        elif v == "snake":
+            SN.tick(self, pressed)
+        if "B" in pressed and v not in ("confirm", "confirm_write", "busy", "card", "learn", "snake"):
             LN.context(self)
-        if S.armed() and self.n % 20 == 0:
+        if S.armed() and self.n % 20 == 0 and self.view != "snake":
             self.dirty = True       # the countdown in the header
         if self.dirty:
             self.draw()
