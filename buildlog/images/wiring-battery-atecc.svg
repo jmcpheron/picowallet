@@ -1,169 +1,229 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
-<rect width="1200" height="720" fill="#fbfbf8"/>
-<text x="20" y="24" font-size="15" text-anchor="start" fill="#222" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">picowallet perfboard: ATECC608 on I2C0, 18650 + switch + Schottky into VSYS, battery sense on GP28</text>
-<text x="20" y="40" font-size="11" text-anchor="start" fill="#555" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Pico 2 W from the top, USB up. Numbers are physical header pins. A dot joins wires; a wire hopping another is not connected.</text>
-<rect x="680" y="100" width="150" height="480" rx="8" fill="#2e7d4f" stroke="#1b4d31" stroke-width="2"/>
-<rect x="733.0" y="86" width="44" height="26" rx="3" fill="#bbb" stroke="#777"/>
-<text x="755.0" y="103" font-size="9" text-anchor="middle" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">micro-USB</text>
-<rect x="728.0" y="350" width="54" height="54" fill="#111"/>
-<text x="755.0" y="382" font-size="10" text-anchor="middle" fill="#ddd" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">RP2350</text>
-<rect x="733.0" y="480" width="44" height="30" fill="#777" stroke="#444"/>
-<text x="755.0" y="499" font-size="9" text-anchor="middle" fill="#eee" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">CYW43</text>
-<circle cx="688" cy="124" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="128" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP0 1</text>
-<circle cx="822" cy="124" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="128" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">40 VBUS</text>
-<circle cx="688" cy="145" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="149" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP1 2</text>
-<circle cx="822" cy="145" r="5" fill="#b3261e" stroke="#333" stroke-width="1"/>
-<text x="965" y="149" font-size="11" text-anchor="start" fill="#b3261e" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">39 VSYS  battery + via diode</text>
-<circle cx="688" cy="166" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="170" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GND 3</text>
-<circle cx="822" cy="166" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="170" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">38 GND</text>
-<circle cx="688" cy="187" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="191" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP2 4</text>
-<circle cx="822" cy="187" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="191" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">37 3V3_EN</text>
-<circle cx="688" cy="208" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="212" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP3 5</text>
-<circle cx="822" cy="208" r="5" fill="#d62b2b" stroke="#333" stroke-width="1"/>
-<text x="965" y="212" font-size="11" text-anchor="start" fill="#d62b2b" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">36 3V3 OUT  red 3V3 (chip)</text>
-<circle cx="688" cy="229" r="5" fill="#1e5bd6" stroke="#333" stroke-width="1"/>
-<text x="674" y="224" font-size="11" text-anchor="end" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GP4 SDA 6</text>
-<circle cx="822" cy="229" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="233" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">35 ADC_VREF</text>
-<circle cx="688" cy="250" r="5" fill="#c99a00" stroke="#333" stroke-width="1"/>
-<text x="674" y="245" font-size="11" text-anchor="end" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GP5 SCL 7</text>
-<circle cx="822" cy="250" r="5" fill="#7a3fd6" stroke="#333" stroke-width="1"/>
-<text x="965" y="254" font-size="11" text-anchor="start" fill="#7a3fd6" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">34 GP28 ADC2  sense: Vbat / 2</text>
-<circle cx="688" cy="271" r="5" fill="#111" stroke="#333" stroke-width="1"/>
-<text x="674" y="266" font-size="11" text-anchor="end" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GND 8</text>
-<circle cx="822" cy="271" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="275" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">33 AGND</text>
-<circle cx="688" cy="292" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="296" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP6 9</text>
-<circle cx="822" cy="292" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="296" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">32 GP27</text>
-<circle cx="688" cy="313" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="317" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP7 10</text>
-<circle cx="822" cy="313" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="317" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">31 GP26</text>
-<circle cx="688" cy="334" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="338" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP8 11</text>
-<circle cx="822" cy="334" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="338" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">30 RUN</text>
-<circle cx="688" cy="355" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="359" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP9 12</text>
-<circle cx="822" cy="355" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="359" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">29 GP22</text>
-<circle cx="688" cy="376" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="380" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GND 13</text>
-<circle cx="822" cy="376" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="380" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">28 GND</text>
-<circle cx="688" cy="397" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="401" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP10 14</text>
-<circle cx="822" cy="397" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="401" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">27 GP21</text>
-<circle cx="688" cy="418" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="422" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP11 15</text>
-<circle cx="822" cy="418" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="422" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">26 GP20</text>
-<circle cx="688" cy="439" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="443" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP12 16</text>
-<circle cx="822" cy="439" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="443" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">25 GP19</text>
-<circle cx="688" cy="460" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="464" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP13 17</text>
-<circle cx="822" cy="460" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="464" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">24 GP18</text>
-<circle cx="688" cy="481" r="5" fill="#111" stroke="#333" stroke-width="1"/>
-<text x="674" y="476" font-size="11" text-anchor="end" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GND 18</text>
-<circle cx="822" cy="481" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="485" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">23 GND</text>
-<circle cx="688" cy="502" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="506" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP14 19</text>
-<circle cx="822" cy="502" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="506" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">22 GP17</text>
-<circle cx="688" cy="523" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="674" y="527" font-size="9" text-anchor="end" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP15 20</text>
-<circle cx="822" cy="523" r="5" fill="#e8e0b0" stroke="#333" stroke-width="1"/>
-<text x="836" y="527" font-size="9" text-anchor="start" fill="#888" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">21 GP16</text>
-<rect x="60" y="110" width="190" height="90" rx="6" fill="#1a5fb4" stroke="#0d3c73" stroke-width="2"/>
-<text x="155.0" y="132" font-size="12" text-anchor="middle" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Adafruit ATECC608</text>
-<text x="155.0" y="148" font-size="10" text-anchor="middle" fill="#dbe8ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">STEMMA QT plug stays on</text>
-<text x="155.0" y="162" font-size="10" text-anchor="middle" fill="#dbe8ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the chip side; the other</text>
-<text x="155.0" y="176" font-size="10" text-anchor="middle" fill="#dbe8ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">end: strip 4 bare wires</text>
-<rect x="250" y="138" width="12" height="36" fill="#222"/>
-<polyline points="262,144 330,144 330,250 688,250" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,144 330,144 330,250 688,250" fill="none" stroke="#c99a00" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,153 352,153 352,229 688,229" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,153 352,153 352,229 688,229" fill="none" stroke="#1e5bd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,162 374,162 374,271 688,271" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,162 374,162 374,271 688,271" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,171 396,171 396,58 945,58 945,208 822,208" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="262,171 396,171 396,58 945,58 945,208 822,208" fill="none" stroke="#d62b2b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="60" y="222" font-size="10" text-anchor="start" fill="#333" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">STEMMA QT wire colors:</text>
-<text x="60" y="236" font-size="10" text-anchor="start" fill="#c99a00" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">yellow SCL -> GP5 (pin 7)</text>
-<text x="60" y="250" font-size="10" text-anchor="start" fill="#1e5bd6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">blue   SDA -> GP4 (pin 6)</text>
-<text x="60" y="264" font-size="10" text-anchor="start" fill="#111" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">black  GND -> GND (pin 8)</text>
-<text x="60" y="278" font-size="10" text-anchor="start" fill="#d62b2b" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">red    VCC -> 3V3 OUT (pin 36)</text>
-<text x="60" y="292" font-size="9" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Colors: Adafruit convention. Kit cable? Map each wire to the VIN/GND/SDA/SCL pads with a meter first.</text>
-<rect x="60" y="330" width="190" height="70" rx="6" fill="#444" stroke="#111" stroke-width="2"/>
-<rect x="250" y="355" width="10" height="20" fill="#999"/>
-<text x="155.0" y="358" font-size="12" text-anchor="middle" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">18650 in a holder</text>
-<text x="155.0" y="374" font-size="10" text-anchor="middle" fill="#ddd" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">use a PROTECTED cell, or a</text>
-<text x="155.0" y="388" font-size="10" text-anchor="middle" fill="#ddd" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">holder with a protection board</text>
-<text x="264" y="351" font-size="16" text-anchor="start" fill="#b3261e" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">+</text>
-<text x="46" y="355" font-size="18" text-anchor="end" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">-</text>
-<polyline points="260,365 312,365" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="260,365 312,365" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="312" cy="365" r="4.5" fill="#b3261e"/>
-<circle cx="368" cy="365" r="4.5" fill="#b3261e"/>
-<line x1="312" y1="365" x2="362" y2="347" stroke="#b3261e" stroke-width="3" stroke-linecap="round"/>
-<text x="340" y="337" font-size="11" text-anchor="middle" fill="#333" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">SPST slide switch</text>
-<text x="340" y="387" font-size="9" text-anchor="middle" fill="#555" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">ON: cell feeds VSYS</text>
-<polyline points="368,365 474,365" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="368,365 474,365" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polygon points="474,351 474,379 500,365" fill="#333"/>
-<line x1="500" y1="351" x2="500" y2="379" stroke="#333" stroke-width="3.5" stroke-linecap="round"/>
-<text x="488" y="341" font-size="11" text-anchor="middle" fill="#333" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Schottky 1N5817 / SS14</text>
-<text x="480" y="395" font-size="9" text-anchor="start" fill="#555" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">band toward the Pico</text>
-<text x="480" y="407" font-size="9" text-anchor="start" fill="#555" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">anode at the switch</text>
-<polyline points="500,365 610,365 610,72 925,72 925,145 822,145" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="500,365 610,365 610,72 925,72 925,145 822,145" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="52,365 30,365 30,481 688,481" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="52,365 30,365 30,481 688,481" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="420" cy="365" r="4.5" fill="#7a3fd6"/>
-<polyline points="420,365 420,395" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="420,365 420,395" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="412" y="395" width="16" height="40" fill="#fff" stroke="#7a3fd6" stroke-width="2.5"/>
-<text x="434" y="419.0" font-size="11" text-anchor="start" fill="#7a3fd6" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100k</text>
-<polyline points="420,435 420,470" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="420,435 420,470" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="412" y="470" width="16" height="40" fill="#fff" stroke="#7a3fd6" stroke-width="2.5"/>
-<text x="434" y="494.0" font-size="11" text-anchor="start" fill="#7a3fd6" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100k</text>
-<polyline points="420,510 420,540" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="420,510 420,540" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="420,470 480,470 480,493" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="420,470 480,470 480,493" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<line x1="469" y1="493" x2="491" y2="493" stroke="#7a3fd6" stroke-width="3.5" stroke-linecap="round"/>
-<line x1="469" y1="502" x2="491" y2="502" stroke="#7a3fd6" stroke-width="3.5" stroke-linecap="round"/>
-<polyline points="480,502 480,540" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="480,502 480,540" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="480" y="527" font-size="10" text-anchor="middle" fill="#7a3fd6" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100 nF</text>
-<polyline points="480,540 30,540" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="480,540 30,540" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="30" cy="540" r="4.5" fill="#111"/>
-<circle cx="420" cy="540" r="4.5" fill="#111"/>
-<circle cx="480" cy="540" r="4.5" fill="#111"/>
-<text x="40" y="557" font-size="9" text-anchor="start" fill="#555" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">divider ground joins the battery - wire</text>
-<polyline points="480,470 540,470 540,620 910,620 910,250 822,250" fill="none" stroke="#fbfbf8" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="480,470 540,470 540,620 910,620 910,250 822,250" fill="none" stroke="#7a3fd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="480" cy="470" r="4.5" fill="#7a3fd6"/>
-<circle cx="420" cy="470" r="4.5" fill="#7a3fd6"/>
-<text x="20" y="668" font-size="11" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">USB plugged in: the Pico's own diode puts ~4.7 V on VSYS, so the Schottky is reverse-biased. USB never charges or drains the cell.</text>
-<text x="20" y="683" font-size="11" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">USB out, switch ON: VSYS = Vcell - ~0.3 V (2.7 to 3.9 V). The on-board buck-boost holds 3.3 V down to VSYS 1.8 V.</text>
-<text x="20" y="698" font-size="11" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Switch OFF: the cell is isolated and the divider reads 0 V, so nothing back-feeds an unpowered Pico through GP28.</text>
-<text x="20" y="713" font-size="11" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Charge the cell outside the wallet, or add a TP4056 + DW01 module between the holder and the switch (SOLDERING.md).</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="1440" height="900" fill="#fbfbf8"/>
+<text x="24" y="32" font-size="16" text-anchor="start" fill="#222" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">picowallet perfboard: 18650 through a switch and a 1N5817 into VSYS, USB stays plugged for programming, ATECC608 on I2C0</text>
+<text x="24" y="52" font-size="11" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Pico 2 W seen from the top, USB up. Everything solders to the pin tails under the board. Numbers are physical header pins. A dot joins wires.</text>
+<rect x="560" y="100" width="240" height="440" rx="8" fill="#2e7d4f" stroke="#1b4d31" stroke-width="2"/>
+<rect x="654.0" y="82" width="52" height="26" rx="3" fill="#bbb" stroke="#777" stroke-width="1.5"/>
+<text x="680.0" y="99" font-size="9" text-anchor="middle" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">micro-USB</text>
+<text x="680.0" y="75" font-size="9.5" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">programming and power</text>
+<rect x="652.0" y="320" width="56" height="56" rx="2" fill="#111" stroke="#111" stroke-width="1.5"/>
+<text x="680.0" y="352" font-size="10" text-anchor="middle" fill="#ddd" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">RP2350</text>
+<rect x="656.0" y="455" width="48" height="30" rx="2" fill="#777" stroke="#444" stroke-width="1.5"/>
+<text x="680.0" y="474" font-size="9" text-anchor="middle" fill="#eee" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">CYW43</text>
+<text x="680.0" y="290" font-size="9" text-anchor="middle" fill="#d8f0e0" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">on-board Schottky:</text>
+<text x="680.0" y="302" font-size="9" text-anchor="middle" fill="#d8f0e0" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">VBUS 40 -&gt; VSYS 39</text>
+<text x="680.0" y="400" font-size="9" text-anchor="middle" fill="#d8f0e0" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">3.3 V buck-boost</text>
+<text x="680.0" y="412" font-size="9" text-anchor="middle" fill="#d8f0e0" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">VSYS 1.8 to 5.5 V</text>
+<circle cx="568" cy="125" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="129" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">1 GP0</text>
+<circle cx="568" cy="145" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="149" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">2 GP1</text>
+<circle cx="568" cy="165" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="169" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">3 GND</text>
+<circle cx="568" cy="185" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="189" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">4 GP2</text>
+<circle cx="568" cy="205" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="209" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">5 GP3</text>
+<circle cx="568" cy="225" r="5" fill="#1f5fbf" stroke="#333"/>
+<text x="579" y="229" font-size="10" text-anchor="start" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">6 GP4 SDA</text>
+<circle cx="568" cy="245" r="5" fill="#c99a00" stroke="#333"/>
+<text x="579" y="249" font-size="10" text-anchor="start" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">7 GP5 SCL</text>
+<circle cx="568" cy="265" r="5" fill="#222" stroke="#333"/>
+<text x="579" y="269" font-size="10" text-anchor="start" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">8 GND</text>
+<circle cx="568" cy="285" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="289" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">9 GP6</text>
+<circle cx="568" cy="305" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="309" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">10 GP7</text>
+<circle cx="568" cy="325" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="329" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">11 GP8</text>
+<circle cx="568" cy="345" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="349" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">12 GP9</text>
+<circle cx="568" cy="365" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="369" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">13 GND</text>
+<circle cx="568" cy="385" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="389" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">14 GP10</text>
+<circle cx="568" cy="405" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="409" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">15 GP11</text>
+<circle cx="568" cy="425" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="429" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">16 GP12</text>
+<circle cx="568" cy="445" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="449" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">17 GP13</text>
+<circle cx="568" cy="465" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="469" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">18 GND</text>
+<circle cx="568" cy="485" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="489" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">19 GP14</text>
+<circle cx="568" cy="505" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="579" y="509" font-size="9" text-anchor="start" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">20 GP15</text>
+<circle cx="792" cy="125" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="129" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">VBUS 40</text>
+<circle cx="792" cy="145" r="5" fill="#b3261e" stroke="#333"/>
+<text x="781" y="149" font-size="10" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">VSYS 39</text>
+<circle cx="792" cy="165" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="169" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GND 38</text>
+<circle cx="792" cy="185" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="189" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">3V3_EN 37</text>
+<circle cx="792" cy="205" r="5" fill="#b3261e" stroke="#333"/>
+<text x="781" y="209" font-size="10" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">3V3 OUT 36</text>
+<circle cx="792" cy="225" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="229" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">ADC_VREF 35</text>
+<circle cx="792" cy="245" r="5" fill="#2a8c4a" stroke="#333"/>
+<text x="781" y="249" font-size="10" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GP28 ADC2 34</text>
+<circle cx="792" cy="265" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="269" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">AGND 33</text>
+<circle cx="792" cy="285" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="289" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP27 32</text>
+<circle cx="792" cy="305" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="309" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP26 31</text>
+<circle cx="792" cy="325" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="329" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">RUN 30</text>
+<circle cx="792" cy="345" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="349" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP22 29</text>
+<circle cx="792" cy="365" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="369" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GND 28</text>
+<circle cx="792" cy="385" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="389" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP21 27</text>
+<circle cx="792" cy="405" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="409" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP20 26</text>
+<circle cx="792" cy="425" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="429" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP19 25</text>
+<circle cx="792" cy="445" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="449" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP18 24</text>
+<circle cx="792" cy="465" r="5" fill="#222" stroke="#333"/>
+<text x="781" y="469" font-size="10" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GND 23</text>
+<circle cx="792" cy="485" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="489" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP17 22</text>
+<circle cx="792" cy="505" r="5" fill="#e8e0b0" stroke="#333"/>
+<text x="781" y="509" font-size="9" text-anchor="end" fill="#cfe6d6" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">GP16 21</text>
+<text x="806" y="129" font-size="10" text-anchor="start" fill="#b3261e" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">40 VBUS: nothing connects here</text>
+<rect x="110" y="180" width="200" height="130" rx="8" fill="#1e5aa8" stroke="#123a70" stroke-width="2"/>
+<text x="210.0" y="206" font-size="13" text-anchor="middle" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Adafruit ATECC608</text>
+<text x="210.0" y="224" font-size="10" text-anchor="middle" fill="#dbe7ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">breakout (4314)</text>
+<text x="210.0" y="246" font-size="9.5" text-anchor="middle" fill="#dbe7ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">its own I2C pull-ups,</text>
+<text x="210.0" y="259" font-size="9.5" text-anchor="middle" fill="#dbe7ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">runs on 3.3 V</text>
+<text x="210.0" y="286" font-size="9" text-anchor="middle" fill="#dbe7ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">STEMMA QT plug stays on;</text>
+<text x="210.0" y="298" font-size="9" text-anchor="middle" fill="#dbe7ff" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">other end: 4 bare wires</text>
+<rect x="305" y="190" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="300" y="199" font-size="9" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">VIN</text>
+<rect x="305" y="220" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="300" y="229" font-size="9" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">SDA</text>
+<rect x="305" y="240" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="300" y="249" font-size="9" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">SCL</text>
+<rect x="305" y="260" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="300" y="269" font-size="9" text-anchor="end" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">GND</text>
+<path d="M315 195 L780 195 L780 205 L792 205" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="7 5"/>
+<text x="683" y="189" font-size="9" text-anchor="middle" fill="#ffd3cf" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">under the board</text>
+<text x="327" y="188" font-size="10" text-anchor="start" fill="#b3261e" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">red VIN -&gt; 3V3 OUT, pin 36</text>
+<text x="327" y="208" font-size="8.5" text-anchor="start" fill="#b3261e" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the one wire that crosses to the right column</text>
+<path d="M315 225 L568 225" fill="none" stroke="#1f5fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="327" y="219" font-size="10" text-anchor="start" fill="#1f5fbf" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">blue SDA -&gt; GP4, pin 6</text>
+<path d="M315 245 L568 245" fill="none" stroke="#c99a00" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="327" y="239" font-size="10" text-anchor="start" fill="#9a7600" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">yellow SCL -&gt; GP5, pin 7</text>
+<path d="M315 265 L568 265" fill="none" stroke="#222" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="327" y="280" font-size="10" text-anchor="start" fill="#222" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">black GND -&gt; GND, pin 8</text>
+<text x="327" y="293" font-size="8.5" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">I2C0, the pins atecc.py uses</text>
+<text x="110" y="334" font-size="9.5" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Those colors are the Adafruit STEMMA QT convention. A cable from a kit</text>
+<text x="110" y="347" font-size="9.5" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">may differ: map each bare wire to the VIN / GND / SDA / SCL pads with a</text>
+<text x="110" y="360" font-size="9.5" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">meter (continuity) before anything is powered. Swapped VIN and GND puts</text>
+<text x="110" y="373" font-size="9.5" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">3.3 V on the chip's ground; swapped SDA and SCL is harmless.</text>
+<path d="M792 145 L880 145" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M880 145 L930 145" stroke="#b3261e" stroke-width="2.5"/>
+<polygon points="930,133 930,157 888,145" fill="#111"/>
+<rect x="882" y="133" width="5" height="24" fill="#111"/>
+<path d="M930 145 L1010 145" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1010" cy="145" r="4" fill="#b3261e"/>
+<text x="905.0" y="175" font-size="11" text-anchor="middle" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">1N5817 Schottky</text>
+<text x="905.0" y="188" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">1 A 20 V (wallet &lt; 0.3 A)</text>
+<text x="905.0" y="201" font-size="9" text-anchor="middle" fill="#111" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">band toward the Pico,</text>
+<text x="905.0" y="213" font-size="9" text-anchor="middle" fill="#111" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">anode toward the switch</text>
+<circle cx="1040" cy="145" r="4" fill="#fbfbf8" stroke="#b3261e" stroke-width="2"/>
+<circle cx="1100" cy="145" r="4" fill="#fbfbf8" stroke="#b3261e" stroke-width="2"/>
+<path d="M1043 143 L1092 119" stroke="#b3261e" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M1010 145 L1036 145" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1104 145 L1170 145 L1170 250" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="1070.0" y="109" font-size="11" text-anchor="middle" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">SPST switch</text>
+<text x="1070.0" y="167" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">OFF isolates the cell,</text>
+<text x="1070.0" y="179" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">divider included</text>
+<rect x="1090" y="250" width="210" height="112" rx="6" fill="#fff8e6" stroke="#8a6d1f" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1195.0" y="290" font-size="11" text-anchor="middle" fill="#5a4610" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">TP4056 charger module</text>
+<text x="1195.0" y="305" font-size="9.5" text-anchor="middle" fill="#5a4610" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">WITH DW01 protection (optional)</text>
+<text x="1195.0" y="322" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">charge through ITS USB port,</text>
+<text x="1195.0" y="334" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">never through the Pico</text>
+<rect x="1300" y="288" width="16" height="30" rx="3" fill="#bbb" stroke="#777" stroke-width="1.5"/>
+<text x="1322" y="307" font-size="9" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">USB-C</text>
+<rect x="1165" y="245" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="1170" y="272" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">OUT+</text>
+<rect x="1245" y="245" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="1250" y="272" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">OUT-</text>
+<rect x="1165" y="357" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="1170" y="352" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">B+</text>
+<rect x="1245" y="357" width="10" height="10" fill="#e8c27a" stroke="#333"/>
+<text x="1250" y="352" font-size="9" text-anchor="middle" fill="#5a4610" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">B-</text>
+<rect x="1112" y="433" width="8" height="20" rx="2" fill="#333" stroke="#333" stroke-width="1.5"/>
+<rect x="1120" y="420" width="180" height="46" rx="10" fill="#2b2b2b" stroke="#111" stroke-width="2"/>
+<text x="1210.0" y="440" font-size="11" text-anchor="middle" fill="#fff" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">18650, PROTECTED</text>
+<text x="1210.0" y="455" font-size="9" text-anchor="middle" fill="#ddd" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">in a holder with leads</text>
+<text x="1096" y="449" font-size="16" text-anchor="middle" fill="#b3261e" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">+</text>
+<text x="1314" y="449" font-size="16" text-anchor="middle" fill="#222" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">-</text>
+<path d="M1170 367 L1170 420" fill="none" stroke="#b3261e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1250 367 L1250 420" fill="none" stroke="#222" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="1210.0" y="484" font-size="9" text-anchor="middle" fill="#b3261e" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">a bare cell has no over-discharge or short</text>
+<text x="1210.0" y="496" font-size="9" text-anchor="middle" fill="#b3261e" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">protection: protected cell, or a holder + DW01 board</text>
+<text x="1210.0" y="514" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">without the module: cell + straight to the switch, cell - to GND</text>
+<path d="M1010 145 L1010 175" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1002" y="175" width="16" height="50" rx="2" fill="#fff" stroke="#6a3fbf" stroke-width="2"/>
+<text x="996" y="205" font-size="10" text-anchor="end" fill="#6a3fbf" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100k</text>
+<path d="M1010 225 L1010 275" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1010" cy="245" r="4" fill="#6a3fbf"/>
+<path d="M1010 245 L792 245" fill="none" stroke="#2a8c4a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="806" y="237" font-size="10" text-anchor="start" fill="#2a8c4a" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">34 GP28: sense = Vcell / 2</text>
+<text x="806" y="258" font-size="8.5" text-anchor="start" fill="#2a8c4a" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">4.2 V cell reads 2.1 V (ADC max 3.3)</text>
+<rect x="1002" y="275" width="16" height="50" rx="2" fill="#fff" stroke="#6a3fbf" stroke-width="2"/>
+<text x="996" y="305" font-size="10" text-anchor="end" fill="#6a3fbf" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100k</text>
+<path d="M1010 325 L1010 355" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1010" cy="355" r="4" fill="#6a3fbf"/>
+<path d="M1010 245 L1050 245 L1050 290" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1040 290 L1060 290" fill="none" stroke="#6a3fbf" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1040 300 L1060 300" fill="none" stroke="#6a3fbf" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1050 300 L1050 355 L1010 355" fill="none" stroke="#6a3fbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="1058" y="317" font-size="9" text-anchor="start" fill="#6a3fbf" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">100nF</text>
+<text x="996" y="375" font-size="9" text-anchor="end" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the gauge: optional,</text>
+<text x="996" y="387" font-size="9" text-anchor="end" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">power.py shows USB without it</text>
+<path d="M1010 355 L1010 620" fill="none" stroke="#222" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1010" cy="620" r="4" fill="#222"/>
+<path d="M1250 250 L1250 225 L1375 225 L1375 620 L830 620 L830 465 L792 465" fill="none" stroke="#222" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="836" y="469" font-size="10" text-anchor="start" fill="#222" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">23 GND: any GND pin works</text>
+<text x="1102.5" y="638" font-size="9" text-anchor="middle" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">cell -, divider and module ground: one wire to the Pico's GND</text>
+<rect x="30" y="402" width="470" height="470" rx="8" fill="#f1f4f1" stroke="#c9d3c9" stroke-width="1"/>
+<text x="44" y="430" font-size="12" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Why the cell and USB can be in at the same time</text>
+<text x="44" y="450" font-size="10" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">USB in:</text>
+<text x="93.4" y="450" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the Pico's own Schottky puts ~4.7 V on VSYS, above any cell,</text>
+<text x="44" y="465" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">so the 1N5817 is reverse-biased. No USB current reaches the cell:</text>
+<text x="44" y="480" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">it is never charged through this circuit, and it never pushes</text>
+<text x="44" y="495" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">back into the USB port.</text>
+<text x="44" y="510" font-size="10" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">USB out, ON:</text>
+<text x="124.4" y="510" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">VSYS = Vcell - ~0.35 V, about 2.7 to 3.9 V. The buck-boost</text>
+<text x="44" y="525" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">holds 3.3 V down to VSYS 1.8 V, so the whole cell is usable.</text>
+<text x="44" y="540" font-size="10" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Both:</text>
+<text x="81.0" y="540" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the higher source wins, the other diode just blocks. That is</text>
+<text x="44" y="555" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the documented Pico pattern; unplugging USB does not reboot.</text>
+<text x="44" y="570" font-size="10" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Switch OFF:</text>
+<text x="118.2" y="570" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the cell is isolated and the divider reads 0 V; nothing</text>
+<text x="44" y="585" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">back-feeds an unpowered Pico through GP28.</text>
+<text x="44" y="600" font-size="10" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Charging:</text>
+<text x="105.80000000000001" y="600" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">out of the wallet in a charger, or the TP4056 + DW01 module</text>
+<text x="44" y="615" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">through its own port. A TP4056 without the DW01 pads has no</text>
+<text x="44" y="630" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">protection: skip it. Never charge through the Pico's USB.</text>
+<text x="44" y="645" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">Switch the wallet OFF while it charges: a load on OUT+ keeps the</text>
+<text x="44" y="660" font-size="10" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">TP4056 from ever seeing the end of charge.</text>
+<text x="44" y="685" font-size="12" text-anchor="start" fill="#111" font-weight="bold" font-family="ui-monospace, Menlo, Consolas, monospace">Before the cell goes in (meter, USB unplugged, switch OFF)</text>
+<text x="44" y="705" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">[ ] diode mode across the 1N5817: 0.2 to 0.35 V one way, open the</text>
+<text x="44" y="719" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">    other way; the band sits at the pin 39 end</text>
+<text x="44" y="733" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">[ ] VSYS (39) to GND is not a short</text>
+<text x="44" y="747" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">[ ] the holder's + lead is open to everything with the switch OFF</text>
+<text x="44" y="761" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">[ ] VIN -&gt; 36, GND -&gt; 8, SDA -&gt; 6, SCL -&gt; 7; no continuity 36 to 8</text>
+<text x="44" y="775" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">[ ] then cell in, switch ON, USB out: the screen comes up and the</text>
+<text x="44" y="789" font-size="9.5" text-anchor="start" fill="#333" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">    home screen shows the cell voltage</text>
+<text x="44" y="811" font-size="9" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">The diode backwards is the only way to get it wrong, and it is harmless:</text>
+<text x="44" y="824" font-size="9" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">the cell just never powers the Pico. Never wire the cell to VBUS (40)</text>
+<text x="44" y="837" font-size="9" text-anchor="start" fill="#666" font-weight="normal" font-family="ui-monospace, Menlo, Consolas, monospace">or 3V3 OUT (36): VSYS (39) is the only input for the cell.</text>
 </svg>

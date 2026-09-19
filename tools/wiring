@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+# Draws buildlog/images/wiring-battery-atecc.svg, the perfboard wiring in SOLDERING.md: the ATECC608 on
+# I2C0, an 18650 through a switch and a 1N5817 into VSYS with USB still usable, the battery gauge on
+# GP28, the optional TP4056 + DW01 charger. Run from the repo root: tools/wiring
+W, H = 1440, 900
+MONO = "ui-monospace, Menlo, Consolas, monospace"
+RED, BLK, BLU, YEL, GRN, PUR, GREY = "#b3261e", "#222", "#1f5fbf", "#c99a00", "#2a8c4a", "#6a3fbf", "#666"
+out = []
+def add(s): out.append(s)
+def text(x, y, s, size=11, color="#222", anchor="start", bold=False):
+    add('<text x="%s" y="%s" font-size="%s" text-anchor="%s" fill="%s" font-weight="%s" font-family="%s">%s</text>'
+        % (x, y, size, anchor, color, "bold" if bold else "normal", MONO, s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")))
+def wire(pts, color, width=2.5, dash=False):
+    d = " ".join(("M" if i == 0 else "L") + "%s %s" % p for i, p in enumerate(pts))
+    add('<path d="%s" fill="none" stroke="%s" stroke-width="%s" stroke-linejoin="round" stroke-linecap="round"%s/>'
+        % (d, color, width, ' stroke-dasharray="7 5"' if dash else ""))
+def dot(x, y, color): add('<circle cx="%s" cy="%s" r="4" fill="%s"/>' % (x, y, color))
+def rect(x, y, w, h, fill, stroke="#333", rx=4, sw=1.5, dash=False):
+    add('<rect x="%s" y="%s" width="%s" height="%s" rx="%s" fill="%s" stroke="%s" stroke-width="%s"%s/>'
+        % (x, y, w, h, rx, fill, stroke, sw, ' stroke-dasharray="6 4"' if dash else ""))
+def pad(x, y): add('<rect x="%s" y="%s" width="10" height="10" fill="#e8c27a" stroke="#333"/>' % (x - 5, y - 5))
+
+add('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">' % (W, H, W, H))
+add('<rect width="%d" height="%d" fill="#fbfbf8"/>' % (W, H))
+text(24, 32, "picowallet perfboard: 18650 through a switch and a 1N5817 into VSYS, USB stays plugged for programming, ATECC608 on I2C0", 16, bold=True)
+text(24, 52, "Pico 2 W seen from the top, USB up. Everything solders to the pin tails under the board. Numbers are physical header pins. A dot joins wires.", 11, GREY)
+
+# ----------------------------------------------------------------------------- Pico
+PX, PY, PW, PH = 560, 100, 240, 440
+LX, RX = PX + 8, PX + PW - 8
+def ly(n): return 125 + (n - 1) * 20        # left column, pins 1..20
+def ry(n): return 125 + (40 - n) * 20       # right column, pins 40..21
+rect(PX, PY, PW, PH, "#2e7d4f", "#1b4d31", 8, 2)
+rect(PX + PW / 2 - 26, PY - 18, 52, 26, "#bbb", "#777", 3)
+text(PX + PW / 2, PY - 1, "micro-USB", 9, "#333", "middle")
+text(PX + PW / 2, PY - 25, "programming and power", 9.5, GREY, "middle")
+rect(PX + PW / 2 - 28, 320, 56, 56, "#111", "#111", 2); text(PX + PW / 2, 352, "RP2350", 10, "#ddd", "middle")
+rect(PX + PW / 2 - 24, 455, 48, 30, "#777", "#444", 2); text(PX + PW / 2, 474, "CYW43", 9, "#eee", "middle")
+text(PX + PW / 2, 290, "on-board Schottky:", 9, "#d8f0e0", "middle"); text(PX + PW / 2, 302, "VBUS 40 -> VSYS 39", 9, "#d8f0e0", "middle")
+text(PX + PW / 2, 400, "3.3 V buck-boost", 9, "#d8f0e0", "middle"); text(PX + PW / 2, 412, "VSYS 1.8 to 5.5 V", 9, "#d8f0e0", "middle")
+LEFT = {1: "GP0", 2: "GP1", 3: "GND", 4: "GP2", 5: "GP3", 6: "GP4 SDA", 7: "GP5 SCL", 8: "GND", 9: "GP6", 10: "GP7", 11: "GP8", 12: "GP9",
+        13: "GND", 14: "GP10", 15: "GP11", 16: "GP12", 17: "GP13", 18: "GND", 19: "GP14", 20: "GP15"}
+RIGHT = {40: "VBUS", 39: "VSYS", 38: "GND", 37: "3V3_EN", 36: "3V3 OUT", 35: "ADC_VREF", 34: "GP28 ADC2", 33: "AGND", 32: "GP27", 31: "GP26",
+         30: "RUN", 29: "GP22", 28: "GND", 27: "GP21", 26: "GP20", 25: "GP19", 24: "GP18", 23: "GND", 22: "GP17", 21: "GP16"}
+USED = {6: BLU, 7: YEL, 8: BLK, 36: RED, 39: RED, 34: GRN, 23: BLK}
+for n, name in LEFT.items():
+    used = n in USED
+    add('<circle cx="%s" cy="%s" r="5" fill="%s" stroke="#333"/>' % (LX, ly(n), USED[n] if used else "#e8e0b0"))
+    text(LX + 11, ly(n) + 4, "%d %s" % (n, name), 10 if used else 9, "#fff" if used else "#cfe6d6", bold=used)
+for n, name in RIGHT.items():
+    used = n in USED
+    add('<circle cx="%s" cy="%s" r="5" fill="%s" stroke="#333"/>' % (RX, ry(n), USED[n] if used else "#e8e0b0"))
+    text(RX - 11, ry(n) + 4, "%s %d" % (name, n), 10 if used else 9, "#fff" if used else "#cfe6d6", "end", bold=used)
+text(RX + 14, ry(40) + 4, "40 VBUS: nothing connects here", 10, RED, bold=True)
+
+# ----------------------------------------------------------------------------- ATECC608 breakout, left
+AX, AY, AW, AH = 110, 180, 200, 130
+VINY = 195                     # between pins 4 and 5 on the left edge: no pin there
+rect(AX, AY, AW, AH, "#1e5aa8", "#123a70", 8, 2)
+text(AX + AW / 2, AY + 26, "Adafruit ATECC608", 13, "#fff", "middle", True)
+text(AX + AW / 2, AY + 44, "breakout (4314)", 10, "#dbe7ff", "middle")
+text(AX + AW / 2, AY + 66, "its own I2C pull-ups,", 9.5, "#dbe7ff", "middle")
+text(AX + AW / 2, AY + 79, "runs on 3.3 V", 9.5, "#dbe7ff", "middle")
+text(AX + AW / 2, AY + 106, "STEMMA QT plug stays on;", 9, "#dbe7ff", "middle")
+text(AX + AW / 2, AY + 118, "other end: 4 bare wires", 9, "#dbe7ff", "middle")
+for name, y in (("VIN", VINY), ("SDA", ly(6)), ("SCL", ly(7)), ("GND", ly(8))):
+    pad(AX + AW, y); text(AX + AW - 10, y + 4, name, 9, "#fff", "end", True)
+PE = AX + AW + 5
+wire([(PE, VINY), (PX + 220, VINY), (PX + 220, ry(36)), (RX, ry(36))], RED, 2.5, dash=True)
+text(PX + 123, VINY - 6, "under the board", 9, "#ffd3cf", "middle")
+text(PE + 12, VINY - 7, "red VIN -> 3V3 OUT, pin 36", 10, RED, bold=True)
+text(PE + 12, VINY + 13, "the one wire that crosses to the right column", 8.5, RED)
+wire([(PE, ly(6)), (LX, ly(6))], BLU); text(PE + 12, ly(6) - 6, "blue SDA -> GP4, pin 6", 10, BLU, bold=True)
+wire([(PE, ly(7)), (LX, ly(7))], YEL); text(PE + 12, ly(7) - 6, "yellow SCL -> GP5, pin 7", 10, "#9a7600", bold=True)
+wire([(PE, ly(8)), (LX, ly(8))], BLK); text(PE + 12, ly(8) + 15, "black GND -> GND, pin 8", 10, BLK, bold=True)
+text(PE + 12, ly(8) + 28, "I2C0, the pins atecc.py uses", 8.5, GREY)
+cy = AY + AH + 24
+for line in ("Those colors are the Adafruit STEMMA QT convention. A cable from a kit",
+             "may differ: map each bare wire to the VIN / GND / SDA / SCL pads with a",
+             "meter (continuity) before anything is powered. Swapped VIN and GND puts",
+             "3.3 V on the chip's ground; swapped SDA and SCL is harmless."):
+    text(AX, cy, line, 9.5, GREY); cy += 13
+
+# ----------------------------------------------------------------------------- battery chain, right
+VS = ry(39)                    # the VSYS rail
+NX = 1010                      # node between the diode and the switch: the divider taps here
+D0, D1 = 880, 930              # the diode, band at D0 (toward the Pico)
+wire([(RX, VS), (D0, VS)], RED)
+add('<path d="M%s %s L%s %s" stroke="%s" stroke-width="2.5"/>' % (D0, VS, D1, VS, RED))
+add('<polygon points="%s,%s %s,%s %s,%s" fill="#111"/>' % (D1, VS - 12, D1, VS + 12, D0 + 8, VS))
+add('<rect x="%s" y="%s" width="5" height="24" fill="#111"/>' % (D0 + 2, VS - 12))
+wire([(D1, VS), (NX, VS)], RED); dot(NX, VS, RED)
+dm = (D0 + D1) / 2
+text(dm, VS + 30, "1N5817 Schottky", 11, "#111", "middle", True)
+text(dm, VS + 43, "1 A 20 V (wallet < 0.3 A)", 9, GREY, "middle")
+text(dm, VS + 56, "band toward the Pico,", 9, "#111", "middle")
+text(dm, VS + 68, "anode toward the switch", 9, "#111", "middle")
+S0, S1 = 1040, 1100            # the switch
+add('<circle cx="%s" cy="%s" r="4" fill="#fbfbf8" stroke="%s" stroke-width="2"/>' % (S0, VS, RED))
+add('<circle cx="%s" cy="%s" r="4" fill="#fbfbf8" stroke="%s" stroke-width="2"/>' % (S1, VS, RED))
+add('<path d="M%s %s L%s %s" stroke="%s" stroke-width="2.5" stroke-linecap="round"/>' % (S0 + 3, VS - 2, S1 - 8, VS - 26, RED))
+OX = 1170                      # OUT+ column
+wire([(NX, VS), (S0 - 4, VS)], RED); wire([(S1 + 4, VS), (OX, VS), (OX, 250)], RED)
+text((S0 + S1) / 2, VS - 36, "SPST switch", 11, "#111", "middle", True)
+text((S0 + S1) / 2, VS + 22, "OFF isolates the cell,", 9, GREY, "middle"); text((S0 + S1) / 2, VS + 34, "divider included", 9, GREY, "middle")
+# TP4056 module (optional), dashed
+TX, TY, TW, TH = 1090, 250, 210, 112
+OM = 1250                      # OUT- / B- column
+rect(TX, TY, TW, TH, "#fff8e6", "#8a6d1f", 6, 1.5, dash=True)
+text(TX + TW / 2, TY + 40, "TP4056 charger module", 11, "#5a4610", "middle", True)
+text(TX + TW / 2, TY + 55, "WITH DW01 protection (optional)", 9.5, "#5a4610", "middle")
+text(TX + TW / 2, TY + 72, "charge through ITS USB port,", 9, "#5a4610", "middle")
+text(TX + TW / 2, TY + 84, "never through the Pico", 9, "#5a4610", "middle")
+rect(TX + TW, TY + 38, 16, 30, "#bbb", "#777", 3); text(TX + TW + 22, TY + 57, "USB-C", 9, GREY)
+for name, x, y in (("OUT+", OX, TY), ("OUT-", OM, TY), ("B+", OX, TY + TH), ("B-", OM, TY + TH)):
+    pad(x, y); text(x, y + (22 if y == TY else -10), name, 9, "#5a4610", "middle", True)
+# cell
+CX, CY, CW, CH = 1120, 420, 180, 46
+rect(CX - 8, CY + 13, 8, 20, "#333", "#333", 2)
+rect(CX, CY, CW, CH, "#2b2b2b", "#111", 10, 2)
+text(CX + CW / 2, CY + 20, "18650, PROTECTED", 11, "#fff", "middle", True)
+text(CX + CW / 2, CY + 35, "in a holder with leads", 9, "#ddd", "middle")
+text(CX - 24, CY + 29, "+", 16, RED, "middle", True); text(CX + CW + 14, CY + 29, "-", 16, BLK, "middle", True)
+wire([(OX, TY + TH + 5), (OX, CY)], RED); wire([(OM, TY + TH + 5), (OM, CY)], BLK)
+text(CX + CW / 2, CY + CH + 18, "a bare cell has no over-discharge or short", 9, RED, "middle")
+text(CX + CW / 2, CY + CH + 30, "protection: protected cell, or a holder + DW01 board", 9, RED, "middle")
+text(CX + CW / 2, CY + CH + 48, "without the module: cell + straight to the switch, cell - to GND", 9, GREY, "middle")
+# divider
+SY = ry(34)                    # the sense node lines up with pin 34
+wire([(NX, VS), (NX, SY - 70)], PUR)
+rect(NX - 8, SY - 70, 16, 50, "#fff", PUR, 2, 2); text(NX - 14, SY - 40, "100k", 10, PUR, "end", True)
+wire([(NX, SY - 20), (NX, SY + 30)], PUR); dot(NX, SY, PUR)
+wire([(NX, SY), (RX, SY)], GRN)
+text(RX + 14, SY - 8, "34 GP28: sense = Vcell / 2", 10, GRN, bold=True)
+text(RX + 14, SY + 13, "4.2 V cell reads 2.1 V (ADC max 3.3)", 8.5, GRN)
+rect(NX - 8, SY + 30, 16, 50, "#fff", PUR, 2, 2); text(NX - 14, SY + 60, "100k", 10, PUR, "end", True)
+BY = SY + 110                  # bottom of the divider
+wire([(NX, SY + 80), (NX, BY)], PUR); dot(NX, BY, PUR)
+CPX = 1050
+wire([(NX, SY), (CPX, SY), (CPX, SY + 45)], PUR); wire([(CPX - 10, SY + 45), (CPX + 10, SY + 45)], PUR, 3); wire([(CPX - 10, SY + 55), (CPX + 10, SY + 55)], PUR, 3)
+wire([(CPX, SY + 55), (CPX, BY), (NX, BY)], PUR); text(CPX + 8, SY + 72, "100nF", 9, PUR, bold=True)
+text(NX - 14, BY + 20, "the gauge: optional,", 9, GREY, "end"); text(NX - 14, BY + 32, "power.py shows USB without it", 9, GREY, "end")
+# ground bus
+GY = 620
+wire([(NX, BY), (NX, GY)], BLK); dot(NX, GY, BLK)
+G1 = 1375
+wire([(OM, TY), (OM, 225), (G1, 225), (G1, GY), (830, GY), (830, ry(23)), (RX, ry(23))], BLK)
+text(RX + 44, ry(23) + 4, "23 GND: any GND pin works", 10, BLK, bold=True)
+text((830 + G1) / 2, GY + 18, "cell -, divider and module ground: one wire to the Pico's GND", 9, GREY, "middle")
+
+# ----------------------------------------------------------------------------- notes
+NX0, NY0 = 44, 430
+rect(NX0 - 14, NY0 - 28, 470, 470, "#f1f4f1", "#c9d3c9", 8, 1)
+text(NX0, NY0, "Why the cell and USB can be in at the same time", 12, "#111", bold=True)
+notes = [
+    ("USB in:", "the Pico's own Schottky puts ~4.7 V on VSYS, above any cell,"),
+    ("", "so the 1N5817 is reverse-biased. No USB current reaches the cell:"),
+    ("", "it is never charged through this circuit, and it never pushes"),
+    ("", "back into the USB port."),
+    ("USB out, ON:", "VSYS = Vcell - ~0.35 V, about 2.7 to 3.9 V. The buck-boost"),
+    ("", "holds 3.3 V down to VSYS 1.8 V, so the whole cell is usable."),
+    ("Both:", "the higher source wins, the other diode just blocks. That is"),
+    ("", "the documented Pico pattern; unplugging USB does not reboot."),
+    ("Switch OFF:", "the cell is isolated and the divider reads 0 V; nothing"),
+    ("", "back-feeds an unpowered Pico through GP28."),
+    ("Charging:", "out of the wallet in a charger, or the TP4056 + DW01 module"),
+    ("", "through its own port. A TP4056 without the DW01 pads has no"),
+    ("", "protection: skip it. Never charge through the Pico's USB."),
+    ("", "Switch the wallet OFF while it charges: a load on OUT+ keeps the"),
+    ("", "TP4056 from ever seeing the end of charge."),
+]
+y = NY0 + 20
+for k, v in notes:
+    if k:
+        text(NX0, y, k, 10, "#111", bold=True); text(NX0 + 6.2 * len(k) + 6, y, v, 10, "#333")
+    else:
+        text(NX0, y, v, 10, "#333")
+    y += 15
+y += 10
+text(NX0, y, "Before the cell goes in (meter, USB unplugged, switch OFF)", 12, "#111", bold=True); y += 20
+checks = ["diode mode across the 1N5817: 0.2 to 0.35 V one way, open the",
+          "    other way; the band sits at the pin 39 end",
+          "VSYS (39) to GND is not a short",
+          "the holder's + lead is open to everything with the switch OFF",
+          "VIN -> 36, GND -> 8, SDA -> 6, SCL -> 7; no continuity 36 to 8",
+          "then cell in, switch ON, USB out: the screen comes up and the",
+          "    home screen shows the cell voltage"]
+for c in checks:
+    text(NX0, y, ("    " if c.startswith("    ") else "[ ] ") + c.strip(), 9.5, "#333"); y += 14
+y += 8
+text(NX0, y, "The diode backwards is the only way to get it wrong, and it is harmless:", 9, GREY); y += 13
+text(NX0, y, "the cell just never powers the Pico. Never wire the cell to VBUS (40)", 9, GREY); y += 13
+text(NX0, y, "or 3V3 OUT (36): VSYS (39) is the only input for the cell.", 9, GREY)
+add('</svg>')
+import os
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "buildlog", "images", "wiring-battery-atecc.svg")
+open(os.path.normpath(path), "w").write("\n".join(out))
+print("written", sum(len(s) for s in out), "bytes")

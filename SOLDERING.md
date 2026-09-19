@@ -7,6 +7,8 @@ and powers over USB.
 
 ![wiring](buildlog/images/wiring-battery-atecc.svg)
 
+(`tools/wiring` redraws that file.)
+
 Everything below solders to the **outside of the Pico's header pins** (the tails that poke through
 the perfboard), so nothing on the Pico or the LCD board is modified. Physical pin numbers count
 from the USB end: 1 to 20 down the left side, 40 to 21 down the right side, looking at the Pico
@@ -20,7 +22,7 @@ from the top with USB up.
 | 18650 cell, **protected**, or an 18650 holder with a DW01 protection board | a bare unprotected cell has no over-discharge or short protection; do not use one |
 | 18650 holder with leads | |
 | SPST slide switch | rated for 1 A is plenty; the wallet draws under 150 mA |
-| Schottky diode, 1N5817 / 1N5819 (through-hole) or SS14 (SMD) | low forward drop (~0.3 V). A plain 1N4007 drops 0.7 V and wastes range; do not use one |
+| Schottky diode, 1N5817 (1 A, 20 V) or 1N5819 (through-hole), SS14 (SMD) | low forward drop (~0.35 V at the wallet's < 0.3 A). A plain 1N4007 drops 0.7 V and wastes range; do not use one |
 | 2 × 100 kΩ resistors, 1 × 100 nF capacitor | the battery gauge. Optional, the firmware copes without |
 | hookup wire, 26 to 30 AWG | |
 
@@ -95,8 +97,9 @@ cell runs the wallet with the backlight on for roughly a day; days more if you d
 
 Charging: take the cell out and charge it in a charger, or put a TP4056 module **with** protection
 (the ones with a DW01 and two extra pads, usually USB-C) between the holder and the switch, with
-the cell on the module's B+/B− and the switch on OUT+. Then charging happens through the module's
-own USB port, never through the Pico.
+the cell on the module's B+/B− and the switch on OUT+, OUT− to ground (the diagram shows it dashed).
+Then charging happens through the module's own USB port, never through the Pico. Switch the wallet
+OFF while it charges: a load hanging on OUT+ keeps a TP4056 from ever seeing the end of charge.
 
 Check before connecting the cell: meter in diode mode across the Schottky (reads ~0.2 to 0.3 V one
 way, open the other); resistance from VSYS to GND is not a short; with the switch OFF, no path from
