@@ -184,6 +184,9 @@ the next vault gets deployed with.
    and TRY READING SECRET SLOT 8: both refused with "the DATA zone is still open" (the chip reads
    nothing back from slots or OTP until the data lock). IS YOUR SLOT A KEY?: no.
    - [x] Seen 2026-09-17: every Data/OTP read refused with 0x0F while the data zone is open.
+   - [ ] Optional: PLAY SNAKE to a score, three letters, A: SCORES (X on the box) says `chip slot 13
+         holds it; it reads back after the data lock`. `tools/usb exec` of `read_data(13, 0)` still
+         refuses with 0x0F while the data zone is open.
 5. Arm again if the header says SAFE. DATA, slot 0 (`empty`), `! NEW KEY`, red screen, hold A 3 s.
    KEY CREATED ceremony; the tile shows the fingerprint over the green bar.
    - [x] `SHOW PUBLIC KEY`: qx and qy. From the laptop `tools/usb exec 'import wallet;

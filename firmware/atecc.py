@@ -8,8 +8,8 @@
 #   plain data) and what it MAY DO (sign external digests, be regenerated with GenKey, be written,
 #   be locked on its own) is a 4-byte-per-slot table in the 128-byte config zone: SlotConfig at
 #   bytes 20-51 and KeyConfig at bytes 96-127. The config zone is written once and then locked
-#   forever; the chip refuses GenKey and Sign until it is. Locking the DATA zone freezes clear-text
-#   writes but GenKey stays allowed where the table says so. A single slot can also be locked for
+#   forever; the chip refuses GenKey and Sign until it is. Locking the DATA zone opens reads and ends
+#   clear-text writes except where WriteConfig says Always; GenKey stays allowed where the table says so. A single slot can also be locked for
 #   good (KeyConfig.Lockable), after which nothing can replace the key in it.
 from machine import I2C, Pin
 import time
@@ -373,8 +373,9 @@ class ATECC608:
             raise AteccError("lock command returned but the zone is still unlocked")
 
     def lock_data(self):
-        """PERMANENT. Lock the data (and OTP) zone, mode 0x81: no more clear-text slot writes.
-        GenKey keeps working on slots whose config allows it."""
+        """PERMANENT. Lock the data (and OTP) zone, mode 0x81: reads of slots and OTP begin, and clear
+        writes stay only where SlotConfig.WriteConfig says Always (slots 12 and 13 in the wallet config;
+        datasheet, not yet seen on silicon). GenKey keeps working on slots whose config allows it."""
         st = self.lock_state()
         if not st["configLocked"]:
             raise AteccError("lock the config zone first")

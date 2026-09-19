@@ -418,7 +418,7 @@ def draw_cfg(ui):
     d.text("  the original bytes, kept" if ui.snap is not None else "  taken before the first write", 4, y, DIM); y += 14
     d.text("DATA ZONE", 4, y, L.GREY)
     d.text("hidden" if not cfg else ("LOCKED" if data else "open, write-only"), X, y, L.RED if not cfg else (L.GREEN if data else L.YELLOW)); y += 12
-    d.text("  until CONFIG is locked" if not cfg else ("  no clear writes, ever" if data else "  clear writes ok, reads after lock"), 4, y, DIM); y += 16
+    d.text("  until CONFIG is locked" if not cfg else ("  clear writes only in 12, 13" if data else "  clear writes ok, reads after lock"), 4, y, DIM); y += 16
     items = cfg_actions(ui)
     menu(ui, items, y, ui.act)
     menu_footer(ui, items, ui.act)

@@ -144,7 +144,8 @@ field of tiles coloured by what each slot is), OTP (64 write-once bytes), COUNTE
 that only go up) and the LAB docked below, where each question is one real command
 ("WHO ARE YOU?", "ARE YOU HEALTHY?", "MAKE RANDOMNESS") with the answer in words, the bytes, a
 "why that's weird" layer and the raw command underneath; "PLAY SNAKE" asks you instead, and its
-report counts how few bits a game of button presses is really worth. The header always says where you are
+report counts how few bits a game of button presses is really worth (and a top-ten score gets three
+arcade letters, filed on the Pico and into the chip's clear DATA slot 13). The header always says where you are
 (`CHIP > DATA > SLOT 3`) and whether the wallet is `SAFE` or `ARMED`. **B** opens **LEARN**, five
 short chapters that lead into those screens. A refusal from the chip is shown as a lesson: the
 reason first ("the CONFIG zone is still open, so the DATA zone is hidden"), the status byte second.
@@ -180,7 +181,7 @@ active slot in `slot.txt`; switching slots re-announces the new key, and the app
 only for the key the vault was deployed with. The three locks, all permanent:
 
 - **config zone**: freezes the table above. Required. Every chip in use is config-locked.
-- **data zone**: no more clear-text writes to any slot. GenKey still works where the table allows.
+- **data zone**: reads of slots and OTP begin; clear writes stay only where a slot's rules say Always (12 and 13 under the wallet config). GenKey still works where the table allows.
 - **one slot**: the key in it can never be replaced. `KeyConfig.Lockable` decides which slots can.
 
 Try it without hardware: the emulator (`tools/emu`, below) has a virtual ATECC608 on its I2C bus

@@ -210,12 +210,12 @@ class Chip:
             return self._data(bytes(self.cfg[p2 * 4:p2 * 4 + 4]))
         if opcode == OP_WRITE:
             if p1 & 3 == 2:
-                # a data slot, 32 bytes in clear: after the config lock, while the data zone is open,
-                # where the slot's WriteConfig says clear writes are allowed
+                # a data slot, 32 bytes in clear: after the config lock, where the slot's WriteConfig says
+                # Always; the data lock does not end those (datasheet; untested on silicon)
                 slot, block = (p2 >> 3) & 0xF, p2 >> 8
                 if not p1 & 0x80 or len(data) != 32 or block * 32 + 32 > SLOT_BYTES[slot]:
                     raise _Fail(STATUS_PARSE)
-                if not self.config_locked() or self.data_locked() or (self.slot_cfg(slot) >> 13) & 7:
+                if not self.config_locked() or (self.slot_cfg(slot) >> 13) & 7:
                     raise _Fail(STATUS_EXEC)
                 buf = self.data.setdefault(slot, bytearray(SLOT_BYTES[slot]))
                 buf[block * 32:block * 32 + 32] = data

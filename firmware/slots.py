@@ -16,7 +16,6 @@ import ceremony as CE
 import theme as T
 import icons as I
 import qrcode
-import snakelab as SN
 
 HOLD_PERM = 3000        # A held this long on the red screen
 HOLD_REV = 1500         # and this long on the yellow one
@@ -149,7 +148,7 @@ class SlotsUI:
                 out.append(("genkey", "NEW KEY", "perm", "config zone still open" if not cfg_locked else self.sig.gate("genkey")))
         if s["kind"] == "DATA":
             if s.get("clearWrite") == "clear" and not s.get("isSecret"):
-                out.append(("note", "WRITE A NOTE", "rev", "config zone still open" if not cfg_locked else ("data zone is locked" if data_locked else "")))
+                out.append(("note", "WRITE A NOTE", "rev", "config zone still open" if not cfg_locked else ""))   # rules say Always: clear writes survive the data lock
             if not s.get("isSecret"):
                 out.append(("readnote", "READ THE BYTES", "safe", "config zone still open" if not cfg_locked else ("data zone open: reads after its lock" if not data_locked else "")))
         if s["lockable"] and not s["locked"]:
@@ -200,7 +199,8 @@ class SlotsUI:
         elif v == "card":
             LN.draw_card(self)
         elif v == "snake":
-            SN.draw(self)
+            import snakelab
+            snakelab.draw(self)
         elif v == "busy":
             C.header(self, "WORKING")
             d.center_text(self.msg[:28], 100, L.WHITE)
@@ -357,9 +357,9 @@ class SlotsUI:
             body = "The table on the chip is frozen as it is now; keys can then be made and slots written."
         elif kind == "lockdata":
             d.text("LOCK DATA ZONE", 4, y, L.WHITE); y += 14
-            d.text("LOST: clear writes to any slot", 4, y, T.C["perm"]); y += 12
-            d.text("LOST: rewriting the note", 4, y, T.C["perm"]); y += 14
-            body = "GenKey stays allowed where the rules say; reads of slots and OTP begin."
+            d.text("LOST: clear writes, except in", 4, y, T.C["perm"]); y += 12
+            d.text("slots ruled Always (12 and 13)", 4, y, T.C["perm"]); y += 14
+            body = "Reads of slots and OTP begin. GenKey stays allowed where the rules say. Untested on silicon past this door."
         else:
             d.text(kind, 4, y, L.WHITE); y += 14
             body = ""
@@ -460,7 +460,8 @@ class SlotsUI:
         elif v == "learn":
             LN.tick_learn(self, pressed)
         elif v == "snake":
-            SN.tick(self, pressed)
+            import snakelab
+            snakelab.tick(self, pressed)
         if "B" in pressed and v not in ("confirm", "confirm_write", "busy", "card", "learn", "snake"):
             LN.context(self)
         if S.armed() and self.n % 20 == 0 and self.view != "snake":
@@ -560,8 +561,8 @@ class SlotsUI:
                 CE.rules_sealed(self)
                 sealed = True
             elif kind == "lockdata":
-                out = str(self.sig.lock_data()) + ". No more clear-text writes, ever."
-                CE.sealed(self, "DATA SEALED", "no clear writes, ever")
+                out = str(self.sig.lock_data()) + ". Reads of slots and OTP begin; clear writes stay only where a slot's rules say Always (12, 13)."
+                CE.sealed(self, "DATA SEALED", "reads open; writes by the rules")
                 sealed = True
             else:
                 out = "unknown action " + kind

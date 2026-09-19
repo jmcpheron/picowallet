@@ -11,6 +11,7 @@ import lcd as L
 import net
 import eip712
 import signer as S
+gc.collect()        # the chip UI modules are big; compiling them wants contiguous heap (a MemoryError here was seen once at power-up)
 import slots as SL
 import power
 import splash
@@ -175,7 +176,7 @@ def draw_home():
     if sig and sig.name != "atecc608":
         warn = "no chip: software key"
     if not network.WLAN(network.STA_IF).isconnected():
-        warn = "no wifi: check secrets.py"
+        warn = ("no wifi: %s not found" % SSID)[:30] if SSID else "no wifi: no SSID in secrets.py"
     if secrets is None:
         warn = "copy secrets.py to the board"
     if time.ticks_diff(msg_until, time.ticks_ms()) > 0:
@@ -231,7 +232,7 @@ def draw_status():
         d.text(SSID[:22], X, y, L.WHITE); y += 12
         d.text(w.ifconfig()[0], X, y, L.GREEN); y += 12
     else:
-        d.text(("not joined: " + SSID)[:22], X, y, L.RED); y += 12
+        d.text(("not found: " + SSID)[:22], X, y, L.RED); y += 12
     d.text("app", 4, y, L.GREY)
     d.text(APP_HOST[:22] if APP_HOST else "none in secrets.py", X, y, L.WHITE); y += 12
     if last_fetch:
@@ -247,6 +248,8 @@ def draw_status():
         hint = ("next: X, chip page, WRITE +", "LOCK CONFIG (needs ALLOW_LOCK)")
     elif st.get("state") == "empty":
         hint = ("next: X, slot %d, NEW KEY" % st.get("activeSlot", 0), "(ALLOW_GENKEY in secrets.py)")
+    elif not w.isconnected():
+        hint = ("offline: the chip map, LAB and", "snake work; wifi retries itself")
     elif not paired:
         hint = ("next: run the app, it pairs", "a vault to this key")
     else:
@@ -644,7 +647,13 @@ def net_work():
         return
     try:
         if not network.WLAN(network.STA_IF).isconnected():
+            if time.ticks_diff(time.ticks_ms(), net.last_try) > 30000:
+                net.retry()         # returns at once; the radio reports later
+                _log("wifi: retrying " + SSID)
             return
+        if not net.up:
+            net.joined()            # a retry got us here: LED, console if wanted
+            _log("wifi up: " + network.WLAN(network.STA_IF).ifconfig()[0])
         now = time.ticks_ms()
         every = 30000 if paired else 5000
         if last_announce == 0 or time.ticks_diff(now, last_announce) > every:
@@ -745,9 +754,9 @@ def start():
     else:
         splash.step("chip", chip_line(), L.GREEN if sig.name == "atecc608" else L.RED)
     w = network.WLAN(network.STA_IF)
-    if secrets and not w.isconnected():
-        # boot.py did this on the wallet Pico; a board that got wallet.py by hand, or the emulator, did not
-        net.connect(progress=lambda ms: splash.spin("wifi", ("joining " + SSID)[:20]))
+    if secrets and not w.isconnected() and not net.tried:
+        # boot.py already waited on the wallet Pico; a board that got wallet.py by hand, or the emulator, did not
+        net.connect(progress=lambda ms: splash.spin("wifi", ("join " + SSID)[:12] + " A skips") or bool(keys.pressed()))
     splash.wifi_row(w, SSID if secrets else "")
     splash.step("app", APP_HOST[:20] if APP_HOST else "none", L.GREY)
     splash_until = time.ticks_add(time.ticks_ms(), 1500)

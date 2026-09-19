@@ -10,11 +10,19 @@ except ImportError:
 led = Pin("LED", Pin.OUT)
 PORT = 2323
 _listen = None
+tried = False       # connect() ran once (boot.py); wallet.start does not wait a second time
+last_try = 0        # ticks_ms of the last join attempt; wallet.net_work retries every 30 s without blocking
+up = False          # joined() ran: LED on, console started if wanted
 
 
-def connect(timeout_s=20, progress=None):
-    """Join the WiFi in secrets.py. progress(elapsed_ms), if given, is called while waiting (the boot
-    screen animates on it); the LED blinks either way."""
+def connect(timeout_s=12, progress=None):
+    """Join the WiFi in secrets.py, waiting at most timeout_s. progress(elapsed_ms), if given, is called
+    while waiting (the boot screen animates on it) and may return True to stop waiting (a key press);
+    the LED blinks either way. A network that is not there costs 12 s once, never more: the wallet
+    retries in the background (retry) and everything local works without it."""
+    global tried, last_try
+    tried = True
+    last_try = time.ticks_ms()
     wlan = network.WLAN(network.STA_IF)
     if secrets is None:
         print("no secrets.py: not joining WiFi")
@@ -28,7 +36,9 @@ def connect(timeout_s=20, progress=None):
             led.toggle()
             if progress:
                 try:
-                    progress(time.ticks_diff(time.ticks_ms(), t0))
+                    if progress(time.ticks_diff(time.ticks_ms(), t0)):
+                        print("wifi: wait skipped")
+                        break
                 except Exception:
                     pass
             time.sleep_ms(150)
@@ -39,6 +49,31 @@ def connect(timeout_s=20, progress=None):
         led.off()
         print("wifi failed, status", wlan.status())
     return wlan
+
+
+def retry():
+    """Ask the radio to join again and return at once; isconnected() says later whether it did."""
+    global last_try, up
+    last_try = time.ticks_ms()
+    up = False
+    if secrets is None:
+        return
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        try:
+            wlan.connect(secrets.WIFI_SSID, secrets.WIFI_PASS)
+        except OSError as e:
+            print("wifi retry:", e)
+
+
+def joined():
+    """Call once the network is up (boot, or a later retry): LED on, the console if secrets.py wants it."""
+    global up
+    up = True
+    led.on()
+    if _listen is None and getattr(secrets, "ENABLE_NETWORK_CONSOLE", False):
+        console()
 
 
 def _accept(ls):
@@ -72,8 +107,8 @@ def console(port=PORT):
 
 def start(progress=None):
     wlan = connect(progress=progress)
-    if wlan.isconnected() and getattr(secrets, "ENABLE_NETWORK_CONSOLE", False):
-        console()
-    elif wlan.isconnected():
-        print("network console disabled")
+    if wlan.isconnected():
+        joined()
+        if _listen is None:
+            print("network console disabled")
     return wlan

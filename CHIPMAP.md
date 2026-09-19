@@ -175,6 +175,17 @@ presses were worth, counted honestly (only the gap between presses is credited, 
 worth almost nothing), the pool digest as the bytes, `HOW IT WAS COUNTED >` for the method, and
 one line on how the chip's own Random compares. Nothing from the game ever becomes a key.
 
+A score in the top ten gets the arcade box: three letters, the stick to pick them, A to file the
+entry. The table lives in `snake.top` on the Pico's flash and is written into the chip's DATA
+slot 13 as well (72 bytes, the free clear slot under the wallet config; 12 is the note's), 64 bytes
+as two 32-byte blocks: a `SNK1` header and ten entries of three letters and a 16-bit score. The box
+carries the yellow `~` badge for that write. X on the title or the GAME OVER box shows the table
+and what the chip did with it: while the DATA zone is open the chip takes the table but reads
+nothing back (the same lesson as the note), and after LOCK DATA ZONE the chip's copy is read first
+and wins, so a reflashed Pico gets its scores back from the chip. A slot whose rules say Always
+keeps taking clear writes after that lock (datasheet; not yet seen on silicon), which is why the
+wording on the DATA lock screens says "clear writes only where the rules say Always".
+
 ![the lab](buildlog/images/chipmap-07-lab.png)
 ![the fixed random pattern](buildlog/images/chipmap-08-lab-random.png)
 ![why it is weird](buildlog/images/chipmap-09-lab-why.png)

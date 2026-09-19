@@ -9,7 +9,6 @@ import atecc
 import chipmap as C
 import theme as T
 import icons as I
-import snakelab as SN
 
 CARD_ICON = ("chip", "lab", "config", "key", "lock", "book")
 
@@ -23,7 +22,7 @@ CARDS = (
     ("MAKE A KEY", "list",
      "A key is made by GenKey: the chip draws it from its own random generator and keeps it. You never see it, choose it, or read it out; only the public half comes out. Slot 7 also accepts PrivWrite, a key you bring, sent encrypted. A new key REPLACES the old one: there is no erase, and a locked slot never changes again. The chip refuses GenKey until the rules are sealed, so this chapter waits for that. Press A to look at the slots."),
     ("SEAL THE VAULT", "cfg",
-     "Three one-way doors. LOCK CONFIG seals the rules: after it keys can be made and slots written, but the table can never change, and the chip reads nothing back from slots or OTP until the next door. LOCK DATA ZONE ends clear writes and opens reads. LOCK SLOT seals one key forever. Every red step needs three things: the flag on the board, the wallet ARMED (hold B and Y together 3 s), and A held 3 s on the red screen."),
+     "Three one-way doors. LOCK CONFIG seals the rules: after it keys can be made and slots written, but the table can never change, and the chip reads nothing back from slots or OTP until the next door. LOCK DATA ZONE opens reads, and ends clear writes except where a slot's rules say Always (12 and 13). LOCK SLOT seals one key forever. Every red step needs three things: the flag on the board, the wallet ARMED (hold B and Y together 3 s), and A held 3 s on the red screen."),
     ("COLOURS AND GATES", None,
      "o green SAFE TO EXPLORE: changes nothing. ~ yellow REVERSIBLE CHANGE: can be restored. ! red PERMANENT: cannot be undone. Red needs ALLOW_LOCK or ALLOW_GENKEY True in secrets.py on the board, the wallet ARMED (hold B+Y 3 s, good for 60 s, shown in the header), and the red screen's hold. Refusals from the chip are shown as the chip said them, with the reason first."),
 )
@@ -215,7 +214,10 @@ def tick_lab(ui, pressed):
 def ask(ui, i):
     title, cmd, what, fn, ic = QUESTIONS[i]
     if fn is None:
-        return SN.open(ui)          # the game needs no chip
+        import gc
+        gc.collect()
+        import snakelab             # compiled here, not at boot: the biggest module, and no boot needs it
+        return snakelab.enter(ui)   # the game needs no chip
     chip = getattr(ui.sig, "chip", None)
     if chip is None:
         return C.refuse(ui, what, None, "There is no chip on the bus; the software key cannot answer questions.")
