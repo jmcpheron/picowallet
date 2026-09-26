@@ -40,7 +40,7 @@ Earlier options for the v1 HAT build:
 - Web page to create the smart account, register the device pubkey, send a test tx.
 
 ## v2: the McGuffin
-The signing chip (Trust M or ATECC608) moves into a plug-in key with a 3.5 mm and a 2.5 mm TRRS plug; the wallet gets an ILI9341 screen, a rotary dial and an 18650. Wiring, parts and bring-up: `hardware/MCGUFFIN.md`.
+The signing chip (Trust M or ATECC608) moves into a plug-in key with a 3.5 mm and a 2.5 mm TRRS plug; the wallet gets an ILI9341 screen, a rotary dial and an 18650. Wiring, parts and bring-up: `hardware/MCGUFFIN.md`. First build and handoff: `hardware/BUILD1.md`, `hardware/HANDOFF.md`.
 
 ## Order
 1 → 2 → 3 (USB serial) → 5 (case on USB power) → 4 → 3 (WiFi) → 6
