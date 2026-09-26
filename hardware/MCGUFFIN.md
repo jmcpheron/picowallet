@@ -21,6 +21,9 @@ McGuffin in and the wallet can sign. Pull it out and the wallet holds nothing.
 
 Full shopping list with resistors and diodes: [parts](#parts).
 
+**Building with what is on the bench now?** [BUILD1.md](BUILD1.md) is the subset with the 2.0" ST7789,
+the knob and an ATECC key, no extra components, with a drawn wiring diagram. Same pins as below.
+
 ## The McGuffin plugs
 
 Two prongs give 8 contacts. I2C needs 4, so the other 4 add reset, key detection and a chip ID.
@@ -63,9 +66,9 @@ harm, so **the wallet keeps key VCC switched off** until the key is fully in:
 
 1. DETECT (GP22, pull-up) reads 0 steadily for ~300 ms. Both prongs are seated: the 2.5 mm tip only
    meets the tip contact at the end of the travel.
-2. Switch VCC on (GP14 low), wait 10 ms, check SDA and SCL read 1 (a pair of headphones would hold
+2. Switch VCC on (GP6 low), wait 10 ms, check SDA and SCL read 1 (a pair of headphones would hold
    them low), then read the ID and talk I2C.
-3. DETECT goes 1 or I2C errors: VCC off, and set GP4, GP5, GP6 to inputs so nothing back-powers the
+3. DETECT goes 1 or I2C errors: VCC off, and set GP4, GP5, GP26 to inputs so nothing back-powers the
    chip through its pins. Power cycling is also the reset of last resort.
 
 Do not plug the McGuffin into a phone or laptop: their mic bias (about 2 V) lands on a contact.
@@ -83,46 +86,46 @@ joystick becomes the dial.
 
 | function | GPIO | Pico pin | notes |
 |---|---|---|---|
+| dial push | GP1 | 2 | switch to GND, internal pull-up |
 | dial A | GP2 | 4 | internal pull-up, 10 nF to GND |
 | dial B | GP3 | 5 | internal pull-up, 10 nF to GND |
 | key SDA | GP4 | 6 | I2C0, 100 Ω in series at the jack |
 | key SCL | GP5 | 7 | I2C0, 100 Ω in series at the jack |
-| key RST | GP6 | 9 | 100 Ω in series; active low on the Trust M |
+| key VCC enable | GP6 | 9 | low = on, drives the PNP (Build 1: high = on, powers the key directly) |
 | TFT DC | GP8 | 11 | |
 | TFT CS | GP9 | 12 | |
 | TFT SCK | GP10 | 14 | SPI1 |
 | TFT MOSI (SDI) | GP11 | 15 | SPI1 |
 | TFT RESET | GP12 | 16 | |
 | TFT LED | GP13 | 17 | PWM backlight, see [screen](#screen) |
-| key VCC enable | GP14 | 19 | low = on, drives the PNP |
 | key A | GP15 | 20 | tact switch to GND, internal pull-up |
-| dial push | GP16 | 21 | switch to GND, internal pull-up |
 | key B | GP17 | 22 | |
 | key X | GP19 | 25 | |
 | key Y | GP21 | 27 | |
 | key DETECT | GP22 | 29 | internal pull-up |
+| key RST | GP26 | 31 | 100 Ω in series; active low on the Trust M |
 | key ID | GP27 | 32 | ADC1, 10 kΩ pull-up to 3V3 |
 | battery sense | GP28 | 34 | ADC2, 100k/100k divider |
 | 3V3 OUT | | 36 | TFT VCC, key switch, pull-ups |
 | VSYS | | 39 | battery in, through the Schottky |
 | GND | | 3, 8, 13, 18, 23, 28, 33, 38 | any |
 
-Spare: GP0/GP1 (UART0, handy for a debug console), GP7, GP18, GP20, GP26. GP23, GP24, GP25 and
+Spare: GP0, GP7, GP14, GP16, GP18, GP20. GP23, GP24, GP25 and
 GP29 are wired to the WiFi chip on the Pico 2 W and are not on the header; do not use them.
 
 ```
                          USB
                   ┌─────┤   ├─────┐
   (spare)   GP0   1 │ o           o │ 40  VBUS
-  (spare)   GP1   2 │ o           o │ 39  VSYS      <- battery via Schottky
+  dial SW   GP1   2 │ o           o │ 39  VSYS      <- battery via Schottky
             GND   3 │ o           o │ 38  GND       <- battery -, all grounds
   dial A    GP2   4 │ o           o │ 37  3V3_EN    (leave alone)
   dial B    GP3   5 │ o           o │ 36  3V3 OUT   -> TFT VCC, key PNP, pull-ups
   key SDA   GP4   6 │ o           o │ 35  ADC_VREF
   key SCL   GP5   7 │ o           o │ 34  GP28      battery sense
             GND   8 │ o           o │ 33  GND
-  key RST   GP6   9 │ o           o │ 32  GP27      key ID
-  (spare)   GP7  10 │ o           o │ 31  GP26      (spare)
+  key VCC   GP6   9 │ o           o │ 32  GP27      key ID
+  (spare)   GP7  10 │ o           o │ 31  GP26      key RST
   TFT DC    GP8  11 │ o           o │ 30  RUN
   TFT CS    GP9  12 │ o           o │ 29  GP22      key DETECT
             GND  13 │ o           o │ 28  GND
@@ -131,8 +134,8 @@ GP29 are wired to the WiFi chip on the Pico 2 W and are not on the header; do no
   TFT RST   GP12 16 │ o           o │ 25  GP19      key X
   TFT LED   GP13 17 │ o           o │ 24  GP18      (spare)
             GND  18 │ o           o │ 23  GND
-  key VCC   GP14 19 │ o           o │ 22  GP17      key B
-  key A     GP15 20 │ o           o │ 21  GP16      dial push
+  (spare)   GP14 19 │ o           o │ 22  GP17      key B
+  key A     GP15 20 │ o           o │ 21  GP16      (spare)
                   └─────────────────┘
 ```
 
@@ -143,7 +146,7 @@ GP29 are wired to the WiFi chip on the Pico 2 W and are not on the header; do no
                 │                  \
                10k               PNP  2N3906 / S8550
                 │                  /
- GP14 ──1k──────┴──────────────── B
+ GP6  ──1k──────┴──────────────── B
                                    C ──┬──┬──── 3.5 mm Ring 2 (key VCC)
                                        │  │
                                      10µF 100nF
@@ -155,7 +158,7 @@ GP29 are wired to the WiFi chip on the Pico 2 W and are not on the header; do no
  GP5  ── 100Ω ──┬────────────────────── 3.5 mm Ring 1 (SCL)
                 10k ── key VCC
 
- GP6  ── 100Ω ──────────────────────── 2.5 mm Ring 1 (RST)
+ GP26 ── 100Ω ──────────────────────── 2.5 mm Ring 1 (RST)
  GP22 (pull-up) ────────────────────── 2.5 mm Tip    (DETECT)
  3V3 ──10k──┬───────────────────────── 2.5 mm Ring 2 (ID)
             └── GP27
@@ -220,7 +223,7 @@ SDO(MISO), then T_CLK, T_CS, T_DIN, T_DO, T_IRQ for touch if fitted. Check your 
 EC11 has 3 pins on one side (A, common, B) and 2 on the other (the push switch).
 - Common and one push pin to GND.
 - A to GP2, B to GP3, each with a 10 nF cap to GND to calm contact bounce.
-- The other push pin to GP16.
+- The other push pin to GP1.
 - A, B, X, Y: one leg of each tact switch to its GPIO, the other to GND.
 
 All inputs use the internal pull-ups, as `lcd.py` does now. No external resistors.
@@ -259,14 +262,14 @@ One step at a time, on USB power, with the battery disconnected until the last s
 2. **Screen:** wire it, do the backlight test, check with a meter that no pin is shorted to its
    neighbour. The ILI9341 driver is still to be written; for now `Pin(13, Pin.OUT).value(1)` should
    light the backlight.
-3. **Keys and dial:** `from machine import Pin; [Pin(p, Pin.IN, Pin.PULL_UP).value() for p in (2,3,15,16,17,19,21)]`
+3. **Keys and dial:** `from machine import Pin; [Pin(p, Pin.IN, Pin.PULL_UP).value() for p in (1,2,3,15,17,19,21)]`
    shows 1s, and each switch makes its own 0.
-4. **Jacks, nothing in:** GP22 reads 1, `ADC(27).read_u16()` near 65535. With GP14 high (or
+4. **Jacks, nothing in:** GP22 reads 1, `ADC(27).read_u16()` near 65535. With GP6 high (or
    floating), 0 V on the 3.5 mm Ring 2 contact.
 5. **McGuffin in:** GP22 reads 0, GP27 matches the ID table. Then:
    ```
    from machine import Pin, I2C
-   Pin(14, Pin.OUT).value(0)          # key VCC on
+   Pin(6, Pin.OUT).value(0)           # key VCC on
    print(I2C(0, sda=Pin(4), scl=Pin(5), freq=100_000).scan())
    ```
    Trust M shows `[48]` (0x30). ATECC shows `[96]` (0x60) after the wake pulse in
