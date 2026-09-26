@@ -73,6 +73,10 @@ website ──"send $5 to atg.eth"──▶ app (queue + relay, runs on your lap
 
 About $35. No soldering iron.
 
+Next hardware (in progress, needs soldering): the key moves into a plug-in McGuffin, with a bigger
+screen, a dial and an 18650. See [`hardware/MCGUFFIN.md`](hardware/MCGUFFIN.md), and
+[`hardware/BUILD1.md`](hardware/BUILD1.md) for the first build with a wiring diagram.
+
 ## 2. Print the case
 
 `case/waveshare-13-pico-lcd-case-tomas-plass.stl`: both halves in one file, PLA, 0.2 mm layers,

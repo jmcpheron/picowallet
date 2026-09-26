@@ -24,7 +24,8 @@ Goal: a working wallet you can hold, that signs a real transaction, built from A
 - Testnet first, then a small mainnet amount.
 
 ## 4. Battery
-Pick one:
+v2 goes with an 18650 + protected TP4056 into VSYS through a Schottky: see `hardware/MCGUFFIN.md`.
+Earlier options for the v1 HAT build:
 - **TP4056 USB-C charger module** (~17×19 mm) wired to a LiPo and to VSYS through a Schottky diode. Charge over its own USB-C. Two more solder joints plus the battery leads.
 - **Pimoroni LiPo SHIM for Pico** — solders to the header pins under the Pico, has charger, protection and a power button. Cleanest, needs stacking headers because the SHIM sits where the LCD's header wants to be.
 - Cell: 502030 (5×20×30 mm, 250 mAh) fits the gap. Pico + backlight ≈ 50–100 mA, so ~3 h on, days in sleep.
@@ -37,6 +38,9 @@ Pick one:
 - One-page build guide with photos.
 - Firmware as a single `.uf2` or a folder to drop on the Pico.
 - Web page to create the smart account, register the device pubkey, send a test tx.
+
+## v2: the McGuffin
+The signing chip (Trust M or ATECC608) moves into a plug-in key with a 3.5 mm and a 2.5 mm TRRS plug; the wallet gets an ILI9341 screen, a rotary dial and an 18650. Wiring, parts and bring-up: `hardware/MCGUFFIN.md`.
 
 ## Order
 1 → 2 → 3 (USB serial) → 5 (case on USB power) → 4 → 3 (WiFi) → 6
