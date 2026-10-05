@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
 import { type AppState, ago, short, usd } from "~~/components/chip/types";
+import { useUsbWallet } from "~~/components/usb/UsbWalletProvider";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
 import type { CommandType } from "~~/services/chip/types";
 import { notification } from "~~/utils/scaffold-eth";
@@ -45,8 +46,17 @@ const Step = ({ n, title, done, children }: { n: number; title: string; done: bo
 
 const Setup: NextPage = () => {
   const { targetNetwork } = useTargetNetwork();
+  const usb = useUsbWallet();
   const [state, setState] = useState<AppState>();
   const [busy, setBusy] = useState<string>(); // which button is working
+
+  /** Over USB the browser talks to the wallet directly; otherwise queue for the WiFi wallet. */
+  const run = async (type: CommandType) => {
+    if (!usb.connected) return runCommand(type);
+    const out = await usb.provision(type);
+    if (!out.ok) throw new Error(out.error || "failed");
+    return out.result;
+  };
   const [fundAmount, setFundAmount] = useState("10");
 
   const refresh = useCallback(async () => {
@@ -65,7 +75,7 @@ const Setup: NextPage = () => {
   const device = state?.device;
   const chip = device?.chip;
   const now = state?.now ?? 0;
-  const online = !!device && now - device.lastSeen < 45_000;
+  const online = usb.connected || (!!device && now - device.lastSeen < 45_000);
   const isMock = device?.backend === "mock";
   const configLocked = isMock ? true : chip?.configLocked === true;
   const hasKey = !!device?.qx;
@@ -148,7 +158,7 @@ const Setup: NextPage = () => {
                 disabled={!!busy || !online}
                 onClick={() =>
                   act("status", async () => {
-                    await runCommand("status");
+                    await run("status");
                     return "status refreshed";
                   })
                 }
@@ -165,6 +175,37 @@ const Setup: NextPage = () => {
           )}
         </div>
       </div>
+
+      {usb.connected && usb.hello && !usb.hello.hasKey && (
+        <div className="card bg-base-100 border border-primary">
+          <div className="card-body p-5 gap-3">
+            <h2 className="card-title text-base m-0">Make the key on the wallet</h2>
+            <p className="text-sm opacity-70 m-0">
+              One press. The chip locks its settings and makes a key inside itself. Nobody else ever sees that key. The
+              wallet shows its new address when it&apos;s done.
+            </p>
+            <button
+              className="btn btn-primary btn-sm w-fit"
+              disabled={!!busy}
+              onClick={() =>
+                act("setup", async () => {
+                  const out = await usb.provision("setup");
+                  if (!out.ok) throw new Error(out.error || "failed");
+                  return "new wallet " + (out.result?.address ?? "");
+                })
+              }
+            >
+              {busy === "setup" ? (
+                <>
+                  <span className="loading loading-spinner loading-xs" /> Waiting for A on the wallet…
+                </>
+              ) : (
+                "Make the key"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       <Step n={1} title="Lock the chip's config zone" done={configLocked}>
         <p className="text-sm opacity-70 m-0">
@@ -183,7 +224,7 @@ const Setup: NextPage = () => {
             onClick={() => {
               if (!confirm("Lock the config zone? This cannot be undone.")) return;
               act("lock", async () => {
-                await runCommand("lock-config");
+                await run("lock-config");
                 return "config zone locked";
               });
             }}
@@ -219,7 +260,7 @@ const Setup: NextPage = () => {
             disabled={!!busy || !online || !configLocked}
             onClick={() =>
               act("genkey", async () => {
-                await runCommand("genkey");
+                await run("genkey");
                 return "new key generated";
               })
             }

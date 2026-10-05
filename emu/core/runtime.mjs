@@ -26,6 +26,11 @@ const SHIMS = ["machine", "network", "requests", "socket", "rp2"];
 export async function createDevice(opts) {
   const keys = opts.keys;
   const stdout = opts.onStdout || (() => {});
+  // Serial input, the Pico's USB stdin. opts.stdin (a byte getter, null when empty) lets a host
+  // feed bytes from another thread; without it writeStdin() queues bytes here.
+  const inq = [];
+  const stdin = opts.stdin || (() => (inq.length ? inq.shift() : null));
+  function writeStdin(text) { for (const b of new TextEncoder().encode(text)) inq.push(b); }
   const frame = new Uint8Array(FRAME_BYTES);
   const pinOut = new Map();
   const timers = new Map();
@@ -177,6 +182,7 @@ export async function createDevice(opts) {
     url: opts.url,
     heapsize: opts.heapsize || DEFAULT_HEAP,
     stdout: (line) => stdout(line),
+    stdin,
     linebuffer: true,
   });
   M = mp._module;
@@ -188,6 +194,9 @@ export async function createDevice(opts) {
   FS.writeFile("/lib/_bootstrap.py", opts.shims._bootstrap);
   for (const [name, data] of Object.entries(opts.files || {})) writeFile(name, data);
   writeFile("secrets.py", secretsPy(opts.appUrl || "http://localhost:3001"));
+  // A fixed throwaway software key, so the virtual wallet's address survives reboots and a vault
+  // deployed against it on anvil keeps working across runs. Never a real key.
+  writeFile("key.bin", Uint8Array.from({ length: 32 }, (_, i) => i + 1));
   mark("flash written");
   mp.runPython("import _bootstrap");
   mark("bootstrapped");
@@ -230,14 +239,16 @@ export async function createDevice(opts) {
     if (irqPoll) clearInterval(irqPoll);
   }
 
-  return { mp, run, exec, writeFile, listFiles, dispose, frame, get frames() { return frames; } };
+  return { mp, run, exec, writeFile, writeStdin, listFiles, dispose, frame, get frames() { return frames; } };
 }
 
 // Python for "import NAME fresh, then ENTRY", with the traceback printed instead of raised.
-export function runCode(name, entry) {
+// `first` lists modules to import before the target: ship passes ["lcd"] when the module draws,
+// so the 115 KB framebuffer is allocated before the big module is compiled (RP2040 heap, see lcd.py).
+export function runCode(name, entry, first = []) {
   name = name.replace(/\.py$/, "").replace(/^.*\//, "");
   if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error("not a module name: " + name);
-  const body = `    import ${name}\n` + (entry ? `    ${entry}\n` : "");
+  const body = first.map((m) => `    import ${m}\n`).join("") + `    import ${name}\n` + (entry ? `    ${entry}\n` : "");
   const n = JSON.stringify(name);
   // On a board that was not reset, stop the old copy (sketches offer stop()) so its timer does not
   // keep drawing. `import name` at module level, so the name is bound in __main__ for REPL lines.

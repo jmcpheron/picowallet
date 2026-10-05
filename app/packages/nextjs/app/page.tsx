@@ -9,6 +9,7 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { CpuChipIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { RequestCard } from "~~/components/chip/RequestCard";
 import { type AppState, ago, short, usd } from "~~/components/chip/types";
+import { useUsbWallet } from "~~/components/usb/UsbWalletProvider";
 import { useScaffoldEventHistory, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { recoveryAbi } from "~~/services/chip/recoveryAbi";
 import type { TransferRequest, WalletRequest } from "~~/services/chip/types";
@@ -20,6 +21,7 @@ const DEFAULT_AMOUNT = "5";
 
 const Home: NextPage = () => {
   const { targetNetwork } = useTargetNetwork();
+  const usb = useUsbWallet();
   const [state, setState] = useState<AppState>();
   const [stateError, setStateError] = useState<string>();
   const [to, setTo] = useState<string>(DEFAULT_TO);
@@ -66,6 +68,19 @@ const Home: NextPage = () => {
     return () => clearInterval(t);
   }, [refresh]);
 
+  useEffect(() => {
+    if (usb.connected && state)
+      usb.pushState({
+        vault: state.account.address,
+        balance: state.account.balanceFormatted,
+        symbol: state.token.symbol,
+      });
+  }, [usb, state]);
+
+  // With a wallet on USB, that wallet is the device; the server's record may be another (WiFi) wallet.
+  const usbControlsVault =
+    !!usb.hello?.qx && !!state && usb.hello.qx.toLowerCase() === state.account.signer.qx.toLowerCase();
+
   const onToChange = (v: string) => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(v)) typedName.current = v; // keep "atg.eth", drop once it resolves
     setTo(v);
@@ -76,6 +91,41 @@ const Home: NextPage = () => {
   const vaultBalance = Number(state?.account.balanceFormatted ?? 0);
   const overBalance = amountOk && Number(amount) > vaultBalance;
   const canSend = isAddress && amountOk && !overBalance && !sending && !!state;
+
+  /** With a USB wallet plugged in, the browser is the courier: hand the request to the wallet, wait
+   *  for A or Y, then post the answer to the app. Returns false when no wallet is connected. */
+  const signOnWallet = async (request: WalletRequest): Promise<boolean> => {
+    if (!usb.connected) return false;
+    let out;
+    try {
+      out = await usb.sign(request);
+    } catch (e: any) {
+      await fetch(`/api/requests/${request.id}/reject`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ by: "website (" + String(e?.message || e).slice(0, 40) + ")" }),
+      }).catch(() => {});
+      throw e;
+    }
+    if (out.type === "signature") {
+      const res = await fetch(`/api/requests/${request.id}/signature`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ r: out.r, s: out.s }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || res.statusText);
+      notification.success(json.txHash ? "Signed on the wallet and relayed" : "Signed on the wallet: " + json.status);
+      return true;
+    }
+    const why = out.type === "rejected" ? "rejected on the wallet" : out.type === "busy" ? "wallet busy" : out.error;
+    await fetch(`/api/requests/${request.id}/reject`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ by: (usb.hello?.name || "wallet") + ": " + why }),
+    }).catch(() => {});
+    throw new Error(why);
+  };
 
   const submit = async () => {
     if (!canSend) return;
@@ -89,9 +139,10 @@ const Home: NextPage = () => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || res.statusText);
-      notification.success(
-        state?.device?.paired ? "Sent to the chip for signing" : "Queued — waiting for a paired device",
-      );
+      if (!(await signOnWallet(json.request)))
+        notification.success(
+          state?.device?.paired ? "Sent to the chip for signing" : "Queued — waiting for a paired device",
+        );
       await refresh();
     } catch (e: any) {
       notification.error(e.message);
@@ -110,7 +161,7 @@ const Home: NextPage = () => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || res.statusText);
-      notification.success("Sent ENS name to the chip for signing");
+      if (!(await signOnWallet(json.request))) notification.success("Sent ENS name to the chip for signing");
       await refresh();
     } catch (e: any) {
       notification.error(e.message);
@@ -129,7 +180,7 @@ const Home: NextPage = () => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || res.statusText);
-      notification.success("Sent contract call to the chip for signing");
+      if (!(await signOnWallet(json.request))) notification.success("Sent contract call to the chip for signing");
       await refresh();
     } catch (e: any) {
       notification.error(e.message);
@@ -186,7 +237,7 @@ const Home: NextPage = () => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || res.statusText);
-      notification.success("Cancellation sent to the Pico.");
+      if (!(await signOnWallet(json.request))) notification.success("Cancellation sent to the Pico.");
       await refresh();
     } catch (e: any) {
       notification.error(e.message);
@@ -283,7 +334,11 @@ const Home: NextPage = () => {
           <div className="card-body p-5 gap-2">
             <div className="flex items-center justify-between">
               <h2 className="card-title text-base">Device</h2>
-              {device ? (
+              {usb.connected ? (
+                <span className={`badge ${usbControlsVault ? "badge-success" : "badge-error"}`}>
+                  {usbControlsVault ? "paired over USB" : "wrong wallet"}
+                </span>
+              ) : device ? (
                 <Link href="/setup" className={`badge ${device.paired ? "badge-success" : "badge-warning"}`}>
                   {device.paired ? "paired" : "not paired"}
                 </Link>
@@ -294,7 +349,20 @@ const Home: NextPage = () => {
                 </span>
               )}
             </div>
-            {device ? (
+            {usb.connected && usb.hello ? (
+              <div className="text-sm space-y-1">
+                <div className="font-semibold">
+                  {usb.hello.name} <span className="badge badge-ghost badge-sm">USB · {usb.hello.backend}</span>
+                </div>
+                <div className="font-mono text-xs opacity-70" title={usb.hello.address}>
+                  chip{" "}
+                  {usb.hello.address ? usb.hello.address.slice(0, 6) + "..." + usb.hello.address.slice(-4) : "no key"}
+                </div>
+                <div className={`text-xs font-semibold ${usbControlsVault ? "text-success" : "text-error"}`}>
+                  {usbControlsVault ? "this wallet controls this vault" : "NOT this vault's signer"}
+                </div>
+              </div>
+            ) : device ? (
               <div className="text-sm space-y-1">
                 <div className="font-semibold">
                   {device.name} <span className="badge badge-ghost badge-sm">{device.backend}</span>

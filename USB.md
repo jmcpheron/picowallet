@@ -1,0 +1,162 @@
+# The wallet over USB
+
+The USB wallet has no radio. It is a passive device: it never asks for anything. The website
+(in Chrome, with WebSerial) pushes one message at a time down the USB cable, the wallet shows
+what it was asked, the person presses A or Y, and the wallet answers. The app server keeps its
+one job, relaying signed transfers and paying gas. Nothing else reaches the wallet.
+
+```
+browser (Chrome) ── WebSerial ── USB ── picowallet
+   │  POST /api/requests (makes the request + digest)
+   │  POST /api/requests/:id/signature (r, s)  ──▶ app server ──▶ relay ──▶ ChipAccount
+```
+
+## Framing
+
+- One JSON object per line, `\n` terminated, UTF-8, on the Pico's USB serial port (the same
+  port MicroPython uses for its REPL).
+- Every host message carries an `id`. The wallet answers with the same `id`.
+- Lines from the wallet that do not start with `{` are logs. Hosts ignore them.
+- Lines longer than 16 KB are dropped with an `error`.
+- The wallet handles one message at a time. A second `sign` while one is on screen gets
+  `{"type":"busy"}` immediately.
+
+## Messages
+
+### hello
+
+Host: `{"id": 1, "type": "hello"}`
+
+Wallet:
+```json
+{"id": 1, "type": "hello", "name": "picowallet-pink", "fw": "usb-1",
+ "serial": "0123597b4f22a25eee", "backend": "atecc608",
+ "configLocked": true, "dataLocked": false, "hasKey": true,
+ "qx": "0x…", "qy": "0x…", "address": "0x…"}
+```
+`qx`, `qy`, `address` are absent until the chip has a key. `address` is the P-256 key's
+Ethereum-style address (keccak of the 64-byte public key, last 20 bytes), the same value the
+website shows next to the account's blockie.
+
+### sign
+
+Host: `{"id": 2, "type": "sign", "request": { …WalletRequest… }}`
+
+`request` is the object the app stores for `POST /api/requests`: `kind`, `chainId`, `account`,
+`nonce`, `deadline`, `digest`, plus the kind's raw fields (`token`, `to`, `amount` for a
+transfer; `name` for setName; `target`, `value`, `data` for execute) and display hints
+(`toName`, `tokenSymbol`, `tokenDecimals`, `amountFormatted`, `valueFormatted`).
+
+The wallet:
+1. Rebuilds the EIP-712 digest from the raw fields. If it differs from `request.digest`, it
+   answers `error` and shows nothing to sign.
+2. Draws the request: summary page (what, how much, to whom), details page (full address in
+   chunks, chain, nonce, deadline, vault), and the digest's blockie with its first 8 hex.
+   Display hints are drawn smaller and never hashed.
+3. Waits. A signs on the chip and answers `signature`. Y answers `rejected`.
+
+Wallet answers, one of:
+```json
+{"id": 2, "type": "signature", "r": "0x…", "s": "0x…", "digest": "0x…"}
+{"id": 2, "type": "rejected"}
+{"id": 2, "type": "error", "error": "digest mismatch"}
+{"id": 2, "type": "busy"}
+```
+
+The host then posts `r` and `s` to `POST /api/requests/:id/signature`, or `/reject`.
+
+### cancel
+
+Host: `{"id": 5, "type": "cancel"}`. Takes a pending `sign` off the wallet's screen (the person
+changed their mind on the website). Wallet: `{"id": 5, "type": "cancelled"}`. The original
+`sign` never gets an answer; the host drops it.
+
+### provision
+
+Host: `{"id": 3, "type": "provision", "op": "setup"}`, `"op": "lock-config"`, `"op": "genkey"`
+or `"op": "status"`.
+
+`status` answers at once with the chip's status. `setup` is the one people use: the wallet shows
+a short explanation ("the chip makes the key right now, in front of you, nobody else ever sees
+it, the chip locks to it for good"), A locks the config zone if needed and makes the key, and the
+wallet then shows its new blockie and address. `lock-config` and `genkey` are the two halves on
+their own. All three are permanent: allowed only when `secrets.py` sets `ALLOW_LOCK` /
+`ALLOW_GENKEY`, and only after a physical A. Y cancels.
+
+Wallet: `{"id": 3, "type": "result", "ok": true, "result": {"op", "note", "status", "hasKey", "qx", "qy", "address"}}`
+or `{"id": 3, "type": "result", "ok": false, "error": "…"}`.
+
+### state
+
+Host: `{"id": 7, "type": "state", "vault": "0x…", "balance": "4", "symbol": "USDS"}` → Wallet:
+`{"id": 7, "type": "ok"}`. A display hint, sent by the website whenever the balance changes.
+The wallet shows it on its home screen labelled "per the website", and only when `vault` equals
+its own pinned `EXPECTED_VAULT`. Nothing in it is trusted or signed.
+
+The home screen shows the **vault** (the account that holds the money, from `EXPECTED_VAULT`)
+as the big blockie and address, the balance hint under it, and the chip's own address small.
+Without a pinned vault it shows the chip address and says so.
+
+### ping
+
+Host: `{"id": 4, "type": "ping"}` → Wallet: `{"id": 4, "type": "pong"}`.
+
+### reboot
+
+Host: `{"id": 6, "type": "reboot"}` → Wallet: `{"id": 6, "type": "rebooting"}`, then it resets and
+comes back with `ready`. Use this instead of `mpremote ... machine.reset()`: killing mpremote
+mid-reset has wedged the Mac's serial port twice, and only a replug clears that.
+
+### Unsolicited
+
+On boot the wallet prints `{"type": "ready", "name": "…"}` once.
+
+## The comparison screen
+
+The device exists so you can compare two screens before pressing A. Website and wallet draw
+identical layouts from identical raw fields:
+
+- the action and amount, large;
+- the recipient: name hint (small, labelled) and the full address in 4 chunks of 10;
+- the blockie of the digest (seed = `0x` + 64 lowercase hex), 8 cells, drawn big;
+- the first 8 hex characters of the digest under it.
+
+The website's blockie comes from the digest it got from the app. The wallet's blockie comes
+from the digest it computed itself from the raw fields. If the two pictures match, the wallet is
+signing what the website shows. `firmware/blockies.py` is a pixel-exact port of
+`ethereum/blockies`; the website uses the same algorithm.
+
+## What the wallet trusts
+
+Nothing from the host. The chain id and vault address are pinned in `secrets.py`
+(`EXPECTED_CHAIN_ID`, `EXPECTED_VAULT`, `EXPECTED_TOKEN`) when set. The digest is recomputed.
+The key never leaves the chip. The host can only ask; the person decides.
+
+## The website
+
+`app/packages/nextjs`: a bar under the header with **connect** (WebSerial, Chrome or Edge) and
+**connect emulator** (the virtual wallet on `localhost:4242`). Once connected the browser is the
+courier: every request the site creates goes to the wallet, and the answer goes to the app. The
+"Compare with the wallet" panel shows the wallet's own summary screen, the blockie and the 8 hex
+while the wallet waits for A. The Setup page's lock and key buttons go over USB too.
+
+- `services/usb/link.ts`: the two transports and the messages.
+- `services/usb/blockies.ts`, `components/usb/Blockie.tsx`: the reference blockies algorithm.
+- `components/usb/UsbWalletProvider.tsx`: connection state, `sign`, `cancel`, `provision`; it
+  posts the wallet's key to `/api/device` so pairing works as before.
+- `components/usb/ComparePanel.tsx`, `components/usb/UsbBar.tsx`: the UI.
+
+## Development
+
+- Emulator: `tools/emu run usbwallet`, then `tools/emu send '{"id":1,"type":"hello"}'` writes a
+  line to the virtual device's stdin and prints what came back. `tools/emu headless usbwallet
+  --send '…' --key A --shot x.png` scripts a whole session. The virtual wallet has a fixed
+  throwaway software key, so a vault deployed on anvil against it keeps working across reboots
+  (`CHIP_PUBKEY_X/Y` from its `hello`, `yarn deploy`).
+- The website's **connect emulator** talks to the same virtual wallet through the emulator
+  server (`POST /ctl/cmd {cmd: "send", waitId}`; the server allows cross-origin calls to `/ctl/`).
+- Real board: `firmware/main_usb.py` goes on the board as `main.py`. `mpremote` still works:
+  Ctrl-C drops the wallet loop to the REPL, and `tools/emu ship usbwallet` soft-resets first.
+  Close the browser's connection before using `mpremote`; one process owns the port.
+- The WiFi wallet (`wallet.py`) is unchanged. The USB wallet is `usbwallet.py`, sharing the
+  signer, screen and EIP-712 code.

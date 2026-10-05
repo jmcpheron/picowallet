@@ -9,7 +9,7 @@
 // module is imported with the same snippet the emulator uses. Output is followed for a few seconds; a module that never returns
 // (a `while True`) is reported as blocking and left running.
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { FIRMWARE, SKETCHES, listWorkspace, entryFor } from "./workspace.mjs";
 import { runCode } from "./runtime.mjs";
@@ -65,24 +65,42 @@ async function doShip(name, file, src, port, target, boot) {
   if (boot) {
     if (target === "wifi" || /wallet/.test(mainNow)) bootNote = "main.py left alone: this looks like the wallet Pico";
     else {
-      writeFileSync(join(SKETCHES, ".main.py"), `# written by the emulator's send: run ${name} at power-up\nimport sys\ntry:\n    import ${name}\n${entryFor(name) ? "    " + entryFor(name) + "\n" : ""}except Exception as e:\n    sys.print_exception(e)\n`);
+      const lcdFirst = dependencies(name).includes("lcd.py") && name !== "lcd" ? "    import lcd     # first: framebuffer on a fresh heap (RP2040)\n" : "";
+      writeFileSync(join(SKETCHES, ".main.py"), `# written by the emulator's send: run ${name} at power-up\nimport sys\ntry:\n${lcdFirst}    import loader\n    loader.load("${name}")\n    import ${name}\n${entryFor(name) ? "    " + entryFor(name) + "\n" : ""}except Exception as e:\n    sys.print_exception(e)\n`);
       bootNote = `main.py now runs ${name} at power-up`;
     }
   }
 
   // Everything the module imports (recursively) that lives in firmware/ or emu/sketches/, plus any
   // "x.bin" it names, goes too. mpremote cp skips files the board already has unchanged.
-  const args = [];
+  const args = [], dropPy = [];
+  // the bootloader's modules go as their pre-compiled .mpy (tools/mpy) unless the .py was edited since;
+  // the .py is then deleted on the board, since a .py there is imported before its .mpy
+  const put = (dep, dir) => {
+    const mpy = join(FIRMWARE, dep.replace(/\.py$/, ".mpy"));
+    if (BOOT_MODULES.includes(dep) && existsSync(mpy) && statSync(mpy).mtimeMs >= statSync(join(FIRMWARE, dep)).mtimeMs) {
+      args.push("cp", mpy, `:${dep.replace(/\.py$/, ".mpy")}`, "+");
+      dropPy.push(dep);
+    } else args.push("cp", join(dir, dep), `:${dep}`, "+");
+  };
   for (const dep of dependencies(name)) {
     const f = listWorkspace().find((x) => x.name === dep);
-    if (f && dep !== file.name) args.push("cp", join(f.src === "firmware" ? FIRMWARE : SKETCHES, dep), `:${dep}`, "+");
+    if (f && dep !== file.name) put(dep, f.src === "firmware" ? FIRMWARE : SKETCHES);
   }
   args.push("cp", src, `:${file.name}`, "+");
-  if (bootNote.startsWith("main.py now")) args.push("cp", join(SKETCHES, ".main.py"), ":main.py", "+");
-  args.push("exec", "import os\nif hasattr(os, 'sync'): os.sync()");
+  if (bootNote.startsWith("main.py now")) {
+    // the boot logo and loading bar come with a boot main.py
+    for (const f of [...BOOT_MODULES, "logo.bin", "bar.bin", "boot.py"]) if (!dependencies(name).includes(f)) put(f, FIRMWARE);
+    args.push("cp", join(SKETCHES, ".main.py"), ":main.py", "+");
+  }
+  const drop = dropPy.length ? `\nfor f in ${JSON.stringify(dropPy)}:\n    try: os.remove(f)\n    except OSError: pass` : "";
+  args.push("exec", `import os${drop}\nif hasattr(os, 'sync'): os.sync()`);
   const c = await mp(port, args, 120000);
   if (c.code !== 0) return { ok: false, port, error: "copy failed", lines: lines(c.out) };
-  const r = await mp(port, ["exec", runCode(name, entryFor(name))], FOLLOW_MS);
+  const first = dependencies(name).includes("lcd.py") && name !== "lcd" ? ["lcd"] : [];
+  // USB: soft-reset before the run (resume=false) so the heap is fresh. mpremote's copy helpers
+  // stay resident under resume and fragment it; on an RP2040 the framebuffer then fails to fit.
+  const r = await mp(port, ["exec", runCode(name, entryFor(name), first)], FOLLOW_MS, target === "wifi");
   const out = lines(c.out).concat(lines(r.out));
   const failed = out.some((l) => /^Traceback/.test(l));
   if (bootNote) out.push(bootNote);
@@ -91,6 +109,8 @@ async function doShip(name, file, src, port, target, boot) {
 }
 
 // Files (names with extension) the module needs from the workspace, the module itself last.
+const BOOT_MODULES = ["splash.py", "lcd.py", "loader.py"];
+
 export function dependencies(name) {
   const ws = listWorkspace();
   const text = (n) => { const f = ws.find((x) => x.name === n + ".py"); return f ? readFileSync(join(f.src === "firmware" ? FIRMWARE : SKETCHES, f.name), "utf8") : null; };
